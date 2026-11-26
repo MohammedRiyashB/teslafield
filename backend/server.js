@@ -411,6 +411,30 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+
+  if (req.method === "POST" && url.pathname === "/api/v1/chat/completions") {
+    try {
+      const input = await readJson(req, 48 * 1024);
+      const messages = Array.isArray(input.messages) ? input.messages : [];
+      if (!messages.length || messages.length > 30) return sendJson(res, 400, { error: "INVALID_MESSAGES", message: "Send between 1 and 30 chat messages." });
+      const safeMessages = messages.map((m) => ({ role: m && ["user", "assistant"].includes(m.role) ? m.role : "user", content: typeof (m && m.content) === "string" ? m.content.slice(0, 12000) : "" })).filter((m) => m.content.trim());
+      if (!safeMessages.length) return sendJson(res, 400, { error: "MESSAGE_REQUIRED", message: "Enter a message first." });
+      const token = process.env.HF_TOKEN || process.env.HUGGINGFACEHUB_API_TOKEN || "";
+      if (!token) return sendJson(res, 503, { error: "CHAT_PROVIDER_NOT_CONFIGURED", message: "Text AI is not connected yet. Set the existing Hugging Face token as a private Render environment variable named HF_TOKEN. No AI request was sent." });
+      const model = process.env.HF_CHAT_MODEL || "Qwen/Qwen2.5-7B-Instruct";
+      const upstream = await fetch("https://router.huggingface.co/v1/chat/completions", { method: "POST", headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" }, body: JSON.stringify({ model, messages: safeMessages, max_tokens: 900, temperature: 0.7, stream: false }), signal: AbortSignal.timeout(90000) });
+      const data = await upstream.json().catch(() => ({}));
+      if (!upstream.ok) return sendJson(res, upstream.status === 429 ? 429 : upstream.status === 402 ? 402 : 502, { error: "CHAT_PROVIDER_ERROR", message: upstream.status === 429 ? "Free inference rate limit reached. Wait and try again." : upstream.status === 402 ? "The selected inference provider requires paid credits. No payment was made; configure a free provider/model." : "Hugging Face inference could not complete this request. Check model availability and token permissions." });
+      const reply = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      if (typeof reply !== "string" || !reply.trim()) return sendJson(res, 502, { error: "EMPTY_CHAT_RESPONSE", message: "The model returned no text." });
+      return sendJson(res, 200, { ok: true, model, reply });
+    } catch (error) {
+      if (error.message === "BODY_TOO_LARGE") return sendJson(res, 413, { error: "REQUEST_TOO_LARGE" });
+      if (error.message === "INVALID_JSON") return sendJson(res, 400, { error: "INVALID_JSON" });
+      return sendJson(res, 504, { error: "CHAT_REQUEST_FAILED", message: "AI request timed out or could not be completed." });
+    }
+  }
+
   if (req.method === "POST" && url.pathname === "/api/v1/creative/plan") {
     try {
       await readJson(req);
