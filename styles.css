@@ -721,3 +721,45 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 @media(prefers-reduced-motion:reduce){
   .composer,.composer-shell{transition:none!important;transform:none!important}
 }
+
+
+/* Refined floating composer: one curved outline, no backing slab. */
+.composer-area{background:transparent!important}
+.composer-shell{isolation:auto;filter:none!important}
+.composer{
+  border-radius:28px!important;
+  background:rgba(16,16,16,.88)!important;
+  border:1px solid rgba(255,255,255,.19)!important;
+  box-shadow:0 5px 22px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.07)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(125%);
+  backdrop-filter:blur(18px) saturate(125%);
+}
+.composer:focus-within{
+  border-color:rgba(255,255,255,.30)!important;
+  background:rgba(17,17,17,.92)!important;
+  box-shadow:0 6px 24px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.09)!important;
+  transform:none!important;
+}
+.dark .composer-area{background:transparent!important}
+.dark .composer{
+  background:rgba(16,16,16,.88)!important;
+  border-color:rgba(255,255,255,.19)!important;
+  box-shadow:0 5px 22px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.07)!important;
+}
+.dark .composer:focus-within{
+  border-color:rgba(255,255,255,.30)!important;
+  background:rgba(17,17,17,.92)!important;
+  box-shadow:0 6px 24px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.09)!important;
+}
+/* Preserve the same full-colour TESLAFIELD mark in both themes. */
+.brand-mark,.account-avatar img,.message-avatar img{
+  display:block;object-fit:contain;background:transparent!important;filter:none!important;
+}
+.brand-mark{padding:0!important}
+.account-avatar{background:transparent!important}
+.dark .brand-mark,.dark .account-avatar,.dark .welcome-mark{
+  background:transparent!important;color:inherit!important;
+}
+.message-avatar:has(img){overflow:hidden;background:transparent!important;border-radius:8px}
+.message-avatar img{width:100%;height:100%;padding:1px}
+@media(max-width:760px){.composer{border-radius:25px!important}}
