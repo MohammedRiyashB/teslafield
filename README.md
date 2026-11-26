@@ -17,6 +17,7 @@ The interface is intentionally honest about its current state. Generate actions 
 ## Included workspaces
 
 - Overview dashboard
+- Explore presets with ready-to-use creative directions
 - Video Studio
 - Image Studio
 - Cinema Director with editable starter shot list
