@@ -40,7 +40,7 @@
   }
   function loadStore() {
     try {
-      const value = JSON.parse(localStorage.getItem("teslafield.conversations.v3") || "[]");
+      const value = JSON.parse(localStorage.getItem("teslafield.conversations.v3") || localStorage.getItem("teslafield.conversations.v2") || "[]");
       chats = Array.isArray(value) ? value.filter((chat) => chat && typeof chat.id === "string" && Array.isArray(chat.messages)) : [];
     } catch (error) {
       chats = [];
