@@ -263,6 +263,10 @@ const server = http.createServer(async (req, res) => {
       if (prompt.length > 2000) return sendJson(res, 400, { error: "PROMPT_TOO_LONG", message: "Image prompts must be 2,000 characters or fewer." });
       if (!dimensions[ratio]) return sendJson(res, 400, { error: "INVALID_ASPECT_RATIO", message: "Choose 1:1, 16:9 or 9:16." });
 
+      const model = typeof input.model === "string" && input.model.trim() ? input.model.trim() : "black-forest-labs/flux.1-schnell";
+      const allowedModels = new Set(["black-forest-labs/flux.1-schnell", "black-forest-labs/flux.1.1-pro"]);
+      if (!allowedModels.has(model)) return sendJson(res, 400, { error: "INVALID_IMAGE_MODEL", message: "Choose a supported image model." });
+
       const provider = getImageProvider();
       if (!provider) {
         return sendJson(res, 503, {
@@ -271,7 +275,7 @@ const server = http.createServer(async (req, res) => {
         });
       }
 
-      const result = await generateImage({ prompt, aspectRatio: ratio, dimensions: dimensions[ratio] }, provider);
+      const result = await generateImage({ prompt, aspectRatio: ratio, dimensions: dimensions[ratio], model }, provider);
       sendJson(res, 200, {
         ok: true,
         provider: result.provider,
