@@ -267,7 +267,8 @@ const server = http.createServer(async (req, res) => {
         videoGeneration: Boolean(process.env.HF_VIDEO_SPACE_URL || process.env.POLLINATIONS_API_KEY),
         audioGeneration: false,
         authentication: false,
-        database: false
+        database: false,
+        textChat: Boolean(process.env.HF_TOKEN || process.env.HUGGINGFACEHUB_API_TOKEN)
       }
     });
     return;
