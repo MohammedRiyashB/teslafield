@@ -2,9 +2,9 @@ const CACHE_NAME = "teslafield-pwa-shell-v5";
 const SHELL_ASSETS = [
   "/",
   "/index.html",
-  "/styles.css?v=20261126-51",
-  "/app.js?v=20261126-51",
-  "/theme-init.js?v=20261126-51",
+  "/styles.css?v=20261126-52",
+  "/app.js?v=20261126-52",
+  "/theme-init.js?v=20261126-52",
   "/manifest.webmanifest",
   "/teslafield-icon-192.png",
   "/teslafield-icon-512.png",
