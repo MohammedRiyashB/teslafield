@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - "index.html"
+      - "terms.html"
+      - "privacy.html"
       - "styles.css"
       - "app.js"
       - "backend/**"
@@ -67,7 +69,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p public
-          cp index.html styles.css app.js theme-init.js public/
+          cp index.html styles.css app.js theme-init.js terms.html privacy.html public/
           test -s teslafieldai-logo.png
           cp teslafieldai-logo.png public/
           if [ -d assets ]; then cp -R assets public/assets; fi
@@ -78,6 +80,8 @@ jobs:
           test -s public/styles.css
           test -s public/app.js
           test -s public/theme-init.js
+          test -s public/terms.html
+          test -s public/privacy.html
           test -s public/teslafieldai-logo.png
           echo "TESLAFIELD static files prepared."
 
@@ -92,16 +96,24 @@ jobs:
         run: |
           set -euo pipefail
           BASE="https://teslafieldai.web.app"
-          curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-connrefused "${BASE}/?release=20261126-19" -o /tmp/teslafield-home.html
-          grep -q "styles.css?v=20261126-19" /tmp/teslafield-home.html
-          grep -q "theme-init.js?v=20261126-19" /tmp/teslafield-home.html
+          curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-connrefused "${BASE}/?release=20261126-21" -o /tmp/teslafield-home.html
+          grep -q "styles.css?v=20261126-21" /tmp/teslafield-home.html
+          grep -q "theme-init.js?v=20261126-21" /tmp/teslafield-home.html
           grep -q "Message TESLAFIELD" /tmp/teslafield-home.html
-          curl --fail --silent --show-error "${BASE}/teslafieldai-logo.png?v=20261126-19" -o /tmp/teslafieldai-logo.png
+          curl --fail --silent --show-error "${BASE}/teslafieldai-logo.png?v=20261126-21" -o /tmp/teslafieldai-logo.png
           test -s /tmp/teslafieldai-logo.png
-          curl --fail --silent --show-error "${BASE}/styles.css?v=20261126-19" -o /tmp/teslafield-styles.css
+          curl --fail --silent --show-error "${BASE}/styles.css?v=20261126-21" -o /tmp/teslafield-styles.css
           grep -q "starter-grid" /tmp/teslafield-styles.css
-          curl --fail --silent --show-error "${BASE}/app.js?v=20261126-19" -o /tmp/teslafield-app.js
+          curl --fail --silent --show-error "${BASE}/app.js?v=20261126-21" -o /tmp/teslafield-app.js
           grep -q "conversations.v4." /tmp/teslafield-app.js
-          curl --fail --silent --show-error "${BASE}/theme-init.js?v=20261126-19" -o /tmp/teslafield-theme-init.js
+          grep -q "savePendingGuestPrompt" /tmp/teslafield-app.js
+          grep -q "storeCookieChoices" /tmp/teslafield-app.js
+          grep -q "guest-mode" /tmp/teslafield-styles.css
+          grep -q "cookie-banner" /tmp/teslafield-styles.css
+          curl --fail --silent --show-error "${BASE}/terms.html" -o /tmp/teslafield-terms.html
+          grep -q "Terms of Use" /tmp/teslafield-terms.html
+          curl --fail --silent --show-error "${BASE}/privacy.html" -o /tmp/teslafield-privacy.html
+          grep -q "Privacy Policy" /tmp/teslafield-privacy.html
+          curl --fail --silent --show-error "${BASE}/theme-init.js?v=20261126-21" -o /tmp/teslafield-theme-init.js
           grep -q "appearance.v2" /tmp/teslafield-theme-init.js
-          echo "Verified live TESLAFIELD HTML, PNG logo, responsive CSS and chat application JavaScript."
+          echo "Verified live TESLAFIELD guest UI, consent controls, legal pages, PNG logo, CSS and application JavaScript."
