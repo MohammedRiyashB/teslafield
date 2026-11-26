@@ -96,24 +96,26 @@ jobs:
         run: |
           set -euo pipefail
           BASE="https://teslafieldai.web.app"
-          curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-connrefused "${BASE}/?release=20261126-21" -o /tmp/teslafield-home.html
-          grep -q "styles.css?v=20261126-21" /tmp/teslafield-home.html
-          grep -q "theme-init.js?v=20261126-21" /tmp/teslafield-home.html
+          curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-connrefused "${BASE}/?release=20261126-22" -o /tmp/teslafield-home.html
+          grep -q "styles.css?v=20261126-22" /tmp/teslafield-home.html
+          grep -q "theme-init.js?v=20261126-22" /tmp/teslafield-home.html
           grep -q "Message TESLAFIELD" /tmp/teslafield-home.html
-          curl --fail --silent --show-error "${BASE}/teslafieldai-logo.png?v=20261126-21" -o /tmp/teslafieldai-logo.png
+          curl --fail --silent --show-error "${BASE}/teslafieldai-logo.png?v=20261126-22" -o /tmp/teslafieldai-logo.png
           test -s /tmp/teslafieldai-logo.png
-          curl --fail --silent --show-error "${BASE}/styles.css?v=20261126-21" -o /tmp/teslafield-styles.css
+          curl --fail --silent --show-error "${BASE}/styles.css?v=20261126-22" -o /tmp/teslafield-styles.css
           grep -q "starter-grid" /tmp/teslafield-styles.css
-          curl --fail --silent --show-error "${BASE}/app.js?v=20261126-21" -o /tmp/teslafield-app.js
+          curl --fail --silent --show-error "${BASE}/app.js?v=20261126-22" -o /tmp/teslafield-app.js
           grep -q "conversations.v4." /tmp/teslafield-app.js
           grep -q "savePendingGuestPrompt" /tmp/teslafield-app.js
           grep -q "storeCookieChoices" /tmp/teslafield-app.js
           grep -q "guest-mode" /tmp/teslafield-styles.css
           grep -q "cookie-banner" /tmp/teslafield-styles.css
-          curl --fail --silent --show-error "${BASE}/terms.html" -o /tmp/teslafield-terms.html
+          curl --fail --location --silent --show-error "${BASE}/terms" -o /tmp/teslafield-terms.html
           grep -q "Terms of Use" /tmp/teslafield-terms.html
-          curl --fail --silent --show-error "${BASE}/privacy.html" -o /tmp/teslafield-privacy.html
+          echo "Verified clean /terms page."
+          curl --fail --location --silent --show-error "${BASE}/privacy" -o /tmp/teslafield-privacy.html
           grep -q "Privacy Policy" /tmp/teslafield-privacy.html
-          curl --fail --silent --show-error "${BASE}/theme-init.js?v=20261126-21" -o /tmp/teslafield-theme-init.js
+          echo "Verified clean /privacy page."
+          curl --fail --silent --show-error "${BASE}/theme-init.js?v=20261126-22" -o /tmp/teslafield-theme-init.js
           grep -q "appearance.v2" /tmp/teslafield-theme-init.js
           echo "Verified live TESLAFIELD guest UI, consent controls, legal pages, PNG logo, CSS and application JavaScript."
