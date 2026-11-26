@@ -1,4 +1,4 @@
-# TESLAFIELD API
+# TeslafieldAI API
 
 Node.js API for the TESLAFIELD web app and ChatGPT MCP connection.
 
@@ -17,7 +17,7 @@ Node.js API for the TESLAFIELD web app and ChatGPT MCP connection.
 - `GET /health` — Render health check
 - `GET /api/v1/status` — integration status
 - `GET /api/v1/warmup` — warmup checks for the AI integrations
-- `POST /api/v1/chat/completions` — Firebase-authenticated TESLAFIELD V1 chat
+- `POST /api/v1/chat/completions` — Firebase-authenticated TeslafieldAI chat
 - `POST /api/v1/chat/stream` — Firebase-authenticated chat stream
 - `POST /api/v1/speech/transcribe` — Firebase-authenticated speech transcription
 - `POST /api/v1/voice/synthesize` — Firebase-authenticated voice synthesis
@@ -32,7 +32,7 @@ Node.js API for the TESLAFIELD web app and ChatGPT MCP connection.
 - Firebase sign-in and consent page: `https://teslafieldai.web.app/oauth`
 - MCP tool: `ask_teslafield`
 
-The MCP service exposes only the TESLAFIELD V1 text-chat capability. Users sign in with the existing Google/Firebase account, explicitly approve the connection, and receive a short-lived OAuth access token scoped to `teslafield:chat`. The Google password and Firebase ID token are never sent to ChatGPT. OAuth uses authorization code + PKCE (S256), validates ChatGPT's Client ID Metadata Document, and binds issued tokens to the MCP resource.
+The MCP service exposes only the TeslafieldAI text-chat capability. Users sign in with the existing Google/Firebase account, explicitly approve the connection, and receive a short-lived OAuth access token scoped to `teslafield:chat`. The Google password and Firebase ID token are never sent to ChatGPT. OAuth uses authorization code + PKCE (S256), validates ChatGPT's Client ID Metadata Document, and binds issued tokens to the MCP resource.
 
 ## Required Render environment variable
 
