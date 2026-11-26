@@ -354,8 +354,11 @@
       if (typing) typing.remove();
       if (error.name !== "AbortError") {
         const message = error.message || "The AI service could not complete this request.";
-        toast(message);
+        chat.messages.push({ role: "assistant", content: "**TESLAFIELD service notice**\\n\\n" + message + "\\n\\nYour prompt is saved in this conversation. You can retry after the service is connected." });
+        chat.updated = Date.now();
+        saveStore();
         renderConversation();
+        toast(message);
       }
     } finally {
       controller = null;
@@ -423,7 +426,7 @@
       const data = await response.json().catch(() => ({}));
       $("connectionStatus").classList.add("online");
       $("connectionStatus").querySelector("span").textContent = "API online";
-      const configured = data.chat && data.chat.configured;
+      const configured = Boolean(data.integrations && data.integrations.textChat);
       $("modelStatus").textContent = configured ? "Text AI provider configured on server." : "Text AI provider needs a private server credential.";
       $("composerProviderNote").textContent = configured ? "Check important information in AI responses." : "Text AI is awaiting provider configuration.";
     } catch (error) {
