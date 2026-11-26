@@ -27,6 +27,40 @@
   const promptInput = $("promptInput");
   const messageList = $("messageList");
   const welcome = $("welcomeScreen");
+  const welcomeSubtitle = welcome.querySelector(".welcome-subtitle");
+  const welcomeMessageGroups = [
+    ["A little curiosity can lead somewhere amazing.", "Your next big idea could start with one question.", "Every great discovery begins with exploration.", "Think boldly. Start anywhere.", "There is always something new to learn.", "Let's make your next thought count.", "Big plans begin with small steps.", "Bring your questions, ideas, and imagination.", "A fresh perspective is one message away.", "Your space to think, create, and discover is ready."],
+    ["Explore a new topic and understand it clearly.", "Turn a complex problem into simple next steps.", "Brainstorm ideas and shape them into a real plan.", "Write something meaningful and make it shine.", "Build, experiment, and bring your ideas to life.", "Find answers, uncover insights, and keep learning.", "Work through a challenge one step at a time.", "Discover a smarter way to approach your next task.", "Create something original from a simple thought.", "Ask freely and follow wherever your curiosity leads."],
+    ["Let's get started.", "I'm ready when you are.", "What shall we explore first?", "Your journey starts with a question.", "Let's make it happen.", "Start with whatever is on your mind.", "The next step is yours.", "Let's turn that thought into progress.", "One message can open a new direction.", "Make today a day of discovery."]
+  ];
+  let welcomeMessageDeck = [];
+  let welcomeMessageIndex = 0;
+  function buildWelcomeMessageDeck() {
+    welcomeMessageDeck = [];
+    welcomeMessageGroups[0].forEach((a) => welcomeMessageGroups[1].forEach((b) => welcomeMessageGroups[2].forEach((c) => welcomeMessageDeck.push(a + " " + b + " " + c))));
+    for (let i = welcomeMessageDeck.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [welcomeMessageDeck[i], welcomeMessageDeck[j]] = [welcomeMessageDeck[j], welcomeMessageDeck[i]];
+    }
+    welcomeMessageIndex = 0;
+  }
+  function showNextWelcomeMessage() {
+    if (!welcomeSubtitle || !welcomeMessageDeck.length) return;
+    welcomeSubtitle.classList.add("welcome-message-changing");
+    const message = welcomeMessageDeck[welcomeMessageIndex];
+    welcomeMessageIndex = (welcomeMessageIndex + 1) % welcomeMessageDeck.length;
+    if (welcomeMessageIndex === 0) buildWelcomeMessageDeck();
+    window.setTimeout(() => {
+      welcomeSubtitle.textContent = message;
+      welcomeSubtitle.classList.remove("welcome-message-changing");
+    }, 180);
+  }
+  buildWelcomeMessageDeck();
+  if (welcomeSubtitle) welcomeSubtitle.textContent = welcomeMessageDeck[0];
+  welcomeMessageIndex = 1;
+  window.setInterval(() => {
+    if (document.visibilityState === "visible" && !welcome.hidden) showNextWelcomeMessage();
+  }, 5500);
   const composerArea = $("composerArea");
   const composerHome = document.createComment("TESLAFIELD composer home");
   composerArea.parentNode.insertBefore(composerHome, composerArea);
@@ -142,12 +176,12 @@
       const heading = welcome.querySelector("h1");
       const subtitle = welcome.querySelector(".welcome-subtitle");
       if (heading) heading.textContent = "Welcome to TESLAFIELD";
-      if (subtitle) subtitle.textContent = "You're signed in. What would you like to explore today?";
+      if (subtitle) showNextWelcomeMessage();
     } else {
       const heading = welcome.querySelector("h1");
       const subtitle = welcome.querySelector(".welcome-subtitle");
       if (heading) heading.textContent = "What would you like to explore?";
-      if (subtitle) subtitle.textContent = "Ask TESLAFIELD anything. Your next idea starts here.";
+      if (subtitle) showNextWelcomeMessage();
     }
     setGuestLayout(!signedIn);
     $("accountStatus").textContent = signedIn
