@@ -76,6 +76,7 @@
   let authClient = null;
   let currentUser = null;
   let authReady = false;
+  let chatWorkspaceActive = false;
   let pendingGuestPrompt = "";
   let guestConversationStarted = false;
   let userPreferences = { responseStyle: "balanced", textSize: "standard", reduceMotion: false };
@@ -352,6 +353,7 @@
     const previousUid = currentUser && currentUser.uid;
     const nextUid = user && user.uid;
     currentUser = user || null;
+    chatWorkspaceActive = !!currentUser;
     authReady = true;
     resolveAuthReady();
     updateAccountUI();
@@ -385,42 +387,66 @@
     }
   }
 
-  function initializeFirebaseAuth() {
+  async function initializeFirebaseAuth() {
     if (!window.firebase || !window.firebase.apps || !window.firebase.apps.length) {
       authReady = true;
       resolveAuthReady();
       updateAccountUI();
+      toast("Firebase Authentication is unavailable. Reload Teslafield and try again.");
       return;
     }
     try {
       authClient = window.firebase.auth();
-      // Complete LOCAL persistence before starting OAuth so Android redirect state is retained.
-      authClient.setPersistence(window.firebase.auth.Auth.Persistence.LOCAL)
-        .then(() => {
-          authClient.onAuthStateChanged((user) => applyFirebaseUser(user));
-          // Explicitly consume the OAuth redirect result. Some mobile browsers restore the
-          // Firebase session after this promise resolves rather than before the first auth event.
-          return authClient.getRedirectResult();
-        })
-        .then((result) => {
-          if (result && result.user) applyFirebaseUser(result.user);
-          else if (authClient.currentUser) applyFirebaseUser(authClient.currentUser);
-        })
-        .catch((error) => {
+
+      // Prefer a remembered session, but do not let unsupported browser storage
+      // prevent the auth listener or Google sign-in from starting.
+      try {
+        await authClient.setPersistence(window.firebase.auth.Auth.Persistence.LOCAL);
+      } catch (localError) {
+        try {
+          await authClient.setPersistence(window.firebase.auth.Auth.Persistence.SESSION);
+        } catch (sessionError) {
+          try {
+            await authClient.setPersistence(window.firebase.auth.Auth.Persistence.NONE);
+          } catch (memoryError) {
+            // Firebase can still attempt an in-memory popup sign-in.
+          }
+        }
+      }
+
+      // Always attach the observer before consuming a possible redirect result.
+      authClient.onAuthStateChanged(
+        (user) => applyFirebaseUser(user),
+        (error) => {
           authReady = true;
           resolveAuthReady();
           updateAccountUI();
-          if (error && error.code && error.code !== "auth/no-auth-event") {
-            const messages = {
-              "auth/unauthorized-domain": "Google sign-in domain is not authorized in Firebase.",
-              "auth/operation-not-allowed": "Google sign-in is disabled in Firebase Authentication.",
-              "auth/network-request-failed": "Network interrupted Google sign-in. Please try again.",
-              "auth/web-storage-unsupported": "This browser is blocking sign-in storage. Open Teslafield in Chrome and allow site storage."
-            };
-            toast(messages[error.code] || ("Google sign-in could not finish (" + error.code + "). Please try again."));
-          }
-        });
+          toast("Teslafield could not restore your sign-in session. Please sign in again.");
+        }
+      );
+
+      try {
+        const result = await authClient.getRedirectResult();
+        if (result && result.user) applyFirebaseUser(result.user);
+        else if (authClient.currentUser) applyFirebaseUser(authClient.currentUser);
+      } catch (error) {
+        if (authClient.currentUser) applyFirebaseUser(authClient.currentUser);
+        const code = error && error.code;
+        if (code && code !== "auth/no-auth-event") {
+          const messages = {
+            "auth/unauthorized-domain": "Google sign-in domain is not authorized in Firebase.",
+            "auth/operation-not-allowed": "Google sign-in is disabled in Firebase Authentication.",
+            "auth/network-request-failed": "Network interrupted Google sign-in. Please try again.",
+            "auth/web-storage-unsupported": "This browser is blocking sign-in storage. Open Teslafield in Chrome and allow site storage."
+          };
+          toast(messages[code] || ("Google sign-in could not finish (" + code + "). Please try again."));
+        }
+      }
     } catch (error) {
+      if (authClient && authClient.currentUser) {
+        applyFirebaseUser(authClient.currentUser);
+        return;
+      }
       authReady = true;
       resolveAuthReady();
       authClient = null;
@@ -755,7 +781,7 @@
   function renderConversation() {
     const chat = activeChat();
     messageList.innerHTML = "";
-    welcome.hidden = !!(chat && chat.messages.length);
+    welcome.hidden = chatWorkspaceActive || !!(chat && chat.messages.length);
     if (chat) chat.messages.forEach((message, index) => renderMessage(message, index, chat));
     scrollBottom();
     renderHistory();
@@ -862,6 +888,7 @@
   function newChat() {
     if (generating) stopGeneration();
     guestConversationStarted = false;
+    chatWorkspaceActive = false;
     setGuestLayout(!currentUser);
     clearPendingGuestPrompt();
     messageList.innerHTML = "";
