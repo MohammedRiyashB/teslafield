@@ -311,7 +311,7 @@ const server = http.createServer(async (req, res) => {
       if (!dimensions[ratio]) return sendJson(res, 400, { error: "INVALID_ASPECT_RATIO", message: "Choose 1:1, 16:9 or 9:16." });
 
       const model = typeof input.model === "string" && input.model.trim() ? input.model.trim() : "black-forest-labs/flux.1-schnell";
-      const allowedModels = new Set(["black-forest-labs/flux.1-schnell", "black-forest-labs/flux.1.1-pro"]);
+      const allowedModels = new Set(["black-forest-labs/FLUX.1-schnell"]);
       if (!allowedModels.has(model)) return sendJson(res, 400, { error: "INVALID_IMAGE_MODEL", message: "Choose a supported image model." });
 
       const provider = getImageProvider();
@@ -354,12 +354,13 @@ const server = http.createServer(async (req, res) => {
         "bytedance/seedance-2.0-mini",
         "bytedance/seedance-2.0-fast",
         "alibaba/wan-2.2-fast",
-        "x-ai/grok-imagine-video-1.5-lite"
+        "x-ai/grok-imagine-video-1.5-lite",
+        "Wan-AI/Wan2.2-TI2V-5B-Diffusers"
       ]);
       if (!prompt) return sendJson(res, 400, { error: "PROMPT_REQUIRED", message: "Enter a video prompt first." });
       if (prompt.length > 2000) return sendJson(res, 400, { error: "PROMPT_TOO_LONG", message: "Video prompts must be 2,000 characters or fewer." });
       if (!allowedModels.has(model)) return sendJson(res, 400, { error: "INVALID_VIDEO_MODEL", message: "Choose a supported video model." });
-      if (![5, 8, 10].includes(duration)) return sendJson(res, 400, { error: "INVALID_DURATION", message: "Choose 5, 8 or 10 seconds." });
+      if (process.env.HF_VIDEO_SPACE_URL ? duration !== 2 : ![5, 8, 10].includes(duration)) return sendJson(res, 400, { error: "INVALID_DURATION", message: process.env.HF_VIDEO_SPACE_URL ? "The free ZeroGPU starter profile supports 2-second clips." : "Choose 5, 8 or 10 seconds." });
       if (process.env.HF_VIDEO_SPACE_URL) {
         const video = await generateWithHuggingFaceVideo(prompt);
         return sendJson(res, 200, {
