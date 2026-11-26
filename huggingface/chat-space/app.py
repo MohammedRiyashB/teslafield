@@ -11,16 +11,16 @@ from pydantic import BaseModel, Field
 from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("TESLAFIELD.Chat")
+logger = logging.getLogger("Teslafield.Chat")
 MODEL_ID = "Qwen/Qwen3-0.6B"
 SYSTEM_PROMPT = (
-    "You are TESLAFIELD AI, a helpful multilingual assistant created by "
-    "the TESLAFIELD team. Be accurate, practical, and concise. Support Tamil "
+    "You are Teslafield AI, a helpful multilingual assistant created by "
+    "the Teslafield team. Be accurate, practical, and concise. Support Tamil "
     "and English naturally. If you are unsure, say so. Do not claim to have "
     "performed actions you have not performed."
 )
 
-api = FastAPI(title="TESLAFIELD Chat Engine", version="1.0.0")
+api = FastAPI(title="Teslafield Chat Engine", version="1.0.0")
 _tokenizer = None
 _model = None
 _model_lock = Lock()
@@ -98,7 +98,7 @@ def generate(messages, max_new_tokens):
 
 @api.get("/")
 async def root():
-    return {"name": "TESLAFIELD Chat Engine", "model": MODEL_ID, "status": "ready"}
+    return {"name": "Teslafield Chat Engine", "model": MODEL_ID, "status": "ready"}
 
 
 @api.get("/health")
@@ -108,7 +108,7 @@ async def health():
 
 @api.get("/info")
 async def info():
-    return {"name": "TESLAFIELD Chat Engine", "model": MODEL_ID, "runtime": "CPU", "language_support": ["Tamil", "English", "multilingual"]}
+    return {"name": "Teslafield Chat Engine", "model": MODEL_ID, "runtime": "CPU", "language_support": ["Tamil", "English", "multilingual"]}
 
 
 @api.post("/chat")
