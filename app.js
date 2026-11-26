@@ -84,6 +84,7 @@
         currentUser = user || null;
         authReady = true;
         resolveAuthReady();
+        updateAccountUI();
         if (previousUid !== nextUid) {
           if (generating) stopGeneration();
           chats = [];
