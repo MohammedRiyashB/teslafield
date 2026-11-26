@@ -57,8 +57,8 @@
       copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
       edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/>',
       retry:'<path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M5.6 9a7 7 0 0 1 11.8-2L20 12M4 12l2.6 5a7 7 0 0 0 11.8-2"/>',
-      up:'<path d="m7 10 5-5 5 5"/><path d="M12 5v14"/>',
-      down:'<path d="m7 14 5 5 5-5"/><path d="M12 19V5"/>',
+      up:'<path d="M7 10v10H4V10h3Zm3 10h6.2a2 2 0 0 0 1.9-1.4l2-6A2 2 0 0 0 17.2 10H13l.7-3.1A2.4 2.4 0 0 0 11.4 4L7 10v10h3Z"/>',
+      down:'<path d="M7 14V4H4v10h3Zm3-10h6.2a2 2 0 0 1 1.9 1.4l2 6A2 2 0 0 1 17.2 14H13l.7 3.1a2.4 2.4 0 0 1-2.3 2.9L7 14V4h3Z"/>',
       sound:'<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15 9a5 5 0 0 1 0 6M18 6a9 9 0 0 1 0 12"/>'
     };
     return '<svg viewBox="0 0 24 24" aria-hidden="true">' + (paths[name] || "") + '</svg>';
@@ -446,12 +446,12 @@
   function renderMessage(message, index, chat) {
     const row = document.createElement("article");
     row.className = "message-row " + message.role;
+    const stack = document.createElement("div");
+    stack.className = "message-stack " + message.role + "-stack";
     const body = document.createElement("div");
     body.className = "message-content";
     body.innerHTML = renderMarkdown(message.content);
-    if (message.role === "user") row.append(body);
-    else row.append(body);
-    messageList.appendChild(row);
+    stack.appendChild(body);
 
     const actions = document.createElement("div");
     actions.className = "message-actions";
@@ -462,17 +462,19 @@
       copy.onclick = () => copyText(message.content);
       const read = document.createElement("button");
       read.type = "button"; read.innerHTML = icon("sound") + "<span>Read aloud</span>";
+      read.setAttribute("aria-label", "Read aloud");
       read.onclick = () => speak(message.content);
       const like = document.createElement("button");
-      like.type = "button"; like.innerHTML = icon("up"); like.title = "Helpful";
-      like.onclick = () => toast("Thanks for the feedback.");
+      like.type = "button"; like.innerHTML = icon("up"); like.title = "Helpful"; like.setAttribute("aria-label", "Helpful");
+      like.onclick = () => { like.classList.add("selected"); dislike.classList.remove("selected"); toast("Thanks for the feedback."); };
       const dislike = document.createElement("button");
-      dislike.type = "button"; dislike.innerHTML = icon("down"); dislike.title = "Not helpful";
-      dislike.onclick = () => toast("Feedback noted for this device.");
+      dislike.type = "button"; dislike.innerHTML = icon("down"); dislike.title = "Not helpful"; dislike.setAttribute("aria-label", "Not helpful");
+      dislike.onclick = () => { dislike.classList.add("selected"); like.classList.remove("selected"); toast("Feedback noted."); };
       actions.append(copy, read, like, dislike);
       if (index === chat.messages.length - 1) {
         const retry = document.createElement("button");
         retry.type = "button"; retry.innerHTML = icon("retry") + "<span>Regenerate</span>";
+        retry.setAttribute("aria-label", "Regenerate response");
         retry.onclick = regenerateLast;
         actions.append(retry);
       }
@@ -485,7 +487,9 @@
       edit.onclick = () => editUserMessage(index);
       actions.append(copy, edit);
     }
-    messageList.appendChild(actions);
+    stack.appendChild(actions);
+    row.appendChild(stack);
+    messageList.appendChild(row);
   }
   function renderConversation() {
     const chat = activeChat();
@@ -1078,10 +1082,21 @@
     renderAttachments();
     if (selectedFiles.length) toast("Files checked and kept on this device. They have not been uploaded.");
   };
-  $("shareChat").onclick = () => {
+  $("shareChat").onclick = async () => {
     const chat = activeChat();
-    if (!chat) { toast("Start a conversation first."); return; }
-    copyText(chat.messages.map((m) => (m.role === "user" ? "You: " : "TESLAFIELD: ") + m.content).join("\n\n"));
+    if (!chat || !chat.messages.length) { toast("Start a conversation first."); return; }
+    const transcript = chat.messages.map((m) => (m.role === "user" ? "You: " : "TESLAFIELD: ") + m.content).join("\n\n");
+    const title = chat.title || "TESLAFIELD conversation";
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text: title + "\n\n" + transcript });
+        return;
+      } catch (error) {
+        if (error && error.name === "AbortError") return;
+      }
+    }
+    await copyText(title + "\n\n" + transcript);
+    toast("Conversation copied. You can paste it into any app to share.");
   };
   document.addEventListener("click", (event) => {
     if (!event.target.closest(".tool-menu-wrap") && !event.target.closest(".account-wrap") && !event.target.closest(".history-more")) closeMenus();
