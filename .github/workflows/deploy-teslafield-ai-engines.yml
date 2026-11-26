@@ -1,0 +1,82 @@
+name: Deploy TESLAFIELD AI Engines
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "huggingface/chat-space/**"
+      - "huggingface/speech-space/**"
+      - "huggingface/voice-space/**"
+      - ".github/workflows/deploy-teslafield-ai-engines.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate AI engine Python files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout TESLAFIELD
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Check Python syntax
+        run: |
+          python -m py_compile huggingface/chat-space/app.py
+          python -m py_compile huggingface/speech-space/app.py
+          python -m py_compile huggingface/voice-space/app.py
+
+  deploy-chat:
+    name: Deploy Chat Engine
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout TESLAFIELD
+        uses: actions/checkout@v4
+      - name: Sync Chat Engine
+        uses: huggingface/hub-sync@v0.3.0
+        with:
+          github_repo_id: ${{ github.repository }}
+          huggingface_repo_id: Earthaioa/EARTH_OS_V10_DOCKER
+          hf_token: ${{ secrets.HF_TOKEN }}
+          repo_type: space
+          space_sdk: docker
+          subdirectory: huggingface/chat-space
+
+  deploy-speech:
+    name: Deploy Speech Engine
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout TESLAFIELD
+        uses: actions/checkout@v4
+      - name: Sync Speech Engine
+        uses: huggingface/hub-sync@v0.3.0
+        with:
+          github_repo_id: ${{ github.repository }}
+          huggingface_repo_id: Earthaioa/OpenWhisper-Small
+          hf_token: ${{ secrets.HF_TOKEN }}
+          repo_type: space
+          space_sdk: gradio
+          subdirectory: huggingface/speech-space
+
+  deploy-voice:
+    name: Deploy Voice Engine
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout TESLAFIELD
+        uses: actions/checkout@v4
+      - name: Sync Voice Engine
+        uses: huggingface/hub-sync@v0.3.0
+        with:
+          github_repo_id: ${{ github.repository }}
+          huggingface_repo_id: Earthaioa/Earthaioa-Kokoro-TTS
+          hf_token: ${{ secrets.HF_TOKEN }}
+          repo_type: space
+          space_sdk: gradio
+          subdirectory: huggingface/voice-space
