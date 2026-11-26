@@ -91,9 +91,9 @@ function requestClientKey(req) {
   return String(req.socket && req.socket.remoteAddress || "unknown").slice(0, 80);
 }
 
-function allowRate(req, res, bucketName) {
+function allowRate(req, res, bucketName, actorKey) {
   const policy = RATE_LIMITS[bucketName] || RATE_LIMITS.global;
-  const key = bucketName + ":" + requestClientKey(req);
+  const key = bucketName + ":" + (actorKey || requestClientKey(req));
   const now = Date.now();
   let bucket = rateBuckets.get(key);
   if (!bucket || now >= bucket.resetAt) {
@@ -477,6 +477,7 @@ const server = http.createServer(async (req, res) => {
     }
     const authUser = await authenticateFirebase(req, res);
     if (!authUser) return;
+    if (!allowRate(req, res, protectedApiRoutes.get(url.pathname), "user:" + authUser.uid)) return;
     req.authUser = authUser;
     audit("api.request_authorized", authUser.uid, url.pathname);
   }
