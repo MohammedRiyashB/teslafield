@@ -26,7 +26,7 @@ async function getFirebaseSigningKey(kid) {
       key && key.kty === "RSA" && key.use === "sig" && key.alg === "RS256" && typeof key.kid === "string"
     );
     const cacheControl = response.headers.get("cache-control") || "";
-    const maxAgeMatch = cacheControl.match(/max-age=(\\d+)/i);
+    const maxAgeMatch = cacheControl.match(/max-age=(\d+)/i);
     const maxAgeSeconds = maxAgeMatch ? Math.min(21600, Math.max(60, Number(maxAgeMatch[1]))) : 3600;
     firebaseSigningKeysExpiresAt = now + maxAgeSeconds * 1000;
   }
