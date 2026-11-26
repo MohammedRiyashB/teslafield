@@ -322,7 +322,7 @@
       }
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = /[\\u0B80-\\u0BFF]/.test(text) ? "ta-IN" : "en-IN";
+      utterance.lang = /[\u0B80-\u0BFF]/.test(text) ? "ta-IN" : "en-IN";
       window.speechSynthesis.speak(utterance);
       toast("TESLAFIELD Voice is unavailable; using your device voice.");
     }
