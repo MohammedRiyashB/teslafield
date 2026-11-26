@@ -303,3 +303,339 @@ a{color:inherit}
 .dark .voice-mode-button,.dark .send-button{background:#f5f5f5;color:#000}
 .dark .voice-mode-button:hover,.dark .send-button:hover{background:#dcdcdc}
 .dark .welcome-mark{border:1px solid #242424}
+
+
+/* --------------------------------------------------------------------------
+   TESLAFIELD UI POLISH — nine focused refinements
+   -------------------------------------------------------------------------- */
+:root{
+  --tf-ease:cubic-bezier(.2,.8,.2,1);
+  --tf-ease-out:cubic-bezier(.22,1,.36,1);
+  --tf-fast:140ms;
+  --tf-ui:220ms;
+  --tf-focus:0 0 0 3px rgba(110,110,110,.18);
+  --tf-content-pad:clamp(18px,3vw,32px);
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+html{scroll-behavior:smooth}
+body{-webkit-tap-highlight-color:transparent}
+button,a,input,textarea{-webkit-tap-highlight-color:transparent}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
+  outline:2px solid #858585;
+  outline-offset:3px;
+}
+::selection{background:rgba(120,120,120,.22);color:inherit}
+.conversation-scroll{scroll-behavior:smooth;scroll-padding-block:24px}
+.conversation-scroll::-webkit-scrollbar,.history-list::-webkit-scrollbar{width:7px}
+.conversation-scroll::-webkit-scrollbar-thumb,.history-list::-webkit-scrollbar-thumb{
+  border:2px solid transparent;
+  border-radius:99px;
+  background:rgba(130,130,130,.32);
+  background-clip:padding-box;
+}
+.conversation-scroll::-webkit-scrollbar-thumb:hover,.history-list::-webkit-scrollbar-thumb:hover{
+  background:rgba(130,130,130,.52);
+  background-clip:padding-box;
+}
+
+/* 1 — A coherent, quiet application frame */
+.sidebar{
+  padding:14px 13px 12px;
+  transition:width var(--tf-ui) var(--tf-ease),transform 280ms var(--tf-ease-out),background-color var(--tf-ui) ease;
+}
+.sidebar-header{height:48px;padding-inline:6px}
+.brand{gap:10px}
+.brand-mark{width:30px;height:30px;border-radius:9px}
+.brand-word{font-size:14px;letter-spacing:.035em}
+.main-panel{transition:margin-left var(--tf-ui) var(--tf-ease),background-color var(--tf-ui) ease}
+.topbar{
+  height:60px;
+  padding-inline:clamp(16px,2.4vw,32px);
+  border-bottom:1px solid color-mix(in srgb,var(--border) 72%,transparent);
+  transition:background-color var(--tf-ui) ease,border-color var(--tf-ui) ease;
+}
+.topbar-brand{font-size:14px;letter-spacing:.015em;gap:8px}
+.model-tier{padding:3px 6px;font-size:9px;letter-spacing:.07em}
+.icon-button{width:38px;height:38px;border-radius:10px;transition:background-color var(--tf-fast) ease,color var(--tf-fast) ease,transform var(--tf-fast) var(--tf-ease)}
+.icon-button:active{transform:scale(.94)}
+.share-button{border:1px solid transparent}
+.share-button:hover{border-color:var(--border)}
+
+/* 2 — More comfortable rhythm and alignment */
+:root{--sidebar-width:264px;--content-width:780px}
+.sidebar-primary{gap:4px;padding-top:14px;padding-bottom:18px}
+.side-action{
+  height:43px;
+  gap:12px;
+  padding-inline:11px;
+  border-radius:10px;
+  font-size:13px;
+  transition:background-color var(--tf-fast) ease,color var(--tf-fast) ease,transform var(--tf-fast) var(--tf-ease);
+}
+.side-action:active{transform:scale(.985)}
+.section-heading{height:32px;padding-inline:9px;font-size:10px;letter-spacing:.085em}
+.history-search{
+  height:39px;
+  margin:6px 1px 10px;
+  padding-inline:10px;
+  border:1px solid transparent;
+  border-radius:10px;
+  transition:background-color var(--tf-fast) ease,border-color var(--tf-fast) ease,box-shadow var(--tf-fast) ease;
+}
+.history-search:focus-within{box-shadow:var(--tf-focus)}
+.history-search input{font-size:13px}
+.history-group{margin-block:11px 15px}
+.history-group-label{padding:5px 10px 6px;font-size:10px;letter-spacing:.025em}
+.history-row{min-height:39px;border-radius:9px;transition:background-color var(--tf-fast) ease}
+.history-title{padding:9px 10px;font-size:13px;line-height:1.35}
+.history-more{width:32px;height:32px;border-radius:8px;transition:opacity var(--tf-fast) ease,background-color var(--tf-fast) ease}
+.sidebar-footer{padding-top:10px}
+.sidebar-footer>.side-action{height:41px}
+.account-wrap{margin-top:7px}
+.account-button{height:52px;border-radius:11px;transition:background-color var(--tf-fast) ease}
+.account-copy strong{font-size:12px}
+.account-copy small{font-size:11px}
+
+/* 3 — Clearer type scale and readable copy */
+.welcome-screen{width:min(var(--content-width),calc(100% - 48px))}
+.welcome-mark{
+  width:48px;height:48px;margin-bottom:22px;border-radius:14px;
+  box-shadow:0 7px 24px rgba(0,0,0,.10);
+}
+.welcome-screen h1{
+  font-size:clamp(31px,3.2vw,39px);
+  line-height:1.16;
+  letter-spacing:-.052em;
+  font-weight:650;
+}
+.welcome-subtitle{margin-top:12px;font-size:14px;line-height:1.55}
+.starter-card{min-height:76px;padding:14px 15px;border-radius:14px}
+.starter-card strong{font-size:13px;line-height:1.35}
+.starter-card small{font-size:11px;line-height:1.45}
+.starter-icon{width:34px;height:34px;border-radius:10px}
+.starter-icon svg{width:18px;height:18px}
+.message-content{font-size:15px;line-height:1.78;letter-spacing:.002em}
+.message-content p{margin-bottom:15px}
+.message-content h2{font-size:21px;letter-spacing:-.025em}
+.message-content h3{font-size:17px;letter-spacing:-.015em}
+.message-content li{padding:4px 0}
+.message-content code{font-size:.88em}
+.message-content pre{padding:16px;border-radius:13px;line-height:1.6}
+.message-actions button{height:34px;padding-inline:9px;border-radius:8px;font-size:11px;transition:background-color var(--tf-fast) ease,color var(--tf-fast) ease,transform var(--tf-fast) ease}
+.message-actions button:active{transform:scale(.96)}
+
+/* 4 — Better surfaces, edges and component consistency */
+.starter-card{
+  border-color:var(--border);
+  box-shadow:0 1px 2px rgba(0,0,0,.025);
+  transition:background-color 170ms ease,border-color 170ms ease,box-shadow 170ms ease,transform 170ms var(--tf-ease);
+}
+.starter-card:hover{
+  border-color:color-mix(in srgb,var(--text) 20%,var(--border));
+  box-shadow:0 7px 22px rgba(0,0,0,.055);
+  transform:translateY(-2px);
+}
+.starter-card:active{transform:translateY(0) scale(.99)}
+.history-row-menu,.account-menu,.tool-menu{
+  border-radius:13px;
+  box-shadow:0 14px 38px rgba(0,0,0,.13);
+  transform-origin:top left;
+}
+.account-menu{transform-origin:bottom left}
+.history-row-menu button,.account-menu button,.account-menu a,.tool-menu button,.tool-menu a{
+  min-height:38px;
+  border-radius:8px;
+  font-size:12px;
+  transition:background-color var(--tf-fast) ease,color var(--tf-fast) ease;
+}
+
+/* 5 — Conversation flow and message hierarchy */
+.message-list{padding-top:18px;padding-bottom:48px}
+.message-row{gap:14px;margin:28px 0 24px}
+.message-avatar{width:30px;height:30px}
+.message-row.user .message-content{
+  max-width:min(78%,640px);
+  padding:12px 16px;
+  border-radius:19px 19px 6px 19px;
+}
+.message-row.assistant .message-content{padding-top:1px}
+.message-content blockquote{border-left-width:2px;padding-left:15px}
+.message-content a{text-decoration-thickness:1px;text-underline-offset:3px}
+.message-content pre code{font-size:13px}
+.message-actions{margin-top:-9px;margin-bottom:28px;gap:5px}
+
+/* 6 — Composer: clear hierarchy, useful hit areas and focus feedback */
+.composer-area{
+  padding:12px var(--tf-content-pad) max(12px,env(safe-area-inset-bottom));
+  background:linear-gradient(to bottom,transparent 0%,var(--page) 18%);
+}
+.composer{
+  padding:13px 14px 10px;
+  border-color:color-mix(in srgb,var(--border) 90%,var(--text));
+  border-radius:25px;
+  box-shadow:0 8px 30px rgba(0,0,0,.055);
+  transition:border-color 180ms ease,box-shadow 180ms ease,background-color 180ms ease,transform 180ms var(--tf-ease);
+}
+.composer:focus-within{
+  border-color:color-mix(in srgb,var(--text) 28%,var(--border));
+  box-shadow:0 9px 32px rgba(0,0,0,.085),0 0 0 3px rgba(120,120,120,.075);
+}
+.composer textarea{font-size:16px;line-height:1.55;padding:4px 5px 10px}
+.composer-tools,.composer-actions{gap:9px}
+.composer-icon{width:38px;height:38px;transition:background-color var(--tf-fast) ease,color var(--tf-fast) ease,transform var(--tf-fast) var(--tf-ease)}
+.composer-icon:active,.voice-mode-button:active,.send-button:active{transform:scale(.93)}
+.plus-button{border-color:var(--border)}
+.voice-mode-button,.send-button{width:38px;height:38px;transition:background-color var(--tf-fast) ease,transform var(--tf-fast) var(--tf-ease),box-shadow var(--tf-fast) ease}
+.send-button:not(:disabled):hover,.voice-mode-button:hover{box-shadow:0 3px 12px rgba(0,0,0,.12)}
+.composer-hint{font-size:12px}
+.composer-disclaimer{margin-top:9px;font-size:11px;line-height:1.45}
+.attachment-strip{padding:9px 11px;border-radius:12px}
+.attachment-chip{min-height:31px;border-radius:9px}
+
+/* 7 — Menus, navigation and purposeful controls */
+.side-action.active{box-shadow:inset 2px 0 0 color-mix(in srgb,var(--text) 62%,transparent)}
+.sidebar-collapsed .side-action.active{box-shadow:none}
+.search-clear{width:28px;height:28px;border-radius:7px}
+.search-clear:hover{background:var(--hover)}
+.text-button{border-radius:6px;transition:background-color var(--tf-fast) ease,color var(--tf-fast) ease}
+.text-button:hover{background:var(--hover)}
+.sidebar-scrim{backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+.topbar,.sidebar,.composer-area{isolation:isolate}
+.toast-message{padding:11px 16px;border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.18);font-size:12px}
+
+/* 8 — One restrained motion language across the interface */
+@keyframes tf-rise-in{
+  from{opacity:0;transform:translateY(9px)}
+  to{opacity:1;transform:translateY(0)}
+}
+@keyframes tf-fade-in{from{opacity:0}to{opacity:1}}
+@keyframes tf-menu-in{
+  from{opacity:0;transform:translateY(5px) scale(.985)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+@keyframes tf-pop-in{
+  from{opacity:0;transform:scale(.975)}
+  to{opacity:1;transform:scale(1)}
+}
+.welcome-screen{animation:tf-rise-in 430ms var(--tf-ease-out) both}
+.welcome-mark{animation:tf-pop-in 380ms var(--tf-ease-out) 60ms both}
+.welcome-screen h1,.welcome-subtitle{animation:tf-fade-in 360ms ease both}
+.starter-card{animation:tf-rise-in 380ms var(--tf-ease-out) both}
+.starter-card:nth-child(1){animation-delay:80ms}
+.starter-card:nth-child(2){animation-delay:120ms}
+.starter-card:nth-child(3){animation-delay:160ms}
+.starter-card:nth-child(4){animation-delay:200ms}
+.message-row{animation:tf-rise-in 230ms var(--tf-ease-out) both}
+.message-actions{animation:tf-fade-in 180ms ease 50ms both}
+.history-row-menu,.account-menu:not([hidden]),.tool-menu:not([hidden]){animation:tf-menu-in 160ms var(--tf-ease-out) both}
+.attachment-strip:not([hidden]){animation:tf-pop-in 160ms var(--tf-ease-out) both}
+.toast-message{transition:opacity 190ms ease,transform 220ms var(--tf-ease-out)}
+.icon-button,.side-action,.history-row,.account-button,.composer-icon,.send-button,.voice-mode-button{touch-action:manipulation}
+
+/* 9 — Responsive comfort, keyboard-safe layout and accessibility */
+@media(min-width:1500px){
+  :root{--sidebar-width:284px;--content-width:840px}
+  .topbar{height:66px}
+  .welcome-screen h1{font-size:42px}
+  .message-content{font-size:16px}
+}
+@media(max-width:760px){
+  :root{--sidebar-width:min(88vw,320px);--content-width:100%}
+  .app-shell,.main-panel{height:var(--visual-viewport-height,100dvh);min-height:0}
+  .sidebar{padding:12px 12px max(12px,env(safe-area-inset-bottom));}
+  .sidebar-header{height:48px}
+  .sidebar-primary{padding-top:12px;padding-bottom:14px}
+  .side-action{height:45px;font-size:14px;border-radius:10px}
+  .history-search{height:42px}
+  .history-title{font-size:13px;min-height:40px}
+  .account-button{height:54px}
+  .topbar{height:56px;min-height:56px;padding-inline:12px}
+  .topbar-brand{font-size:14px}
+  .icon-button{width:40px;height:40px}
+  .welcome-screen{
+    width:calc(100% - 32px);
+    margin:clamp(48px,10vh,88px) auto 26px;
+  }
+  .welcome-mark{width:43px;height:43px;margin-bottom:18px}
+  .welcome-screen h1{font-size:clamp(29px,7.4vw,34px);line-height:1.15}
+  .welcome-subtitle{max-width:340px;margin:10px auto 0;font-size:13px;line-height:1.5}
+  .starter-grid{gap:9px;margin-top:25px}
+  .starter-card{min-height:72px;padding:10px 11px;gap:9px}
+  .starter-icon{width:30px;height:30px}
+  .starter-card strong{font-size:12px}
+  .starter-card small{font-size:10.5px}
+  .message-list{width:calc(100% - 30px);padding-top:8px;padding-bottom:28px}
+  .message-row{gap:10px;margin:24px 0 20px}
+  .message-avatar{width:28px;height:28px}
+  .message-content{max-width:calc(100% - 38px);font-size:15px;line-height:1.72}
+  .message-row.user .message-content{max-width:88%;padding:11px 14px}
+  .message-actions{margin:0 0 23px 38px;gap:3px}
+  .message-actions button{height:36px;min-width:36px}
+  .composer-area{padding:8px 10px max(10px,env(safe-area-inset-bottom))}
+  .composer{padding:10px 11px 8px;border-radius:22px}
+  .composer textarea{min-height:38px;max-height:150px;padding:4px 4px 9px;font-size:16px}
+  .composer-toolbar{gap:8px}
+  .composer-tools,.composer-actions{gap:5px}
+  .composer-icon,.voice-mode-button,.send-button{width:40px;height:40px;min-width:40px;min-height:40px}
+  .composer-hint{font-size:11px}
+  .composer-disclaimer{margin-top:7px;font-size:10px}
+  .attachment-strip{max-height:104px;overflow:auto}
+}
+@media(max-width:380px){
+  .starter-grid{grid-template-columns:1fr;max-width:340px;margin-top:20px}
+  .starter-card{min-height:60px;padding:9px 12px}
+  .welcome-screen{margin-top:clamp(35px,7vh,58px)}
+  .welcome-subtitle{max-width:290px;font-size:12px}
+  .composer-hint{display:none}
+  .composer-divider{display:none}
+}
+@media(orientation:landscape) and (max-height:520px) and (max-width:900px){
+  .topbar{height:46px;min-height:46px}
+  .welcome-screen{margin:16px auto}
+  .welcome-mark{width:32px;height:32px;margin-bottom:9px}
+  .welcome-screen h1{font-size:24px}
+  .welcome-subtitle{display:none}
+  .starter-grid{max-width:540px;margin-top:14px}
+  .starter-card{min-height:50px}
+  .composer-area{padding-top:4px}
+  .composer-disclaimer{display:none}
+}
+@media(hover:none){
+  .history-more{opacity:1}
+  .starter-card:hover{transform:none;box-shadow:none}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    scroll-behavior:auto!important;
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.01ms!important;
+  }
+}
+:root.dark{
+  --page:#000;
+  --sidebar:#000;
+  --surface:#080808;
+  --surface-2:#0d0d0d;
+  --hover:#171717;
+  --text:#f5f5f5;
+  --muted:#b5b5b5;
+  --subtle:#777;
+  --border:#242424;
+  --accent:#fff;
+  --accent-contrast:#000;
+}
+.dark .topbar{border-bottom-color:#181818}
+.dark .starter-card{background:#080808;border-color:#242424;box-shadow:none}
+.dark .starter-card:hover{background:#101010;border-color:#414141;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.dark .history-row-menu,.dark .account-menu,.dark .tool-menu{
+  background:#080808;border-color:#292929;box-shadow:0 14px 38px rgba(0,0,0,.62)
+}
+.dark .composer{background:#050505;border-color:#282828;box-shadow:0 8px 30px rgba(0,0,0,.55)}
+.dark .composer:focus-within{border-color:#555;box-shadow:0 9px 32px rgba(0,0,0,.7),0 0 0 3px rgba(255,255,255,.045)}
+.dark .message-row.user .message-content{background:#171717;color:#f4f4f4}
+.dark .history-search:focus-within{background:#080808;border-color:#343434;box-shadow:0 0 0 3px rgba(255,255,255,.04)}
+.dark .side-action.active{box-shadow:inset 2px 0 0 #777}
+.dark .sidebar-scrim{background:rgba(0,0,0,.68)}

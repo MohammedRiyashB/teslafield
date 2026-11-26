@@ -3,6 +3,13 @@
   const API = "https://teslafield-api.onrender.com";
   const $ = (id) => document.getElementById(id);
   const root = document.documentElement;
+  const syncVisualViewport = () => {
+    const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    root.style.setProperty("--visual-viewport-height", Math.round(viewportHeight) + "px");
+  };
+  syncVisualViewport();
+  window.addEventListener("resize", syncVisualViewport, { passive: true });
+  if (window.visualViewport) window.visualViewport.addEventListener("resize", syncVisualViewport, { passive: true });
   const promptInput = $("promptInput");
   const messageList = $("messageList");
   const welcome = $("welcomeScreen");
@@ -582,6 +589,8 @@
   }
   function applyTheme(theme) {
     root.classList.toggle("dark", theme === "dark");
+    const themeColor = document.querySelector('meta[name="theme-color"]');
+    if (themeColor) themeColor.setAttribute("content", theme === "dark" ? "#000000" : "#ffffff");
     $("themeLabel").textContent = theme === "dark" ? "Dark" : "Light";
     try { localStorage.setItem("teslafield.appearance", theme); } catch (error) {}
   }
