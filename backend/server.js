@@ -175,12 +175,12 @@ async function generateWithHuggingFaceVideo(prompt) {
   return "data:video/mp4;base64," + bytes.toString("base64");
 }
 
-const CHAT_SPACE_URL = (process.env.HF_CHAT_SPACE_URL || "https://earthaioa-earth-os-v10-docker.hf.space").replace(/\\/+$/, "");
+const trimTrailingSlashes = (value) => { while (value.endsWith("/")) value = value.slice(0, -1); return value; };
+const CHAT_SPACE_URL = trimTrailingSlashes(process.env.HF_CHAT_SPACE_URL || "https://earthaioa-earth-os-v10-docker.hf.space");
 const SPEECH_SPACE_ID = process.env.HF_SPEECH_SPACE_ID || "Earthaioa/OpenWhisper-Small";
 const VOICE_SPACE_ID = process.env.HF_VOICE_SPACE_ID || "Earthaioa/Earthaioa-Kokoro-TTS";
-const SPEECH_SPACE_URL = (process.env.HF_SPEECH_SPACE_URL || "https://earthaioa-openwhisper-small.hf.space").replace(/\\/+$/, "");
-const VOICE_SPACE_URL = (process.env.HF_VOICE_SPACE_URL || "https://earthaioa-earthaioa-kokoro-tts.hf.space").replace(/\\/+$/, "");
-
+const SPEECH_SPACE_URL = trimTrailingSlashes(process.env.HF_SPEECH_SPACE_URL || "https://earthaioa-openwhisper-small.hf.space");
+const VOICE_SPACE_URL = trimTrailingSlashes(process.env.HF_VOICE_SPACE_URL || "https://earthaioa-earthaioa-kokoro-tts.hf.space");
 async function endpointReady(baseUrl, path) {
   try {
     const response = await fetch(baseUrl + path, { signal: AbortSignal.timeout(6000) });
