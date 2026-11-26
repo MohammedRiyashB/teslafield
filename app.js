@@ -3,6 +3,8 @@
   const API = "https://teslafield-api.onrender.com";
   const $ = (id) => document.getElementById(id);
   const root = document.documentElement;
+  let connectReturnFocus = null;
+  let gmailAccessToken = null;
   // Protect TESLAFIELD brand artwork only; regular website images remain downloadable.
   document.addEventListener("contextmenu", (event) => {
     if (event.target && event.target.closest && event.target.closest('img[src*="teslafieldai-logo"]')) {
@@ -159,6 +161,37 @@
     $("accountDelete").hidden = !signedIn;
     $("topSignUp").hidden = signedIn;
     $("topLogIn").hidden = signedIn;
+  }
+
+
+  function openConnectPage() {
+    connectReturnFocus = document.activeElement;
+    document.body.classList.add("connect-page-mode");
+    $("appShell").hidden = true; $("connectPage").hidden = false;
+    $("gmailDetailCard").hidden = true; $("connectAppList").hidden = false;
+    $("connectSearchInput").value = ""; $("connectNoResults").hidden = true;
+    $("connectBackButton").focus();
+    if (location.pathname !== "/connect") history.pushState({ teslafieldPage: "connect" }, "", "/connect");
+  }
+  function closeConnectPage(fromPopState) {
+    $("connectPage").hidden = true; $("appShell").hidden = false;
+    document.body.classList.remove("connect-page-mode");
+    if (!fromPopState && location.pathname === "/connect") history.pushState({ teslafieldPage: "home" }, "", "/");
+    if (connectReturnFocus && connectReturnFocus.focus) connectReturnFocus.focus();
+  }
+  function updateGmailConnectionUI() {
+    const connected = !!gmailAccessToken;
+    $("gmailStatus").textContent = connected ? "Connected for this session" : "Not connected";
+    $("gmailDetailStatus").textContent = connected ? "Connected for this session" : "Not connected";
+    $("gmailConnectAction").innerHTML = connected ? "Manage" : '<span aria-hidden="true">＋</span> Connect';
+    $("gmailDetailConnect").hidden = connected; $("gmailDisconnect").hidden = !connected;
+    $("gmailSetupNote").textContent = connected ? "Gmail access is temporary for this browser session. Disconnect at any time." : "Google OAuth setup is required before Gmail can be connected. Your Gmail password is never shared with TESLAFIELD.";
+  }
+  function showGmailDetails() { $("connectAppList").hidden = true; $("gmailDetailCard").hidden = false; updateGmailConnectionUI(); $("gmailDetailBack").focus(); }
+  function beginGmailConnect() { showGmailDetails(); toast("Gmail connection is not activated yet. Google OAuth client setup is required first."); }
+  function disconnectGmail() {
+    if (gmailAccessToken && window.google && google.accounts && google.accounts.oauth2) { try { google.accounts.oauth2.revoke(gmailAccessToken, () => {}); } catch (error) {} }
+    gmailAccessToken = null; updateGmailConnectionUI(); toast("Gmail disconnected.");
   }
 
   function initializeCookieChoices() {
@@ -1079,6 +1112,13 @@
   }
 
   $("newChat").onclick = newChat;
+  $("connectEntryButton").onclick = openConnectPage;
+  $("connectBackButton").onclick = () => closeConnectPage(false);
+  $("gmailConnectAction").onclick = () => gmailAccessToken ? showGmailDetails() : beginGmailConnect();
+  $("gmailDetailConnect").onclick = beginGmailConnect;
+  $("gmailDisconnect").onclick = disconnectGmail;
+  $("gmailDetailBack").onclick = () => { $("gmailDetailCard").hidden = true; $("connectAppList").hidden = false; };
+  $("connectSearchInput").oninput = () => { const q = $("connectSearchInput").value.trim().toLowerCase(); const card = document.querySelector(".connect-app-card"); const match = !q || card.dataset.appSearch.includes(q); card.hidden = !match; $("connectNoResults").hidden = match; };
   $("mobileMenu").onclick = openSidebar;
   $("sidebarClose").onclick = closeSidebar;
   $("sidebarScrim").onclick = closeSidebar;
@@ -1173,6 +1213,7 @@
     const key = event.key.toLowerCase();
     if ((event.ctrlKey || event.metaKey) && key === "k") { event.preventDefault(); newChat(); }
     if (event.key === "Escape") {
+      if (!$("connectPage").hidden) { closeConnectPage(false); return; }
       closeMenus();
       closeSidebar();
       if (!$("signupPromptModal").hidden) closeSignupPrompt();
@@ -1214,6 +1255,8 @@
     }, 3400);
   }
 
+  window.addEventListener("popstate", () => { if (location.pathname !== "/connect" && !$("connectPage").hidden) closeConnectPage(true); else if (location.pathname === "/connect" && $("connectPage").hidden) openConnectPage(); });
+  if (location.pathname === "/connect") openConnectPage();
   if (location.pathname.startsWith("/share/")) {
     openSharedMessagePage();
     return;

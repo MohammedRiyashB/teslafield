@@ -76,6 +76,7 @@
         
       </div>
       <div class="topbar-right">
+        <button class="connect-entry-button" id="connectEntryButton" type="button" aria-label="Connect apps"><span class="infinity-mark">∞</span><span>Connect</span></button>
         <button class="top-auth-button top-auth-secondary" id="topLogIn" type="button">Log in</button>
         <button class="top-auth-button top-auth-primary" id="topSignUp" type="button">Sign up</button>
       </div>
@@ -138,6 +139,26 @@
   <footer class="guest-footer" aria-label="TESLAFIELD company information">TESLAFIELD © 2026 BMR INC. All rights reserved.</footer>
 </div>
 
+<main class="connect-page" id="connectPage" hidden aria-label="Connect apps">
+  <header class="connect-page-header"><button class="connect-back-button" id="connectBackButton" type="button"><span aria-hidden="true">←</span> Back</button><div class="connect-page-brand"><span class="connect-brand-infinity">∞</span><span>CONNECTO</span></div><span class="connect-header-spacer"></span></header>
+  <section class="connect-page-content">
+    <div class="connect-page-heading"><p class="connect-eyebrow">TESLAFIELD ECOSYSTEM</p><h1>Connect your apps</h1><p>Bring your tools together. Connect an app to use its information with TESLAFIELD.</p></div>
+    <label class="connect-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/></svg><input id="connectSearchInput" type="search" placeholder="Search apps" autocomplete="off" aria-label="Search apps"><kbd>/</kbd></label>
+    <section class="connect-app-section" id="connectAppList" aria-label="Available apps"><div class="connect-section-label">AVAILABLE APPS <span>1</span></div>
+      <article class="connect-app-card" data-app-search="gmail google email inbox">
+        <div class="connect-app-icon gmail-app-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path fill="#4285F4" d="M5 12.5v23A3.5 3.5 0 0 0 8.5 39H13V19L5 12.5Z"/><path fill="#34A853" d="M35 19v20h4.5a3.5 3.5 0 0 0 3.5-3.5v-23L35 19Z"/><path fill="#EA4335" d="M5 12.5 9 9.3a6 6 0 0 1 7.4 0L24 15l7.6-5.7a6 6 0 0 1 7.4 0l4 3.2L24 27 5 12.5Z"/><path fill="#C5221F" d="M13 19 5 12.5V16l8 6.2V19Z"/><path fill="#FBBC04" d="M35 19v3.2l8-6.2v-3.5L35 19Z"/></svg></div>
+        <div class="connect-app-copy"><strong>Gmail</strong><span>Read and understand your emails with AI</span><small class="connect-app-status" id="gmailStatus">Not connected</small></div><button class="connect-app-action" id="gmailConnectAction" type="button"><span aria-hidden="true">＋</span> Connect</button>
+      </article><div class="connect-no-results" id="connectNoResults" hidden>No apps found. Try another search.</div>
+    </section>
+    <p class="connect-security-note"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></svg> You control what you connect. You can disconnect an app at any time.</p>
+    <section class="connect-detail-card" id="gmailDetailCard" hidden><button class="connect-detail-back" id="gmailDetailBack" type="button">← All apps</button>
+      <div class="connect-detail-title"><div class="connect-app-icon gmail-app-icon"><svg viewBox="0 0 48 48"><path fill="#4285F4" d="M5 12.5v23A3.5 3.5 0 0 0 8.5 39H13V19L5 12.5Z"/><path fill="#34A853" d="M35 19v20h4.5a3.5 3.5 0 0 0 3.5-3.5v-23L35 19Z"/><path fill="#EA4335" d="M5 12.5 9 9.3a6 6 0 0 1 7.4 0L24 15l7.6-5.7a6 6 0 0 1 7.4 0l4 3.2L24 27 5 12.5Z"/></svg></div><div><p class="connect-eyebrow">APP CONNECTION</p><h2>Gmail</h2><span id="gmailDetailStatus">Not connected</span></div></div>
+      <p>Allow TESLAFIELD to access your Gmail messages so you can ask questions like “What does this email mean?”</p><div class="connect-permission-row"><span>Read email messages</span><span class="permission-readonly">Read only</span></div>
+      <div class="connect-detail-actions"><button class="connect-app-action" id="gmailDetailConnect" type="button">＋ Connect Gmail</button><button class="connect-disconnect-button" id="gmailDisconnect" type="button" hidden>Disconnect</button></div>
+      <p class="connect-setup-note" id="gmailSetupNote">Google OAuth setup is required before Gmail can be connected. Your Gmail password is never shared with TESLAFIELD.</p>
+    </section>
+  </section><footer class="connect-page-footer">TESLAFIELD © 2026 BMR INC. All rights reserved.</footer>
+</main>
 <input id="fileInput" type="file" hidden multiple accept=".png,.jpg,.jpeg,.webp,.pdf,.txt,.csv,.docx,image/png,image/jpeg,image/webp,application/pdf,text/plain,text/csv,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
 <div class="toast-message" id="toastMessage" role="status" aria-live="polite"></div>
 <main class="shared-message-page" id="sharedMessagePage" hidden>
