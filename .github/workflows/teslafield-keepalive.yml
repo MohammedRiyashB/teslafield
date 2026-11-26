@@ -1,0 +1,59 @@
+name: TESLAFIELD Keepalive
+
+on:
+  schedule:
+    # Every 10 minutes, offset from the top of the hour to reduce schedule congestion.
+    - cron: "3,13,23,33,43,53 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: teslafield-keepalive
+  cancel-in-progress: true
+
+jobs:
+  keep-services-awake:
+    name: Ping Render and Hugging Face services
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check Render backend and warm integrated Spaces
+        shell: bash
+        run: |
+          set -uo pipefail
+          failures=0
+
+          ping() {
+            local name="$1"
+            local url="$2"
+            echo "::group::$name"
+            if curl --location --silent --show-error --fail \
+              --connect-timeout 15 --max-time 60 \
+              --retry 2 --retry-delay 5 --retry-all-errors \
+              --output /dev/null "$url"; then
+              echo "::notice::$name responded successfully."
+            else
+              echo "::warning::$name did not return a successful response. It may be starting, sleeping, or temporarily unavailable."
+              failures=$((failures + 1))
+            fi
+            echo "::endgroup::"
+          }
+
+          # /health keeps the Node API's public health route active.
+          ping "Render API health" "https://teslafield-api.onrender.com/health"
+
+          # This endpoint also checks the Chat, Speech and Voice Hugging Face Spaces.
+          ping "Render integration warmup (Chat, Speech and Voice)" "https://teslafield-api.onrender.com/api/v1/warmup"
+
+          # The Image and Video Spaces are checked directly because they are not
+          # currently included in the backend's /api/v1/warmup integration checks.
+          ping "Hugging Face Image Space" "https://earthaioa-teslafield-image.hf.space/config"
+          ping "Hugging Face Video Space" "https://earthaioa-teslafield-video.hf.space/config"
+
+          if [ "$failures" -gt 0 ]; then
+            echo "::warning::$failures keepalive check(s) failed. The next scheduled run will retry."
+          else
+            echo "All TESLAFIELD keepalive checks returned successful responses."
+          fi
