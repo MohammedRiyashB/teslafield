@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "TESLAFIELD AI",
+  "short_name": "TESLAFIELD",
+  "description": "Your AI workspace for ideas, answers and creation.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/teslafield-pwa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
