@@ -1679,3 +1679,7 @@ html[data-motion="reduced"] *,html[data-motion="reduced"] *:before,html[data-mot
   .install-experience-close{width:25px;height:29px;font-size:20px}
 }
 @media(prefers-reduced-motion:reduce){.install-experience-banner,.install-experience-download{transition:none}}
+
+
+/* Remove the thin separator beneath the main navigation header. */
+.topbar{border-bottom:0!important;}
