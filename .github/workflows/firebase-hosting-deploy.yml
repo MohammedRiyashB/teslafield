@@ -58,6 +58,10 @@ jobs:
           assert.ok(app.includes('/api/v1/chat/stream'));
           assert.ok(!app.includes('followup-suggestions'));
           assert.ok(app.includes('response_style: userPreferences.responseStyle'));
+          assert.ok(app.includes('let chatWorkspaceActive = false;'));
+          assert.ok(app.includes('welcome.hidden = chatWorkspaceActive || !!(chat && chat.messages.length);'));
+          assert.ok(app.includes('Auth.Persistence.SESSION'));
+          assert.ok(app.includes('Auth.Persistence.NONE'));
           assert.match(html, /id="installExperienceBanner"/);
           assert.ok(app.includes('installBannerCooldown = 5 * 60 * 1000'));
           assert.ok(app.includes('beforeinstallprompt'));
@@ -67,7 +71,7 @@ jobs:
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-icon-192.png' && icon.sizes === '192x192'));
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-icon-512.png' && icon.sizes === '512x512'));
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-pwa-icon.svg'));
-          assert.ok(fs.readFileSync('sw.js', 'utf8').includes('teslafield-pwa-shell-v3'));
+          assert.ok(fs.readFileSync('sw.js', 'utf8').includes('teslafield-pwa-shell-v4'));
           const chatEngine = fs.readFileSync('huggingface/chat-space/app.py', 'utf8');
           assert.ok(chatEngine.includes('MODEL_ID = "Qwen/Qwen3-0.6B"'));
           assert.ok(chatEngine.includes('TextIteratorStreamer'));
