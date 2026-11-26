@@ -171,6 +171,37 @@
     window.setTimeout(() => $("closeCookieSettings").focus(), 40);
   }
 
+  function applyFirebaseUser(user) {
+    const previousUid = currentUser && currentUser.uid;
+    const nextUid = user && user.uid;
+    currentUser = user || null;
+    authReady = true;
+    resolveAuthReady();
+    updateAccountUI();
+    if (previousUid !== nextUid) {
+      if (generating) stopGeneration();
+      chats = [];
+      activeId = null;
+      if (currentUser) {
+        loadStore();
+        activeId = chats.length ? chats[0].id : null;
+      }
+      messageList.innerHTML = "";
+      renderConversation();
+    }
+    if (currentUser) {
+      const pending = readPendingGuestPrompt();
+      closeSignupPrompt();
+      if (pending) {
+        clearPendingGuestPrompt();
+        activeId = null;
+        renderConversation();
+        promptInput.value = pending;
+        window.setTimeout(() => sendMessage(pending), 0);
+      }
+    }
+  }
+
   function initializeFirebaseAuth() {
     if (!window.firebase || !window.firebase.apps || !window.firebase.apps.length) {
       authReady = true;
@@ -180,49 +211,38 @@
     }
     try {
       authClient = window.firebase.auth();
-      authClient.setPersistence(window.firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
-      authClient.onAuthStateChanged((user) => {
-        const previousUid = currentUser && currentUser.uid;
-        const nextUid = user && user.uid;
-        currentUser = user || null;
-        authReady = true;
-        resolveAuthReady();
-        updateAccountUI();
-        if (previousUid !== nextUid) {
-          if (generating) stopGeneration();
-          chats = [];
-          activeId = null;
-          if (currentUser) {
-            loadStore();
-            activeId = chats.length ? chats[0].id : null;
-          }
-          messageList.innerHTML = "";
-          renderConversation();
-        } else {
+      // Complete LOCAL persistence before starting OAuth so Android redirect state is retained.
+      authClient.setPersistence(window.firebase.auth.Auth.Persistence.LOCAL)
+        .then(() => {
+          authClient.onAuthStateChanged((user) => applyFirebaseUser(user));
+          // Explicitly consume the OAuth redirect result. Some mobile browsers restore the
+          // Firebase session after this promise resolves rather than before the first auth event.
+          return authClient.getRedirectResult();
+        })
+        .then((result) => {
+          if (result && result.user) applyFirebaseUser(result.user);
+          else if (authClient.currentUser) applyFirebaseUser(authClient.currentUser);
+        })
+        .catch((error) => {
+          authReady = true;
+          resolveAuthReady();
           updateAccountUI();
-        }
-        if (currentUser) {
-          const pending = readPendingGuestPrompt();
-          closeSignupPrompt();
-          if (pending) {
-            clearPendingGuestPrompt();
-            activeId = null;
-            renderConversation();
-            promptInput.value = pending;
-            window.setTimeout(() => sendMessage(pending), 0);
+          if (error && error.code && error.code !== "auth/no-auth-event") {
+            const messages = {
+              "auth/unauthorized-domain": "Google sign-in domain is not authorized in Firebase.",
+              "auth/operation-not-allowed": "Google sign-in is disabled in Firebase Authentication.",
+              "auth/network-request-failed": "Network interrupted Google sign-in. Please try again.",
+              "auth/web-storage-unsupported": "This browser is blocking sign-in storage. Open TESLAFIELD in Chrome and allow site storage."
+            };
+            toast(messages[error.code] || ("Google sign-in could not finish (" + error.code + "). Please try again."));
           }
-        }
-      });
-      authClient.getRedirectResult().catch((error) => {
-        if (error && error.code !== "auth/no-auth-event") {
-          toast("Google sign-in could not be completed. Please try again.");
-        }
-      });
+        });
     } catch (error) {
       authReady = true;
       resolveAuthReady();
       authClient = null;
       updateAccountUI();
+      toast("TESLAFIELD could not initialize Google sign-in. Reload and try again.");
     }
   }
 
