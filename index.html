@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#000000">
-  <script src="/theme-init.js?v=20261126-40"></script>
+  <script src="/theme-init.js?v=20261126-41"></script>
   <meta name="description" content="TESLAFIELD — an AI workspace for ideas, answers and creation.">
   <title>TESLAFIELD</title>
-  <link rel="icon" type="image/png" href="/teslafieldai-logo.png?v=20261126-40">
-  <link rel="apple-touch-icon" href="/teslafieldai-logo.png?v=20261126-40">
-  <link rel="stylesheet" href="/styles.css?v=20261126-40">
+  <link rel="icon" type="image/png" href="/teslafieldai-logo.png?v=20261126-41">
+  <link rel="apple-touch-icon" href="/teslafieldai-logo.png?v=20261126-41">
+  <link rel="stylesheet" href="/styles.css?v=20261126-41">
 </head>
 <body>
 <div class="app-shell" id="appShell">
@@ -17,31 +17,31 @@
   <aside class="sidebar" id="sidebar" aria-label="Main navigation">
     <div class="sidebar-header">
       <a class="brand" href="/" aria-label="TESLAFIELD home">
-        <img class="brand-mark" src="/teslafieldai-logo.png?v=20261126-40" alt=""><span class="brand-word">TESLAFIELD</span>
+        <img class="brand-mark" src="/teslafieldai-logo.png?v=20261126-41" alt=""><span class="brand-word">TESLAFIELD</span>
       </a>
-      <button class="icon-button sidebar-collapse" id="sidebarCollapse" aria-label="Collapse sidebar" title="Collapse sidebar">
+      <button type="button" class="icon-button sidebar-collapse" id="sidebarCollapse" aria-label="Collapse sidebar" title="Collapse sidebar">
         <svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="3"/><path d="M9 4v16"/></svg>
       </button>
-      <button class="icon-button sidebar-close" id="sidebarClose" aria-label="Close sidebar">
+      <button type="button" class="icon-button sidebar-close" id="sidebarClose" aria-label="Close sidebar">
         <svg viewBox="0 0 24 24"><path d="m18 6-12 12M6 6l12 12"/></svg>
       </button>
     </div>
 
     <div class="sidebar-primary">
-      <button class="side-action active" id="newChat">
+      <button type="button" class="side-action active" id="newChat">
         <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>New chat</span><kbd>Ctrl K</kbd>
       </button>
     </div>
 
     <div class="history-area">
-      <div class="section-heading"><span>YOUR CHATS</span><button class="text-button" id="clearHistory">Clear</button></div>
+      <div class="section-heading"><span>YOUR CHATS</span><button type="button" class="text-button" id="clearHistory">Clear</button></div>
       <div class="history-list" id="historyList"></div>
       <p class="history-empty" id="historyEmpty">Your conversations will appear here.</p>
     </div>
 
     <div class="sidebar-footer">
       <div class="account-wrap">
-        <button class="account-button" id="accountButton" aria-expanded="false">
+        <button type="button" class="account-button" id="accountButton" aria-expanded="false">
           <span class="account-avatar" id="accountAvatar"><span id="accountAvatarFallback">T</span><img id="accountAvatarImage" alt="" hidden></span>
           <span class="account-copy"><strong id="accountDisplayName">TESLAFIELD</strong><small id="accountDisplayEmail">Sign in to your account</small></span>
           <svg class="account-more" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg>
@@ -49,13 +49,13 @@
         <div class="account-menu" id="accountMenu" hidden>
           <div class="account-menu-title">Your account</div>
           <p class="account-menu-status" id="accountStatus">Sign in with Google to access TESLAFIELD.</p>
-          <button id="accountSignUp">Sign up with Google</button>
-          <button id="accountLogIn">Log in with Google</button>
+          <button type="button" id="accountSignUp">Sign up with Google</button>
+          <button type="button" id="accountLogIn">Log in with Google</button>
           <button id="appearanceButton" type="button"><span>Appearance</span><span class="side-meta" id="themeLabel">Dark</span></button>
           <button id="privacyChoices" type="button">Your privacy choices</button>
           <div class="account-menu-divider"></div>
-          <button id="accountSignOut" hidden>Sign out</button>
-          <button id="accountDelete" class="danger" hidden>Delete account &amp; local data</button>
+          <button type="button" id="accountSignOut" hidden>Sign out</button>
+          <button type="button" id="accountDelete" class="danger" hidden>Delete account &amp; local data</button>
         </div>
       </div>
     </div>
@@ -65,12 +65,12 @@
     <header class="topbar">
       <div class="topbar-left">
         <a class="guest-brand" id="guestBrand" href="/" aria-label="TESLAFIELD home">
-          <img src="/teslafieldai-logo.png?v=20261126-40" alt="TESLAFIELD">
+          <img src="/teslafieldai-logo.png?v=20261126-41" alt="TESLAFIELD">
         </a>
-        <button class="icon-button mobile-menu" id="mobileMenu" aria-label="Open sidebar">
+        <button type="button" class="icon-button mobile-menu" id="mobileMenu" aria-label="Open sidebar">
           <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
-        <button class="icon-button desktop-menu" id="desktopMenu" aria-label="Open sidebar" title="Open sidebar">
+        <button type="button" class="icon-button desktop-menu" id="desktopMenu" aria-label="Open sidebar" title="Open sidebar">
           <svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="3"/><path d="M9 4v16"/></svg>
         </button>
         
@@ -87,19 +87,19 @@
         <h1>What would you like to explore?</h1>
         <p class="welcome-subtitle">Ask TESLAFIELD anything. Your next idea starts here.</p>
         <div class="starter-grid">
-          <button class="starter-card" data-prompt="Explain a difficult topic in simple language, step by step.">
+          <button type="button" class="starter-card" data-prompt="Explain a difficult topic in simple language, step by step.">
             <span class="starter-icon learn-icon"><svg viewBox="0 0 24 24"><path d="M12 3 3.5 7.5 12 12l8.5-4.5L12 3Z"/><path d="M5.5 9v5c3.8 3.2 9.2 3.2 13 0V9M20.5 8v7"/></svg></span>
             <span><strong>Learn something</strong><small>Understand a topic clearly</small></span>
           </button>
-          <button class="starter-card" data-prompt="Help me write a polished, clear and professional email.">
+          <button type="button" class="starter-card" data-prompt="Help me write a polished, clear and professional email.">
             <span class="starter-icon write-icon"><svg viewBox="0 0 24 24"><path d="M4 20h4l11-11a2.8 2.8 0 0 0-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></svg></span>
             <span><strong>Write anything</strong><small>Draft, rewrite and improve</small></span>
           </button>
-          <button class="starter-card" data-prompt="Let's brainstorm original ideas for a project and turn the best one into a plan.">
+          <button type="button" class="starter-card" data-prompt="Let's brainstorm original ideas for a project and turn the best one into a plan.">
             <span class="starter-icon idea-icon"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M8.3 14.5A7 7 0 1 1 15.7 14.5c-.9.7-1.4 1.6-1.5 2.5h-4.4c-.1-.9-.6-1.8-1.5-2.5Z"/></svg></span>
             <span><strong>Explore ideas</strong><small>Brainstorm and make a plan</small></span>
           </button>
-          <button class="starter-card" data-prompt="Help me write and debug code. Explain the solution and show an example.">
+          <button type="button" class="starter-card" data-prompt="Help me write and debug code. Explain the solution and show an example.">
             <span class="starter-icon code-icon"><svg viewBox="0 0 24 24"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></svg></span>
             <span><strong>Build with code</strong><small>Create, understand and debug</small></span>
           </button>
@@ -162,7 +162,7 @@
 <input id="fileInput" type="file" hidden multiple accept=".png,.jpg,.jpeg,.webp,.pdf,.txt,.csv,.docx,image/png,image/jpeg,image/webp,application/pdf,text/plain,text/csv,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
 <div class="toast-message" id="toastMessage" role="status" aria-live="polite"></div>
 <main class="shared-message-page" id="sharedMessagePage" hidden>
-  <header class="shared-message-header"><a href="/" class="shared-message-brand"><img src="/teslafieldai-logo.png?v=20261126-40" alt=""> TESLAFIELD <span>AI</span></a><a class="shared-open-app" href="/">Try TESLAFIELD</a></header>
+  <header class="shared-message-header"><a href="/" class="shared-message-brand"><img src="/teslafieldai-logo.png?v=20261126-41" alt=""> TESLAFIELD <span>AI</span></a><a class="shared-open-app" href="/">Try TESLAFIELD</a></header>
   <section class="shared-message-card"><div class="shared-eyebrow">SHARED AI RESPONSE</div><h1 id="sharedMessageTitle">A response shared from TESLAFIELD</h1><article class="shared-message-content" id="sharedMessageContent"></article><div class="shared-message-footer"><span>Shared with TESLAFIELD AI</span><button id="copySharedMessage" type="button">Copy response</button></div></section>
   <footer class="shared-message-bottom">TESLAFIELD © 2026 BMR INC. All rights reserved.</footer>
 </main>
@@ -170,7 +170,7 @@
 <div class="signup-prompt-backdrop" id="signupPromptModal" hidden>
   <section class="signup-prompt" role="dialog" aria-modal="true" aria-labelledby="signupPromptTitle">
     <button class="modal-close" id="closeSignupPrompt" type="button" aria-label="Close">×</button>
-    <div class="signup-prompt-mark"><img src="/teslafieldai-logo.png?v=20261126-40" alt=""></div>
+    <div class="signup-prompt-mark"><img src="/teslafieldai-logo.png?v=20261126-41" alt=""></div>
     <p class="signup-eyebrow">YOUR TESLAFIELD EXPERIENCE</p>
     <h2 id="signupPromptTitle">Continue your conversation</h2>
     <p class="signup-prompt-copy">Sign up for free to continue seamlessly with TESLAFIELD. Keep your conversation in your account on this browser and pick up where you left off.</p>
@@ -225,6 +225,6 @@
 <script defer src="/__/firebase/8.10.1/firebase-app.js"></script>
 <script defer src="/__/firebase/8.10.1/firebase-auth.js"></script>
 <script defer src="/__/firebase/init.js"></script>
-<script src="/app.js?v=20261126-40" defer></script>
+<script src="/app.js?v=20261126-41" defer></script>
 </body>
 </html>
