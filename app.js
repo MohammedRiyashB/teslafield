@@ -142,7 +142,7 @@
     row.className = "message-row " + message.role;
     const avatar = document.createElement("div");
     avatar.className = "message-avatar";
-    avatar.textContent = message.role === "assistant" ? "T" : "";
+    if (message.role === "assistant") avatar.innerHTML = '<img src="./teslafieldai-logo.png?v=20261126-14" alt="TESLAFIELD">';
     const body = document.createElement("div");
     body.className = "message-content";
     body.innerHTML = renderMarkdown(message.content);
@@ -309,7 +309,7 @@
     const row = document.createElement("div");
     row.id = "typingIndicator";
     row.className = "message-row assistant";
-    row.innerHTML = '<div class="message-avatar">T</div><div class="typing-dots"><i></i><i></i><i></i></div>';
+    row.innerHTML = '<div class="message-avatar"><img src="./teslafieldai-logo.png?v=20261126-14" alt="TESLAFIELD"></div><div class="typing-dots"><i></i><i></i><i></i></div>';
     messageList.appendChild(row);
     scrollBottom();
   }
