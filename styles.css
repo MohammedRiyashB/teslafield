@@ -16,7 +16,7 @@ a{color:inherit}
 .brand-word{font:750 14px Manrope,sans-serif;letter-spacing:.025em}
 .icon-button{width:35px;height:35px;display:grid;place-items:center;border:0;border-radius:9px;background:transparent;color:var(--muted);padding:0}
 .icon-button:hover,.composer-icon:hover{background:var(--hover);color:var(--text)}
-.icon-button svg,.side-action svg,.history-search svg,.model-button svg,.share-button svg,.composer-icon svg,.tool-menu svg,.voice-mode-button svg,.send-button svg,.account-more{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.icon-button svg,.side-action svg,.history-search svg,.share-button svg,.composer-icon svg,.tool-menu svg,.voice-mode-button svg,.send-button svg,.account-more{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .sidebar-collapse{display:grid}
 .sidebar-close,.mobile-menu{display:none}
 .sidebar-primary{display:flex;flex-direction:column;gap:3px;padding:12px 0 16px}
@@ -144,7 +144,6 @@ a{color:inherit}
 .attachment-chip{display:inline-flex;align-items:center;gap:7px;margin:2px 5px 2px 0;padding:5px 8px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text)}
 .attachment-chip button{border:0;background:transparent;color:#888;font-size:14px}
 .composer-disclaimer{margin:8px auto 0;text-align:center;color:#999;font-size:10px;line-height:1.4}
-.composer-provider-note{margin:3px auto 0;text-align:center;color:#aaa;font-size:9px}
 .tool-menu-wrap{position:relative}
 .tool-menu{position:absolute;z-index:90;bottom:43px;left:0;width:224px;padding:6px;border:1px solid var(--border);border-radius:13px;background:var(--surface);box-shadow:0 10px 30px #0000001c}
 .tool-menu button,.tool-menu a{width:100%;height:39px;display:flex;align-items:center;gap:10px;padding:0 9px;border:0;border-radius:8px;background:transparent;color:var(--text);text-decoration:none;text-align:left;font-size:12px}
@@ -186,7 +185,7 @@ a{color:inherit}
 .dark .composer textarea::placeholder{color:#999}
 .dark .voice-mode-button,.dark .send-button{background:#eee;color:#171717}
 .dark .voice-mode-button:hover,.dark .send-button:hover{background:#d8d8d8}
-.dark .account-menu,.dark .model-menu,.dark .tool-menu,.dark .history-row-menu{box-shadow:0 10px 30px #0008}
+.dark .account-menu,.dark .tool-menu,.dark .history-row-menu{box-shadow:0 10px 30px #0008}
 @media(min-width:1500px){
   :root{--sidebar-width:280px;--content-width:820px}
   .sidebar{padding:16px 14px 12px}
@@ -251,7 +250,6 @@ a{color:inherit}
   .composer-icon{width:31px;height:31px}
   .voice-mode-button,.send-button{width:33px;height:33px}
   .composer-disclaimer{margin-top:6px;font-size:9px}
-  .composer-provider-note{font-size:8px}
 }
 @media(max-width:380px){
   .starter-grid{grid-template-columns:1fr;max-width:330px;margin-top:19px}
@@ -286,11 +284,11 @@ a{color:inherit}
 .dark html,.dark body,.dark .app-shell,.dark .main-panel,.dark .topbar,.dark .conversation-scroll,.dark .composer-area,.dark .sidebar{background:#000}
 .dark .sidebar{border-right-color:#202020}
 .dark .side-action{color:#ededed}
-.dark .side-action:hover,.dark .side-action.active,.dark .history-row:hover,.dark .history-row.active,.dark .account-button:hover,.dark .model-button:hover,.dark .model-button[aria-expanded=true],.dark .composer-icon:hover{background:#151515}
+.dark .side-action:hover,.dark .side-action.active,.dark .history-row:hover,.dark .history-row.active,.dark .account-button:hover,.dark .composer-icon:hover{background:#151515}
 .dark .side-action svg,.dark .icon-button{color:#bdbdbd}
 .dark .history-title{color:#e8e8e8}
 .dark .history-search:focus-within{background:#080808;border-color:#292929}
-.dark .history-row-menu,.dark .account-menu,.dark .model-menu,.dark .tool-menu{background:#080808;border-color:#292929}
+.dark .history-row-menu,.dark .account-menu,.dark .tool-menu{background:#080808;border-color:#292929}
 .dark .starter-card{background:#080808;border-color:#262626}
 .dark .starter-card:hover{background:#111;border-color:#444}
 .dark .starter-icon{background:#171717;color:#eee}
