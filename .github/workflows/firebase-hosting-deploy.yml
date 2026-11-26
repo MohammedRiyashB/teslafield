@@ -58,10 +58,23 @@ jobs:
           assert.ok(app.includes('/api/v1/chat/stream'));
           assert.ok(!app.includes('followup-suggestions'));
           assert.ok(app.includes('response_style: userPreferences.responseStyle'));
-          assert.ok(app.includes('let chatWorkspaceActive = false;'));
-          assert.ok(app.includes('welcome.hidden = chatWorkspaceActive || !!(chat && chat.messages.length);'));
-          assert.ok(app.includes('Auth.Persistence.SESSION'));
-          assert.ok(app.includes('Auth.Persistence.NONE'));
+          const authInitStart = app.indexOf('async function initializeFirebaseAuth()');
+          const authInitEnd = app.indexOf('async function requireAuthentication', authInitStart);
+          assert.ok(authInitStart >= 0 && authInitEnd > authInitStart, 'Firebase auth initializer must exist');
+          const authInit = app.slice(authInitStart, authInitEnd);
+          assert.ok(authInit.includes('Auth.Persistence.LOCAL'), 'LOCAL persistence should be preferred');
+          assert.ok(authInit.includes('Auth.Persistence.SESSION'), 'SESSION persistence fallback is required');
+          assert.ok(authInit.includes('Auth.Persistence.NONE'), 'memory persistence fallback is required');
+          assert.ok(authInit.indexOf('onAuthStateChanged') >= 0);
+          assert.ok(authInit.indexOf('getRedirectResult') > authInit.indexOf('onAuthStateChanged'), 'Attach auth observer before reading redirect result');
+          const signInStart = app.indexOf('async function accountEntry()');
+          const signInEnd = app.indexOf('async function deleteAccountAndLocalData', signInStart);
+          assert.ok(signInStart >= 0 && signInEnd > signInStart, 'Google sign-in entry handler must exist');
+          const signIn = app.slice(signInStart, signInEnd);
+          assert.ok(signIn.includes('signInWithPopup'), 'Google popup sign-in must be available');
+          assert.ok(signIn.includes('signInWithRedirect'), 'Google redirect recovery must be available');
+          assert.ok(app.includes('welcome.hidden = !!(chat && chat.messages.length);'), 'Empty signed-in chats must show the chat entry screen');
+          assert.ok(!app.includes('chatWorkspaceActive'), 'Do not hide the starter screen solely because a user signed in');
           assert.match(html, /id="installExperienceBanner"/);
           assert.ok(app.includes('installBannerCooldown = 5 * 60 * 1000'));
           assert.ok(app.includes('beforeinstallprompt'));
@@ -71,7 +84,8 @@ jobs:
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-icon-192.png' && icon.sizes === '192x192'));
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-icon-512.png' && icon.sizes === '512x512'));
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-pwa-icon.svg'));
-          assert.ok(fs.readFileSync('sw.js', 'utf8').includes('teslafield-pwa-shell-v4'));
+          assert.ok(fs.readFileSync('sw.js', 'utf8').includes('teslafield-pwa-shell-v5'));
+          assert.ok(fs.readFileSync('theme-init.js', 'utf8').includes('teslafield.appearance.v2'));
           const chatEngine = fs.readFileSync('huggingface/chat-space/app.py', 'utf8');
           assert.ok(chatEngine.includes('MODEL_ID = "Qwen/Qwen3-0.6B"'));
           assert.ok(chatEngine.includes('TextIteratorStreamer'));
@@ -177,8 +191,8 @@ jobs:
           test -s /tmp/teslafieldai-logo.png
           curl --fail --silent --show-error "${BASE}/manifest.webmanifest" -o /tmp/teslafield-manifest.json
           node -e "const m=JSON.parse(require('node:fs').readFileSync('/tmp/teslafield-manifest.json','utf8')); if(m.id!=='/' || m.display!=='standalone') process.exit(1)"
-          curl --fail --silent --show-error "${BASE}/sw.js" -o /tmp/teslafield-sw.js
-          grep -q "teslafield-pwa-shell-v3" /tmp/teslafield-sw.js
+          curl --fail --silent --show-error "${BASE}/sw.js?verify=${GITHUB_SHA}" -o /tmp/teslafield-sw.js
+          grep -q "teslafield-pwa-shell-v5" /tmp/teslafield-sw.js
           curl --fail --silent --show-error "${BASE}/teslafield-pwa-icon.svg" -o /tmp/teslafield-icon.svg
           grep -q "<svg" /tmp/teslafield-icon.svg
           curl --fail --silent --show-error "${BASE}/teslafield-icon-192.png" -o /tmp/teslafield-icon-192.png
@@ -192,12 +206,15 @@ jobs:
           console.log('Verified 192px and 512px PNG install icons.');
           NODE
           echo "Verified PWA manifest, service worker and app icon."
-          curl --fail --silent --show-error "${BASE}/styles.css?v=$VERSION" -o /tmp/teslafield-styles.css
+          curl --fail --silent --show-error "${BASE}/styles.css?v=$VERSION&verify=${GITHUB_SHA}" -o /tmp/teslafield-styles.css
           grep -q "starter-grid" /tmp/teslafield-styles.css
-          curl --fail --silent --show-error "${BASE}/app.js?v=$VERSION" -o /tmp/teslafield-app.js
+          curl --fail --silent --show-error "${BASE}/app.js?v=$VERSION&verify=${GITHUB_SHA}" -o /tmp/teslafield-app.js
           grep -q "conversations.v4." /tmp/teslafield-app.js
           grep -q "savePendingGuestPrompt" /tmp/teslafield-app.js
           grep -q "storeCookieChoices" /tmp/teslafield-app.js
+          grep -q "Auth.Persistence.SESSION" /tmp/teslafield-app.js
+          grep -q "Auth.Persistence.NONE" /tmp/teslafield-app.js
+          grep -q "welcome.hidden = !!(chat && chat.messages.length);" /tmp/teslafield-app.js
           grep -q "guest-mode" /tmp/teslafield-styles.css
           grep -q "cookie-banner" /tmp/teslafield-styles.css
           curl --fail --location --silent --show-error "${BASE}/terms" -o /tmp/teslafield-terms.html
@@ -212,6 +229,8 @@ jobs:
           grep -q 'src="/app.js?v=' /tmp/teslafield-share.html
           grep -q 'src="/theme-init.js?v=' /tmp/teslafield-share.html
           echo "Verified /share route serves the share page with root-relative assets."
-          curl --fail --silent --show-error "${BASE}/theme-init.js?v=$VERSION" -o /tmp/teslafield-theme-init.js
-          grep -q "appearance.v2" /tmp/teslafield-theme-init.js
+          curl --fail --silent --show-error "${BASE}/theme-init.js?v=$VERSION&verify=${GITHUB_SHA}" -o /tmp/teslafield-theme-init.js
+          test -s /tmp/teslafield-theme-init.js
+          if grep -Eiq "<!doctype html|<html" /tmp/teslafield-theme-init.js; then echo "theme-init.js resolved to the HTML fallback instead of JavaScript"; exit 1; fi
+          grep -q "teslafield.appearance.v2" /tmp/teslafield-theme-init.js
           echo "Verified live Teslafield guest UI, consent controls, legal pages, PNG logo, CSS and application JavaScript."
