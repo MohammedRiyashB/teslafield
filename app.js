@@ -59,7 +59,8 @@
       retry:'<path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M5.6 9a7 7 0 0 1 11.8-2L20 12M4 12l2.6 5a7 7 0 0 0 11.8-2"/>',
       up:'<path d="M7 10v10H4V10h3Zm3 10h6.2a2 2 0 0 0 1.9-1.4l2-6A2 2 0 0 0 17.2 10H13l.7-3.1A2.4 2.4 0 0 0 11.4 4L7 10v10h3Z"/>',
       down:'<path d="M7 14V4H4v10h3Zm3-10h6.2a2 2 0 0 1 1.9 1.4l2 6A2 2 0 0 1 17.2 14H13l.7 3.1a2.4 2.4 0 0 1-2.3 2.9L7 14V4h3Z"/>',
-      sound:'<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15 9a5 5 0 0 1 0 6M18 6a9 9 0 0 1 0 12"/>'
+      sound:'<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15 9a5 5 0 0 1 0 6M18 6a9 9 0 0 1 0 12"/>',
+      share:'<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.7 6.6-4.4M8.7 13.3l6.6 4.4"/>','
     };
     return '<svg viewBox="0 0 24 24" aria-hidden="true">' + (paths[name] || "") + '</svg>';
   };
@@ -120,6 +121,20 @@
 
   function updateAccountUI() {
     const signedIn = !!currentUser;
+    const displayName = signedIn ? (currentUser.displayName || (currentUser.email || "Google user").split("@")[0]) : "TESLAFIELD";
+    $("accountDisplayName").textContent = displayName;
+    $("accountDisplayEmail").textContent = signedIn ? (currentUser.email || "Google account") : "Sign in to your account";
+    $("accountAvatarFallback").textContent = displayName.trim().charAt(0).toUpperCase() || "T";
+    const avatarImage = $("accountAvatarImage");
+    if (signedIn && currentUser.photoURL) {
+      avatarImage.src = currentUser.photoURL;
+      avatarImage.hidden = false;
+      $("accountAvatarFallback").hidden = true;
+    } else {
+      avatarImage.removeAttribute("src");
+      avatarImage.hidden = true;
+      $("accountAvatarFallback").hidden = false;
+    }
     if (signedIn) {
       guestConversationStarted = false;
       document.body.classList.remove("guest-mode", "guest-conversation-mode");
@@ -144,8 +159,6 @@
     $("accountDelete").hidden = !signedIn;
     $("topSignUp").hidden = signedIn;
     $("topLogIn").hidden = signedIn;
-    const accountSubtitle = document.querySelector(".account-copy small");
-    if (accountSubtitle) accountSubtitle.textContent = signedIn ? "Signed-in account" : "Secure sign-in required";
   }
 
   function initializeCookieChoices() {
@@ -478,6 +491,11 @@
         retry.onclick = regenerateLast;
         actions.append(retry);
       }
+      const share = document.createElement("button");
+      share.type = "button"; share.innerHTML = icon("share") + "<span>Share</span>";
+      share.setAttribute("aria-label", "Share this response");
+      share.onclick = () => shareAssistantMessage(message.content);
+      actions.append(share);
     } else {
       const copy = document.createElement("button");
       copy.type = "button"; copy.innerHTML = icon("copy") + "<span>Copy</span>";
@@ -491,6 +509,70 @@
     row.appendChild(stack);
     messageList.appendChild(row);
   }
+  async function shareAssistantMessage(content) {
+    try {
+      const payload = JSON.stringify({ content: String(content || "").slice(0, 30000), createdAt: new Date().toISOString() });
+      const bytes = new TextEncoder().encode(payload);
+      let encoded;
+      if ("CompressionStream" in window) {
+        try {
+          const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip"));
+          const compressed = new Uint8Array(await new Response(stream).arrayBuffer());
+          encoded = "g" + base64UrlEncode(compressed);
+        } catch (error) { encoded = "j" + base64UrlEncode(bytes); }
+      } else encoded = "j" + base64UrlEncode(bytes);
+      const id = Array.from(crypto.getRandomValues(new Uint8Array(18)), (v, i) => String(i === 0 ? (v % 9) + 1 : v % 10)).join("");
+      const shareUrl = location.origin + "/share/" + id + "#" + encoded;
+      const shareText = "A response shared from TESLAFIELD AI\n" + shareUrl;
+      if (navigator.share) {
+        try { await navigator.share({ title: "TESLAFIELD AI response", text: shareText, url: shareUrl }); return; }
+        catch (error) { if (error && error.name === "AbortError") return; }
+      }
+      await copyText(shareUrl);
+      toast("Share link copied. Send it to anyone.");
+    } catch (error) {
+      toast("This response could not be prepared for sharing. Please try again.");
+    }
+  }
+
+  function base64UrlEncode(bytes) {
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  }
+
+  function base64UrlDecode(value) {
+    const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+    const binary = atob(normalized + "=".repeat((4 - normalized.length % 4) % 4));
+    return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  }
+
+  async function openSharedMessagePage() {
+    if (!/^\/share\/\d{12,24}\/?$/.test(location.pathname)) return false;
+    document.querySelector(".app-shell").hidden = true;
+    $("sharedMessagePage").hidden = false;
+    try {
+      const payload = location.hash.slice(1);
+      if (!payload || !/^[gj]/.test(payload)) throw new Error("Missing share data");
+      let bytes = base64UrlDecode(payload.slice(1));
+      if (payload[0] === "g") {
+        if (!("DecompressionStream" in window)) throw new Error("Compression is not supported");
+        const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+        bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+      }
+      const data = JSON.parse(new TextDecoder().decode(bytes));
+      if (!data || typeof data.content !== "string" || !data.content.trim()) throw new Error("Invalid share data");
+      $("sharedMessageContent").innerHTML = renderMarkdown(data.content);
+      $("copySharedMessage").onclick = () => copyText(data.content);
+      document.title = "Shared response | TESLAFIELD AI";
+    } catch (error) {
+      $("sharedMessageTitle").textContent = "This shared response is unavailable";
+      $("sharedMessageContent").textContent = "The share link may be incomplete or altered. Ask the sender to create a new share link.";
+      $("copySharedMessage").hidden = true;
+    }
+    return true;
+  }
+
   function renderConversation() {
     const chat = activeChat();
     messageList.innerHTML = "";
@@ -526,9 +608,8 @@
   }
   function renderHistory() {
     const list = $("historyList");
-    const query = $("historySearch").value.trim().toLowerCase();
     list.innerHTML = "";
-    const visible = chats.filter((chat) => !query || safeText(chat.title).toLowerCase().includes(query) || chat.messages.some((m) => safeText(m.content).toLowerCase().includes(query)));
+    const visible = chats;
     const groups = ["Today", "Yesterday", "Previous 7 days", "Previous 30 days", "Older"];
     groups.forEach((groupName) => {
       const items = visible.filter((chat) => dateGroup(chat.updated || chat.created) === groupName);
@@ -575,8 +656,7 @@
       list.appendChild(group);
     });
     $("historyEmpty").hidden = visible.length > 0;
-    $("historyEmpty").textContent = query ? "No matching conversations." : "Your conversations will appear here.";
-    $("clearSearch").hidden = !query;
+    $("historyEmpty").textContent = "Your conversations will appear here.";
   }
   function openChat(id) {
     if (generating) stopGeneration();
@@ -994,7 +1074,6 @@
   $("sidebarScrim").onclick = closeSidebar;
   $("desktopMenu").onclick = () => document.body.classList.remove("sidebar-collapsed");
   $("sidebarCollapse").onclick = () => document.body.classList.add("sidebar-collapsed");
-  $("searchChats").onclick = () => { closeSidebar(); $("historySearch").focus(); };
   $("composer").onsubmit = (event) => { event.preventDefault(); if (generating) stopGeneration(); else sendMessage(); };
   $("sendButton").onclick = (event) => { if (generating) { event.preventDefault(); stopGeneration(); } };
   promptInput.oninput = () => {
@@ -1010,8 +1089,6 @@
   document.querySelectorAll("[data-prompt]").forEach((button) => {
     button.onclick = () => sendMessage(button.dataset.prompt);
   });
-  $("historySearch").oninput = renderHistory;
-  $("clearSearch").onclick = () => { $("historySearch").value = ""; renderHistory(); $("historySearch").focus(); };
   $("clearHistory").onclick = () => {
     const hasLegacyHistory = !!(localStorage.getItem("teslafield.conversations.v2") || localStorage.getItem("teslafield.conversations.v3"));
     if (!chats.length && !hasLegacyHistory) { toast("There are no saved conversations."); return; }
@@ -1040,8 +1117,7 @@
   $("cookieRejectAll").onclick = () => storeCookieChoices(false, false);
   $("cookieAcceptAll").onclick = () => storeCookieChoices(true, true);
   $("cookieSettingsOpen").onclick = openCookieSettings;
-  $("privacyChoices").onclick = openCookieSettings;
-  $("sidebarPrivacyChoices").onclick = openCookieSettings;
+  $("privacyChoices").onclick = () => { closeMenus(); openCookieSettings(); };
   $("closeCookieSettings").onclick = () => {
     $("cookieSettingsBackdrop").hidden = true;
     if ($("signupPromptModal").hidden) document.body.classList.remove("modal-open");
@@ -1062,11 +1138,9 @@
   };
   $("accountDelete").onclick = deleteAccountAndLocalData;
   $("accountButton").onclick = () => toggleMenu("accountMenu", "accountButton");
-  $("plusButton").onclick = () => toggleMenu("plusMenu", "plusButton");
-  $("uploadFileAction").onclick = () => {
+  $("plusButton").onclick = () => {
     closeMenus();
-    const approved = window.confirm("Choose files from this device. TESLAFIELD currently checks their type and size but does not upload or analyse file contents. Continue?");
-    if (approved) $("fileInput").click();
+    $("fileInput").click();
   };
   $("fileInput").onchange = async (event) => {
     const incoming = Array.from(event.target.files || []);
@@ -1080,23 +1154,7 @@
     }
     if (incoming.length > remaining) toast("Only 5 files can be selected at once.");
     renderAttachments();
-    if (selectedFiles.length) toast("Files checked and kept on this device. They have not been uploaded.");
-  };
-  $("shareChat").onclick = async () => {
-    const chat = activeChat();
-    if (!chat || !chat.messages.length) { toast("Start a conversation first."); return; }
-    const transcript = chat.messages.map((m) => (m.role === "user" ? "You: " : "TESLAFIELD: ") + m.content).join("\n\n");
-    const title = chat.title || "TESLAFIELD conversation";
-    if (navigator.share) {
-      try {
-        await navigator.share({ title, text: title + "\n\n" + transcript });
-        return;
-      } catch (error) {
-        if (error && error.name === "AbortError") return;
-      }
-    }
-    await copyText(title + "\n\n" + transcript);
-    toast("Conversation copied. You can paste it into any app to share.");
+    if (selectedFiles.length) toast("Files selected on this device. File upload and analysis are not connected yet.");
   };
   document.addEventListener("click", (event) => {
     if (!event.target.closest(".tool-menu-wrap") && !event.target.closest(".account-wrap") && !event.target.closest(".history-more")) closeMenus();
@@ -1104,7 +1162,6 @@
   document.addEventListener("keydown", (event) => {
     const key = event.key.toLowerCase();
     if ((event.ctrlKey || event.metaKey) && key === "k") { event.preventDefault(); newChat(); }
-    if ((event.ctrlKey || event.metaKey) && key === "f") { event.preventDefault(); $("historySearch").focus(); }
     if (event.key === "Escape") {
       closeMenus();
       closeSidebar();
@@ -1147,6 +1204,10 @@
     }, 3400);
   }
 
+  if (location.pathname.startsWith("/share/")) {
+    openSharedMessagePage();
+    return;
+  }
   setGuestLayout(true);
   initializeFirebaseAuth();
   initializeCookieChoices();
