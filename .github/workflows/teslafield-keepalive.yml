@@ -1,6 +1,10 @@
 name: TESLAFIELD Keepalive
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/teslafield-keepalive.yml"
   schedule:
     # Every 10 minutes, offset from the top of the hour to reduce schedule congestion.
     - cron: "3,13,23,33,43,53 * * * *"
@@ -54,6 +58,7 @@ jobs:
 
           if [ "$failures" -gt 0 ]; then
             echo "::warning::$failures keepalive check(s) failed. The next scheduled run will retry."
+            exit 1
           else
             echo "All TESLAFIELD keepalive checks returned successful responses."
           fi
