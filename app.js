@@ -933,6 +933,7 @@
   $("cookieAcceptAll").onclick = () => storeCookieChoices(true, true);
   $("cookieSettingsOpen").onclick = openCookieSettings;
   $("privacyChoices").onclick = openCookieSettings;
+  $("sidebarPrivacyChoices").onclick = openCookieSettings;
   $("closeCookieSettings").onclick = () => {
     $("cookieSettingsBackdrop").hidden = true;
     if ($("signupPromptModal").hidden) document.body.classList.remove("modal-open");
