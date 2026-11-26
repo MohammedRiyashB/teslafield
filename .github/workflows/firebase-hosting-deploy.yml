@@ -253,7 +253,7 @@ jobs:
           curl --fail --location --silent --show-error "${BASE}/terms" -o /tmp/teslafield-terms.html
           grep -q "Terms of Use" /tmp/teslafield-terms.html
           echo "Verified clean /terms page."
-          curl --fail --silent --show-error "${BASE}/oauth.html?verify=${GITHUB_SHA}" -o /tmp/teslafield-oauth.html
+          curl --fail --location --silent --show-error "${BASE}/oauth?verify=${GITHUB_SHA}" -o /tmp/teslafield-oauth.html
           grep -q 'id="signInButton"' /tmp/teslafield-oauth.html
           grep -q '/__/firebase/init.js' /tmp/teslafield-oauth.html
           curl --fail --silent --show-error "${BASE}/oauth.js?v=$VERSION&verify=${GITHUB_SHA}" -o /tmp/teslafield-oauth.js
