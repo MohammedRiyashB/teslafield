@@ -963,7 +963,20 @@
         if (revealTarget) revealTarget.textContent = visibleReply;
         return;
       }
-      if (revealTarget) revealTarget.innerHTML = renderMarkdown(reply);
+      if (revealTarget) {
+        revealTarget.innerHTML = renderMarkdown(reply);
+        revealTarget.querySelectorAll("pre").forEach((pre) => {
+          const code = pre.querySelector("code");
+          if (!code) return;
+          const copyCode = document.createElement("button");
+          copyCode.type = "button";
+          copyCode.className = "code-copy-button";
+          copyCode.innerHTML = icon("copy") + "<span>Copy code</span>";
+          copyCode.setAttribute("aria-label", "Copy code block");
+          copyCode.onclick = () => copyText(code.textContent || "");
+          pre.appendChild(copyCode);
+        });
+      }
       if (voiceModeEnabled) {
         try { await speakWithSpace(reply); }
         catch (voiceError) { toast(voiceError.message || "Voice playback failed."); }
