@@ -497,6 +497,17 @@
     const body = document.createElement("div");
     body.className = "message-content";
     body.innerHTML = renderMarkdown(message.content);
+    body.querySelectorAll("pre").forEach((pre) => {
+      const code = pre.querySelector("code");
+      if (!code) return;
+      const copyCode = document.createElement("button");
+      copyCode.type = "button";
+      copyCode.className = "code-copy-button";
+      copyCode.innerHTML = icon("copy") + "<span>Copy code</span>";
+      copyCode.setAttribute("aria-label", "Copy code block");
+      copyCode.onclick = () => copyText(code.textContent || "");
+      pre.appendChild(copyCode);
+    });
     stack.appendChild(body);
 
     const actions = document.createElement("div");
@@ -743,8 +754,10 @@
   function showTyping() {
     const row = document.createElement("div");
     row.id = "typingIndicator";
-    row.className = "message-row assistant";
-    row.innerHTML = '<div class="typing-dots"><i></i><i></i><i></i></div>';
+    row.className = "message-row assistant typing-row";
+    row.setAttribute("role", "status");
+    row.setAttribute("aria-label", "TESLAFIELD is thinking");
+    row.innerHTML = '<div class="typing-status"><span class="typing-dots"><i></i><i></i><i></i></span><span>Thinking</span></div>';
     messageList.appendChild(row);
     scrollBottom();
   }
@@ -880,6 +893,26 @@
     if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
   }
 
+  async function revealAssistantText(element, fullText, signal) {
+    const characters = Array.from(String(fullText || ""));
+    let visible = "";
+    element.textContent = "";
+    element.classList.add("is-revealing");
+    const chunkSize = 18;
+    for (let index = 0; index < characters.length; index += chunkSize) {
+      if (signal.aborted) break;
+      visible += characters.slice(index, index + chunkSize).join("");
+      element.textContent = visible;
+      if (index % (chunkSize * 4) === 0) scrollBottom();
+      await new Promise((resolve) => {
+        const timer = setTimeout(resolve, 18);
+        signal.addEventListener("abort", () => { clearTimeout(timer); resolve(); }, { once: true });
+      });
+    }
+    element.classList.remove("is-revealing");
+    return visible;
+  }
+
   async function requestReply(chat) {
     showTyping();
     setGenerating(true);
@@ -915,10 +948,22 @@
       if (!response.ok) throw new Error(data.message || data.error || "AI request failed (" + response.status + ").");
       const reply = data.reply || (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content);
       if (typeof reply !== "string" || !reply.trim()) throw new Error("The connected model returned an empty response.");
-      chat.messages.push({ role: "assistant", content: reply });
+      const assistantMessage = { role: "assistant", content: reply };
+      chat.messages.push(assistantMessage);
       chat.updated = Date.now();
       saveStore();
       renderConversation();
+      const revealTarget = messageList.querySelector(".message-row.assistant:last-of-type .message-content");
+      const requestSignal = controller.signal;
+      const visibleReply = revealTarget ? await revealAssistantText(revealTarget, reply, requestSignal) : reply;
+      if (requestSignal.aborted) {
+        assistantMessage.content = visibleReply;
+        chat.updated = Date.now();
+        saveStore();
+        if (revealTarget) revealTarget.textContent = visibleReply;
+        return;
+      }
+      if (revealTarget) revealTarget.innerHTML = renderMarkdown(reply);
       if (voiceModeEnabled) {
         try { await speakWithSpace(reply); }
         catch (voiceError) { toast(voiceError.message || "Voice playback failed."); }
