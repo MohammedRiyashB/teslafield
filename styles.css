@@ -1706,3 +1706,8 @@ html[data-motion="reduced"] *,html[data-motion="reduced"] *:before,html[data-mot
 .composer-actions{column-gap:16px!important;gap:16px!important}
 body.guest-mode .composer-actions{column-gap:16px!important;gap:16px!important}
 @media(max-width:380px){.composer-actions,body.guest-mode .composer-actions{column-gap:14px!important;gap:14px!important}}
+
+/* Match ChatGPT composer control spacing: explicit distance between mic and send. */
+.composer-actions #sendButton{margin-left:18px!important;flex-shrink:0!important}
+.composer-actions #micButton{margin:0!important;flex-shrink:0!important}
+.composer-actions{gap:0!important}
