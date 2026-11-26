@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "TESLAFIELD AI",
-  "short_name": "TESLAFIELD",
+  "name": "Teslafield AI",
+  "short_name": "Teslafield",
   "description": "Your AI workspace for ideas, answers and creation.",
   "start_url": "/?source=pwa",
   "scope": "/",
