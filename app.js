@@ -37,8 +37,6 @@
   let controller = null;
   let selectedFiles = [];
   let toastTimer = null;
-  let mediaRecorder = null;
-  let voiceModeEnabled = false;
   let healthRequest = null;
   let reconnectTimer = null;
   let authClient = null;
@@ -762,8 +760,9 @@
     scrollBottom();
   }
   function stopGeneration() {
-    if (controller) controller.abort();
-    controller = null;
+    const activeController = controller;
+    if (activeController) activeController.abort();
+    if (controller === activeController) controller = null;
     const typing = $("typingIndicator");
     if (typing) typing.remove();
     setGenerating(false);
@@ -813,86 +812,6 @@
     });
   }
 
-  async function startRecording(mode) {
-    if (mediaRecorder) return;
-    if (!(await requireAuthentication())) { voiceModeEnabled = false; return; }
-    try {
-      if (localStorage.getItem("teslafield.audioProcessingConsent.v1") !== "accepted") {
-        const consent = window.confirm("Microphone audio will be recorded on this device and sent over HTTPS to TESLAFIELD and an external transcription AI service for processing. Avoid recording passwords, payment details or other sensitive information. Continue?");
-        if (!consent) { voiceModeEnabled = false; return; }
-        localStorage.setItem("teslafield.audioProcessingConsent.v1", "accepted");
-      }
-    } catch (error) {
-      toast("Microphone consent could not be saved. Please check browser settings.");
-      voiceModeEnabled = false;
-      return;
-    }
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
-      toast("Audio recording is not supported here. Allow microphone access or use a supported browser.");
-      voiceModeEnabled = false;
-      return;
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const preferred = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find((type) => MediaRecorder.isTypeSupported(type));
-      const recorder = preferred ? new MediaRecorder(stream, { mimeType: preferred }) : new MediaRecorder(stream);
-      const chunks = [];
-      mediaRecorder = recorder;
-      recorder.ondataavailable = (event) => { if (event.data && event.data.size) chunks.push(event.data); };
-      recorder.onstop = async () => {
-        stream.getTracks().forEach((track) => track.stop());
-        mediaRecorder = null;
-        const clip = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
-        if (!clip.size) {
-          if (mode === "conversation" && voiceModeEnabled) startRecording("conversation");
-          else toast("No audio was recorded. Try again.");
-          return;
-        }
-        try {
-          const bytes = new Uint8Array(await clip.arrayBuffer());
-          let binary = "";
-          for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-          const token = await getAuthToken();
-          const response = await fetch(API + "/api/v1/speech/transcribe", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-            body: JSON.stringify({ audioBase64: btoa(binary), mimeType: clip.type, language: "Auto detect" }),
-            signal: AbortSignal.timeout(180000)
-          });
-          const data = await response.json().catch(() => ({}));
-          if (!response.ok) throw new Error(data.message || "Whisper could not transcribe this recording.");
-          const transcript = String(data.transcript || "").trim();
-          if (!transcript) {
-            toast("No speech detected. Please try again.");
-            if (mode === "conversation" && voiceModeEnabled) startRecording("conversation");
-            return;
-          }
-          if (mode === "conversation") {
-            await sendMessage(transcript);
-          } else {
-            promptInput.value = (promptInput.value ? promptInput.value + " " : "") + transcript;
-            promptInput.dispatchEvent(new Event("input"));
-            promptInput.focus();
-            toast("Speech converted to text.");
-          }
-        } catch (error) {
-          toast(error.message || "Speech recognition failed. Please retry.");
-          if (mode === "conversation" && voiceModeEnabled) startRecording("conversation");
-        }
-      };
-      recorder.start();
-      toast(mode === "conversation" ? "Voice conversation listening… tap Voice Mode to finish." : "Listening… tap the microphone again to finish.");
-    } catch (error) {
-      mediaRecorder = null;
-      voiceModeEnabled = false;
-      toast("Microphone permission is needed. Allow it in your browser settings and try again.");
-    }
-  }
-
-  function stopRecording() {
-    if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
-  }
-
   async function revealAssistantText(element, fullText, signal) {
     const characters = Array.from(String(fullText || ""));
     let visible = "";
@@ -905,8 +824,14 @@
       element.textContent = visible;
       if (index % (chunkSize * 4) === 0) scrollBottom();
       await new Promise((resolve) => {
-        const timer = setTimeout(resolve, 18);
-        signal.addEventListener("abort", () => { clearTimeout(timer); resolve(); }, { once: true });
+        let timer;
+        const finish = () => {
+          clearTimeout(timer);
+          signal.removeEventListener("abort", finish);
+          resolve();
+        };
+        timer = setTimeout(finish, 18);
+        signal.addEventListener("abort", finish, { once: true });
       });
     }
     element.classList.remove("is-revealing");
@@ -914,35 +839,50 @@
   }
 
   async function requestReply(chat) {
+    const requestController = new AbortController();
+    const requestSignal = requestController.signal;
+    controller = requestController;
     showTyping();
     setGenerating(true);
-    controller = new AbortController();
     try {
-      await waitForApiReady(90000);
+      await waitForApiReady(90000, requestSignal);
+      if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
       const token = await getAuthToken();
+      if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
       const chatRequest = {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
         body: JSON.stringify({ messages: chat.messages.slice(-30) }),
-        signal: controller.signal
+        signal: requestSignal
       };
       let response;
       for (let attempt = 0; attempt < 3; attempt++) {
+        if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
         try {
           response = await fetch(API + "/api/v1/chat/completions", chatRequest);
-          if (response.ok || ![502, 503, 504].includes(response.status) || attempt === 2) break;
+          const retryable = [502, 503, 504].includes(response.status);
+          if (response.ok || !retryable || attempt === 2) break;
+          if (response.body) await response.body.cancel().catch(() => {});
         } catch (networkError) {
           if (networkError.name === "AbortError" || attempt === 2) throw networkError;
         }
         await new Promise((resolve, reject) => {
-          const timer = setTimeout(resolve, attempt === 0 ? 1800 : 4500);
-          controller.signal.addEventListener("abort", () => {
+          const abort = () => {
             clearTimeout(timer);
             reject(new DOMException("Request cancelled", "AbortError"));
-          }, { once: true });
+          };
+          const timer = setTimeout(() => {
+            requestSignal.removeEventListener("abort", abort);
+            resolve();
+          }, attempt === 0 ? 1800 : 4500);
+          requestSignal.addEventListener("abort", abort, { once: true });
+          if (requestSignal.aborted) abort();
         });
       }
+      if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
+      if (!response) throw new Error("TESLAFIELD could not reach the chat service. Please retry.");
       const data = await response.json().catch(() => ({}));
+      if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
       const typing = $("typingIndicator");
       if (typing) typing.remove();
       if (!response.ok) throw new Error(data.message || data.error || "AI request failed (" + response.status + ").");
@@ -954,7 +894,6 @@
       saveStore();
       renderConversation();
       const revealTarget = messageList.querySelector(".message-row.assistant:last-of-type .message-content");
-      const requestSignal = controller.signal;
       const visibleReply = revealTarget ? await revealAssistantText(revealTarget, reply, requestSignal) : reply;
       if (requestSignal.aborted) {
         assistantMessage.content = visibleReply;
@@ -977,14 +916,10 @@
           pre.appendChild(copyCode);
         });
       }
-      if (voiceModeEnabled) {
-        try { await speakWithSpace(reply); }
-        catch (voiceError) { toast(voiceError.message || "Voice playback failed."); }
-      }
     } catch (error) {
       const typing = $("typingIndicator");
       if (typing) typing.remove();
-      if (error.name !== "AbortError") {
+      if (error.name !== "AbortError" && !requestSignal.aborted) {
         const message = error.message || "The AI service could not complete this request.";
         chat.messages.push({ role: "assistant", content: "**TESLAFIELD service notice**\n\n" + message + "\n\nYour prompt is saved in this conversation. You can retry after the service is connected." });
         chat.updated = Date.now();
@@ -993,10 +928,11 @@
         toast(message);
       }
     } finally {
-      controller = null;
-      setGenerating(false);
-      renderHistory();
-      if (voiceModeEnabled && !mediaRecorder) startRecording("conversation");
+      if (controller === requestController) {
+        controller = null;
+        setGenerating(false);
+        renderHistory();
+      }
     }
   }
   function showGuestContinueCard() {
@@ -1132,12 +1068,27 @@
       healthRequest = null;
     }
   }
-  async function waitForApiReady(maxWaitMs) {
+  async function waitForApiReady(maxWaitMs, signal) {
     const deadline = Date.now() + maxWaitMs;
     let attempt = 0;
     while (Date.now() < deadline) {
+      if (signal && signal.aborted) throw new DOMException("Request cancelled", "AbortError");
       if (await pingApi()) return true;
-      await new Promise((resolve) => setTimeout(resolve, Math.min(5000, 1200 + attempt * 700)));
+      if (signal && signal.aborted) throw new DOMException("Request cancelled", "AbortError");
+      await new Promise((resolve, reject) => {
+        const abort = () => {
+          clearTimeout(timer);
+          reject(new DOMException("Request cancelled", "AbortError"));
+        };
+        const timer = setTimeout(() => {
+          if (signal) signal.removeEventListener("abort", abort);
+          resolve();
+        }, Math.min(5000, 1200 + attempt * 700));
+        if (signal) {
+          signal.addEventListener("abort", abort, { once: true });
+          if (signal.aborted) abort();
+        }
+      });
       attempt += 1;
     }
     throw new Error("TESLAFIELD is temporarily unavailable. Please retry shortly.");
