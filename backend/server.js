@@ -52,8 +52,6 @@ function readJson(req, maxBytes = 32 * 1024) {
 const server = http.createServer(async (req, res) => {
   const origin = req.headers.origin;
 
-  // Set CORS_ORIGIN in Render to your exact Firebase Hosting origin(s),
-  // comma-separated, once the frontend URL is known.
   if (origin) {
     if (allowedOrigins.length > 0 && !allowedOrigins.includes(origin)) {
       sendJson(res, 403, { error: "ORIGIN_NOT_ALLOWED" });
@@ -89,12 +87,14 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === "GET" && url.pathname === "/api/v1/status") {
+    const imageProviderConfigured = Boolean(process.env.POLLINATIONS_API_KEY);
     sendJson(res, 200, {
       service: SERVICE_NAME,
       apiVersion: "v1",
       mode: "prototype",
       integrations: {
-        imageGeneration: false,
+        imageGeneration: imageProviderConfigured,
+        imageProvider: imageProviderConfigured ? "Pollinations" : null,
         videoGeneration: false,
         audioGeneration: false,
         authentication: false,
