@@ -510,7 +510,7 @@ const server = http.createServer(async (req, res) => {
       mode: "assistant-chat",
       warmup: url.pathname === "/api/v1/warmup",
       checkedAt: new Date().toISOString(),
-      engine: "TESLAFIELD Chat API",
+      engine: "TESLAFIELD V1",
       integrations: {
         imageGeneration: Boolean(provider),
         imageProvider: provider ? provider.name : null,
@@ -543,7 +543,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/v1/capabilities") {
     sendJson(res, 200, {
       ok: true,
-      engine: "TESLAFIELD Chat API",
+      engine: "TESLAFIELD V1",
       version: API_VERSION,
       capabilities: [
         { id: "image.generate", status: getImageProvider() ? "available" : "provider-required", method: "POST", endpoint: "/api/v1/image/generate" },
@@ -695,7 +695,7 @@ const server = http.createServer(async (req, res) => {
       const reply = data.response;
       if (typeof reply !== "string" || !reply.trim()) return sendJson(res, 502, { error: "EMPTY_CHAT_RESPONSE", message: "The Chat Space returned no text." });
       audit("chat.completed", req.authUser && req.authUser.uid, url.pathname);
-      return sendJson(res, 200, { ok: true, model: data.model || "Qwen/Qwen3-0.6B", reply });
+      return sendJson(res, 200, { ok: true, model: data.model || "TESLAFIELD V1", model_id: data.model_id || "Qwen/Qwen3-0.6B", reply });
     } catch (error) {
       if (error.message === "BODY_TOO_LARGE") return sendJson(res, 413, { error: "REQUEST_TOO_LARGE" });
       if (error.message === "INVALID_JSON") return sendJson(res, 400, { error: "INVALID_JSON" });
