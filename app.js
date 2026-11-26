@@ -24,6 +24,11 @@
   let voiceModeEnabled = false;
   let healthRequest = null;
   let reconnectTimer = null;
+  let authClient = null;
+  let currentUser = null;
+  let authReady = false;
+  let resolveAuthReady;
+  const authReadyPromise = new Promise((resolve) => { resolveAuthReady = resolve; });
 
   const makeId = () => "chat-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
   const safeText = (value) => String(value == null ? "" : value);
@@ -49,18 +54,147 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => box.classList.remove("visible"), 2800);
   }
-  function loadStore() {
+
+  function updateAccountUI() {
+    const signedIn = !!currentUser;
+    $("accountStatus").textContent = signedIn
+      ? "Signed in securely. Your chat history stays on this device."
+      : "Sign in with Google to use TESLAFIELD securely.";
+    $("accountSignUp").hidden = signedIn;
+    $("accountLogIn").hidden = signedIn;
+    $("accountSignOut").hidden = !signedIn;
+    $("accountDelete").hidden = !signedIn;
+    const accountSubtitle = document.querySelector(".account-copy small");
+    if (accountSubtitle) accountSubtitle.textContent = signedIn ? "Signed-in account" : "Secure sign-in required";
+  }
+
+  function initializeFirebaseAuth() {
+    if (!window.firebase || !window.firebase.apps || !window.firebase.apps.length) {
+      authReady = true;
+      resolveAuthReady();
+      updateAccountUI();
+      return;
+    }
     try {
-      const value = JSON.parse(localStorage.getItem("teslafield.conversations.v3") || localStorage.getItem("teslafield.conversations.v2") || "[]");
+      authClient = window.firebase.auth();
+      authClient.setPersistence(window.firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+      authClient.onAuthStateChanged((user) => {
+        const previousUid = currentUser && currentUser.uid;
+        const nextUid = user && user.uid;
+        currentUser = user || null;
+        authReady = true;
+        resolveAuthReady();
+        if (previousUid !== nextUid) {
+          if (generating) stopGeneration();
+          chats = [];
+          activeId = null;
+          if (currentUser) loadStore();
+          messageList.innerHTML = "";
+          welcome.hidden = true === false;
+          renderConversation();
+        } else {
+          updateAccountUI();
+        }
+      });
+      authClient.getRedirectResult().catch((error) => {
+        if (error && error.code !== "auth/no-auth-event") {
+          toast("Google sign-in could not be completed. Please try again.");
+        }
+      });
+    } catch (error) {
+      authReady = true;
+      resolveAuthReady();
+      authClient = null;
+      updateAccountUI();
+    }
+  }
+
+  async function requireAuthentication() {
+    await authReadyPromise;
+    if (currentUser) return true;
+    $("accountMenu").hidden = false;
+    $("accountButton").setAttribute("aria-expanded", "true");
+    toast(authClient
+      ? "Sign in with Google before using TESLAFIELD."
+      : "Secure sign-in is not available on this page yet. Open TESLAFIELD from its website.");
+    return false;
+  }
+
+  async function getAuthToken() {
+    await authReadyPromise;
+    if (!authClient || !currentUser) throw new Error("Sign in with Google to continue.");
+    return currentUser.getIdToken();
+  }
+
+  async function accountEntry() {
+    if (!authClient || !window.firebase) {
+      toast("Firebase Authentication is not initialized on this site.");
+      return;
+    }
+    const provider = new window.firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
+    closeMenus();
+    try {
+      if (window.matchMedia("(max-width: 760px)").matches || /Android|iPhone|iPad/i.test(navigator.userAgent)) {
+        await authClient.signInWithRedirect(provider);
+      } else {
+        await authClient.signInWithPopup(provider);
+      }
+    } catch (error) {
+      if (error && error.code === "auth/popup-blocked") {
+        try { await authClient.signInWithRedirect(provider); return; } catch (redirectError) {}
+      }
+      if (error && error.code === "auth/popup-closed-by-user") return;
+      if (error && error.code === "auth/operation-not-allowed") {
+        toast("Google sign-in is not enabled in Firebase Authentication yet.");
+      } else if (error && error.code === "auth/unauthorized-domain") {
+        toast("Add teslafieldai.web.app to Firebase Authentication authorized domains.");
+      } else {
+        toast("Google sign-in failed. Check your connection and try again.");
+      }
+    }
+  }
+
+  async function deleteAccountAndLocalData() {
+    if (!currentUser) return;
+    const uid = currentUser.uid;
+    if (!window.confirm("Permanently delete this TESLAFIELD sign-in account and its locally saved chats on this device? This cannot be undone.")) return;
+    try {
+      await currentUser.delete();
+      localStorage.removeItem("teslafield.conversations.v4." + uid);
+      localStorage.removeItem("teslafield.conversations.v2");
+      localStorage.removeItem("teslafield.conversations.v3");
+      chats = [];
+      activeId = null;
+      renderConversation();
+      toast("Your account and its local chat data were deleted.");
+    } catch (error) {
+      if (error && error.code === "auth/requires-recent-login") {
+        toast("For security, sign in again with Google and retry account deletion.");
+      } else {
+        toast("Account deletion failed. Please sign in again and retry.");
+      }
+    }
+  }
+  function conversationStoreKey() {
+    return currentUser ? "teslafield.conversations.v4." + currentUser.uid : null;
+  }
+  function loadStore() {
+    chats = [];
+    const key = conversationStoreKey();
+    if (!key) return;
+    try {
+      const value = JSON.parse(localStorage.getItem(key) || "[]");
       chats = Array.isArray(value) ? value.filter((chat) => chat && typeof chat.id === "string" && Array.isArray(chat.messages)) : [];
     } catch (error) {
       chats = [];
     }
   }
   function saveStore() {
+    const key = conversationStoreKey();
+    if (!key) return;
     try {
-      localStorage.setItem("teslafield.conversations.v3", JSON.stringify(chats.slice(0, MAX_HISTORY)));
-      localStorage.setItem("teslafield.conversations.v2", JSON.stringify(chats.slice(0, MAX_HISTORY)));
+      localStorage.setItem(key, JSON.stringify(chats.slice(0, MAX_HISTORY)));
     } catch (error) {
       toast("This browser could not save the conversation history.");
     }
@@ -253,6 +387,7 @@
           const remove = document.createElement("button");
           remove.type = "button"; remove.className = "danger"; remove.textContent = "Delete";
           remove.onclick = () => {
+            if (!window.confirm("Delete this conversation from this browser?")) return;
             chats = chats.filter((item) => item.id !== chat.id);
             if (activeId === chat.id) { activeId = null; messageList.innerHTML = ""; welcome.hidden = false; }
             saveStore(); renderHistory();
@@ -345,9 +480,10 @@
     promptInput.dispatchEvent(new Event("input"));
   }
   async function speakWithSpace(text) {
+    const token = await getAuthToken();
     const response = await fetch(API + "/api/v1/voice/synthesize", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
       body: JSON.stringify({ text: String(text).slice(0, 1500), language: /[\u0B80-\u0BFF]/.test(text) ? "Tamil" : "English", voice: "ahana" }),
       signal: AbortSignal.timeout(180000)
     });
@@ -363,6 +499,18 @@
 
   async function startRecording(mode) {
     if (mediaRecorder) return;
+    if (!(await requireAuthentication())) { voiceModeEnabled = false; return; }
+    try {
+      if (localStorage.getItem("teslafield.audioProcessingConsent.v1") !== "accepted") {
+        const consent = window.confirm("Microphone audio will be recorded on this device and sent over HTTPS to TESLAFIELD and an external transcription AI service for processing. Avoid recording passwords, payment details or other sensitive information. Continue?");
+        if (!consent) { voiceModeEnabled = false; return; }
+        localStorage.setItem("teslafield.audioProcessingConsent.v1", "accepted");
+      }
+    } catch (error) {
+      toast("Microphone consent could not be saved. Please check browser settings.");
+      voiceModeEnabled = false;
+      return;
+    }
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
       toast("Audio recording is not supported here. Allow microphone access or use a supported browser.");
       voiceModeEnabled = false;
@@ -388,9 +536,10 @@
           const bytes = new Uint8Array(await clip.arrayBuffer());
           let binary = "";
           for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+          const token = await getAuthToken();
           const response = await fetch(API + "/api/v1/speech/transcribe", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
             body: JSON.stringify({ audioBase64: btoa(binary), mimeType: clip.type, language: "Auto detect" }),
             signal: AbortSignal.timeout(180000)
           });
@@ -434,9 +583,10 @@
     controller = new AbortController();
     try {
       await waitForApiReady(90000);
+      const token = await getAuthToken();
       const chatRequest = {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
         body: JSON.stringify({ messages: chat.messages.slice(-30) }),
         signal: controller.signal
       };
@@ -491,6 +641,7 @@
   async function sendMessage(value) {
     const text = safeText(value === undefined ? promptInput.value : value).trim();
     if (!text || generating) return;
+    if (!(await requireAuthentication())) return;
     if (selectedFiles.length) {
       toast("File reading is not connected yet. Remove attachments and send text only.");
       return;
@@ -514,6 +665,7 @@
   async function regenerateLast() {
     const chat = activeChat();
     if (!chat || generating) return;
+    if (!(await requireAuthentication())) return;
     if (chat.messages.length && chat.messages[chat.messages.length - 1].role === "assistant") chat.messages.pop();
     if (!chat.messages.length || chat.messages[chat.messages.length - 1].role !== "user") {
       toast("There is no user message to regenerate.");
@@ -529,18 +681,50 @@
     if (!selectedFiles.length) { strip.hidden = true; return; }
     strip.hidden = false;
     const notice = document.createElement("div");
-    notice.textContent = "Attachments are selected locally. File analysis is not connected yet.";
+    notice.textContent = "Selected on this device only — not uploaded. File analysis is not enabled.";
     strip.appendChild(notice);
     selectedFiles.forEach((file, index) => {
       const chip = document.createElement("span");
       chip.className = "attachment-chip";
-      chip.textContent = file.name;
+      chip.textContent = file.name + " · " + Math.max(1, Math.ceil(file.size / 1024)) + " KB";
       const remove = document.createElement("button");
       remove.type = "button"; remove.textContent = "×"; remove.setAttribute("aria-label", "Remove " + file.name);
       remove.onclick = () => { selectedFiles.splice(index, 1); renderAttachments(); };
       chip.appendChild(remove); strip.appendChild(chip);
     });
   }
+  const SAFE_FILE_TYPES = {
+    ".png": ["image/png"],
+    ".jpg": ["image/jpeg"],
+    ".jpeg": ["image/jpeg"],
+    ".webp": ["image/webp"],
+    ".pdf": ["application/pdf"],
+    ".txt": ["text/plain"],
+    ".csv": ["text/csv", "application/vnd.ms-excel", "text/plain"],
+    ".docx": ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"]
+  };
+  async function validateSelectedFile(file) {
+    const dot = file.name.lastIndexOf(".");
+    const extension = dot >= 0 ? file.name.slice(dot).toLowerCase() : "";
+    const acceptedMimes = SAFE_FILE_TYPES[extension];
+    if (!acceptedMimes) return "This file type is not allowed.";
+    if (!file.size || file.size > 10 * 1024 * 1024) return "Each file must be between 1 byte and 10 MB.";
+    if (file.type && !acceptedMimes.includes(file.type.toLowerCase())) return "The file extension and reported type do not match.";
+    const bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+    const ascii = (start, count) => String.fromCharCode(...bytes.slice(start, start + count));
+    let valid = false;
+    if (extension === ".png") valid = bytes.length >= 8 && bytes[0] === 0x89 && ascii(1, 3) === "PNG";
+    else if (extension === ".jpg" || extension === ".jpeg") valid = bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+    else if (extension === ".webp") valid = bytes.length >= 12 && ascii(0, 4) === "RIFF" && ascii(8, 4) === "WEBP";
+    else if (extension === ".pdf") valid = ascii(0, 5) === "%PDF-";
+    else if (extension === ".docx") valid = bytes.length >= 4 && bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04;
+    else if (extension === ".txt" || extension === ".csv") {
+      const sample = new Uint8Array(await file.slice(0, Math.min(file.size, 4096)).arrayBuffer());
+      valid = !sample.some((byte) => byte === 0);
+    }
+    return valid ? null : "The file content does not match its allowed file type.";
+  }
+
   async function pingApi() {
     if (healthRequest) return healthRequest;
     healthRequest = (async () => {
@@ -622,22 +806,46 @@
   $("clearSearch").onclick = () => { $("historySearch").value = ""; renderHistory(); $("historySearch").focus(); };
   $("clearHistory").onclick = () => {
     if (!chats.length) { toast("There are no saved conversations."); return; }
-    if (window.confirm("Delete all conversations saved on this device?")) {
-      chats = []; saveStore(); newChat(); toast("Chat history cleared.");
+    if (window.confirm("Delete all conversations for this signed-in account from this browser?")) {
+      chats = [];
+      saveStore();
+      try {
+        localStorage.removeItem("teslafield.conversations.v2");
+        localStorage.removeItem("teslafield.conversations.v3");
+      } catch (error) {}
+      newChat();
+      toast("Chat history cleared from this browser.");
     }
   };
   $("appearanceButton").onclick = toggleTheme;
-  const accountEntry = () => { closeMenus(); toast("Google sign-in is not connected yet."); };
   $("accountSignUp").onclick = accountEntry;
   $("accountLogIn").onclick = accountEntry;
+  $("accountSignOut").onclick = async () => {
+    if (!authClient) return;
+    try { await authClient.signOut(); closeMenus(); toast("Signed out. Your chats remain in this browser under your account profile."); }
+    catch (error) { toast("Sign out failed. Please retry."); }
+  };
+  $("accountDelete").onclick = deleteAccountAndLocalData;
   $("accountButton").onclick = () => toggleMenu("accountMenu", "accountButton");
   $("plusButton").onclick = () => toggleMenu("plusMenu", "plusButton");
-  $("uploadFileAction").onclick = () => { closeMenus(); $("fileInput").click(); };
-  $("fileInput").onchange = (event) => {
-    selectedFiles = selectedFiles.concat(Array.from(event.target.files || []));
-    renderAttachments();
-    if (selectedFiles.length) toast("Selected locally. File analysis is not connected yet.");
+  $("uploadFileAction").onclick = () => {
+    closeMenus();
+    const approved = window.confirm("Choose files from this device. TESLAFIELD currently checks their type and size but does not upload or analyse file contents. Continue?");
+    if (approved) $("fileInput").click();
+  };
+  $("fileInput").onchange = async (event) => {
+    const incoming = Array.from(event.target.files || []);
     event.target.value = "";
+    const remaining = Math.max(0, 5 - selectedFiles.length);
+    if (!remaining) { toast("You can select up to 5 files at a time."); return; }
+    for (const file of incoming.slice(0, remaining)) {
+      const problem = await validateSelectedFile(file).catch(() => "This file could not be checked.");
+      if (problem) { toast(file.name + ": " + problem); continue; }
+      selectedFiles.push(file);
+    }
+    if (incoming.length > remaining) toast("Only 5 files can be selected at once.");
+    renderAttachments();
+    if (selectedFiles.length) toast("Files checked and kept on this device. They have not been uploaded.");
   };
   $("voiceButton").onclick = () => {
     if (mediaRecorder && mediaRecorder.state === "recording") stopRecording();
@@ -668,7 +876,7 @@
     if (event.key === "Escape") { closeMenus(); closeSidebar(); }
   });
 
-  loadStore();
+  initializeFirebaseAuth();
   try {
     const theme = localStorage.getItem("teslafield.appearance.v2") || "dark";
     applyTheme(theme);
