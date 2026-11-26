@@ -1181,3 +1181,23 @@ body.guest-mode .guest-footer img{
 @media(prefers-reduced-motion:reduce){
   body.guest-mode .welcome-screen h1{transition:none}
 }
+
+
+/* TESLAFIELD brand asset: visually key out its dark matte on the black welcome screen. */
+body.guest-mode .guest-brand img[src*="teslafieldai-logo"],
+body.guest-mode .guest-footer img[src*="teslafieldai-logo"],
+body.guest-mode .guest-watermark img[src*="teslafieldai-logo"]{
+  background:transparent!important;
+  mix-blend-mode:screen;
+  -webkit-user-drag:none;
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-touch-callout:none;
+  pointer-events:auto;
+}
+img[src*="teslafieldai-logo"]{
+  -webkit-user-drag:none;
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-touch-callout:none;
+}
