@@ -1683,3 +1683,16 @@ html[data-motion="reduced"] *,html[data-motion="reduced"] *:before,html[data-mot
 
 /* Remove the thin separator beneath the main navigation header. */
 .topbar{border-bottom:0!important;}
+
+/* Voice input: microphone control and recording / transcription states. */
+.mic-button{width:34px;height:34px;border:1px solid var(--border);color:var(--text);transition:background-color .16s ease,border-color .16s ease,color .16s ease,transform .16s ease}
+.mic-button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.mic-button:hover{background:var(--surface-2);border-color:var(--muted)}
+.mic-stop-icon{display:none}
+.mic-button.recording{background:#d83d4b;border-color:#d83d4b;color:#fff;animation:mic-pulse 1.25s ease-in-out infinite}
+.mic-button.recording .mic-icon{display:none}
+.mic-button.recording .mic-stop-icon{display:block}
+.mic-button.transcribing{opacity:.65;cursor:wait}
+.mic-button:disabled{cursor:wait}
+@keyframes mic-pulse{0%,100%{box-shadow:0 0 0 0 #d83d4b40}50%{box-shadow:0 0 0 6px #d83d4b00}}
+@media(prefers-reduced-motion:reduce){.mic-button.recording{animation:none}}
