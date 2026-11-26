@@ -120,6 +120,20 @@
 
   function updateAccountUI() {
     const signedIn = !!currentUser;
+    if (signedIn) {
+      guestConversationStarted = false;
+      document.body.classList.remove("guest-mode", "guest-conversation-mode");
+      welcome.hidden = false;
+      const heading = welcome.querySelector("h1");
+      const subtitle = welcome.querySelector(".welcome-subtitle");
+      if (heading) heading.textContent = "Welcome to TESLAFIELD";
+      if (subtitle) subtitle.textContent = "You're signed in. What would you like to explore today?";
+    } else {
+      const heading = welcome.querySelector("h1");
+      const subtitle = welcome.querySelector(".welcome-subtitle");
+      if (heading) heading.textContent = "What would you like to explore?";
+      if (subtitle) subtitle.textContent = "Ask TESLAFIELD anything. Your next idea starts here.";
+    }
     setGuestLayout(!signedIn);
     $("accountStatus").textContent = signedIn
       ? "Signed in securely. Your chat history stays on this device."
@@ -190,14 +204,20 @@
       renderConversation();
     }
     if (currentUser) {
-      const pending = readPendingGuestPrompt();
+      guestConversationStarted = false;
+      setGuestLayout(false);
       closeSignupPrompt();
+      const pending = readPendingGuestPrompt();
       if (pending) {
         clearPendingGuestPrompt();
         activeId = null;
+        welcome.hidden = false;
         renderConversation();
         promptInput.value = pending;
-        window.setTimeout(() => sendMessage(pending), 0);
+        window.setTimeout(() => sendMessage(pending), 120);
+      } else if (!activeChat()) {
+        welcome.hidden = false;
+        renderConversation();
       }
     }
   }
@@ -273,22 +293,36 @@
     provider.setCustomParameters({ prompt: "select_account" });
     closeMenus();
     try {
-      if (window.matchMedia("(max-width: 760px)").matches || /Android|iPhone|iPad/i.test(navigator.userAgent)) {
-        await authClient.signInWithRedirect(provider);
-      } else {
-        await authClient.signInWithPopup(provider);
-      }
+      // Try the direct popup flow first, including on Android. It avoids the
+      // cross-site redirect helper storage issue seen in some mobile browsers.
+      const result = await authClient.signInWithPopup(provider);
+      if (result && result.user) applyFirebaseUser(result.user);
     } catch (error) {
-      if (error && error.code === "auth/popup-blocked") {
-        try { await authClient.signInWithRedirect(provider); return; } catch (redirectError) {}
+      const code = error && error.code;
+      const canFallbackToRedirect = [
+        "auth/popup-blocked",
+        "auth/operation-not-supported-in-this-environment",
+        "auth/web-storage-unsupported"
+      ].includes(code);
+      if (canFallbackToRedirect) {
+        try {
+          await authClient.signInWithRedirect(provider);
+          return;
+        } catch (redirectError) {
+          const redirectCode = redirectError && redirectError.code;
+          toast(redirectCode === "auth/unauthorized-domain"
+            ? "Firebase blocked the return address. Add teslafieldai.web.app to Authorized domains."
+            : "Google sign-in could not return to TESLAFIELD. Please retry in Chrome.");
+          return;
+        }
       }
-      if (error && error.code === "auth/popup-closed-by-user") return;
-      if (error && error.code === "auth/operation-not-allowed") {
-        toast("Google sign-in is not enabled in Firebase Authentication yet.");
-      } else if (error && error.code === "auth/unauthorized-domain") {
+      if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") return;
+      if (code === "auth/operation-not-allowed") {
+        toast("Google sign-in is disabled in Firebase Authentication. Enable the Google provider.");
+      } else if (code === "auth/unauthorized-domain") {
         toast("Add teslafieldai.web.app to Firebase Authentication authorized domains.");
       } else {
-        toast("Google sign-in failed. Check your connection and try again.");
+        toast("Google sign-in failed (" + (code || "unknown error") + "). Please try again.");
       }
     }
   }
