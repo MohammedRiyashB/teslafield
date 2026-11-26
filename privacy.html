@@ -22,6 +22,7 @@
     <h2>2. Conversation history</h2>
     <p>Current chat history is saved in your browser's local storage under an account-specific key. It is not currently synced to a TESLAFIELD cloud chat database. Anyone with access to your unlocked browser profile may be able to access that browser storage. It is not encrypted separately by TESLAFIELD.</p>
     <p>You can delete an individual conversation or clear the saved history from the sidebar. Clearing browser data may also remove locally stored conversations.</p>
+    <p>Before you sign in, the first message you compose is temporarily kept in session storage in the current browser tab so TESLAFIELD can send that same message after successful sign-in. The temporary draft is cleared after it is handed off or when the browser tab session ends.</p>
 
     <h2>3. AI processing by external providers</h2>
     <p>When you send a chat message, TESLAFIELD sends the recent conversation context needed for the response to its backend over HTTPS. The backend forwards the request to the configured Hugging Face chat Space for model processing.</p>
