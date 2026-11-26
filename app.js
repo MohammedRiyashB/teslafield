@@ -758,6 +758,7 @@
     row.innerHTML = '<div class="typing-status"><span class="typing-dots"><i></i><i></i><i></i></span><span>Thinking</span></div>';
     messageList.appendChild(row);
     scrollBottom();
+    return row;
   }
   function stopGeneration() {
     const activeController = controller;
@@ -842,7 +843,7 @@
     const requestController = new AbortController();
     const requestSignal = requestController.signal;
     controller = requestController;
-    showTyping();
+    const typingIndicator = showTyping();
     setGenerating(true);
     try {
       await waitForApiReady(90000, requestSignal);
@@ -883,8 +884,7 @@
       if (!response) throw new Error("TESLAFIELD could not reach the chat service. Please retry.");
       const data = await response.json().catch(() => ({}));
       if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
-      const typing = $("typingIndicator");
-      if (typing) typing.remove();
+      typingIndicator.remove();
       if (!response.ok) throw new Error(data.message || data.error || "AI request failed (" + response.status + ").");
       const reply = data.reply || (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content);
       if (typeof reply !== "string" || !reply.trim()) throw new Error("The connected model returned an empty response.");
@@ -917,8 +917,7 @@
         });
       }
     } catch (error) {
-      const typing = $("typingIndicator");
-      if (typing) typing.remove();
+      typingIndicator.remove();
       if (error.name !== "AbortError" && !requestSignal.aborted) {
         const message = error.message || "The AI service could not complete this request.";
         chat.messages.push({ role: "assistant", content: "**TESLAFIELD service notice**\n\n" + message + "\n\nYour prompt is saved in this conversation. You can retry after the service is connected." });
