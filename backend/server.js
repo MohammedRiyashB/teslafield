@@ -42,7 +42,7 @@ function readJson(req, maxBytes = 32 * 1024) {
 }
 
 /*
- * TESLAFIELD Universal AI Engine
+ * TESLAFIELD Creative Studio
  * Provider adapters are isolated from routes so new providers can be added
  * without changing the frontend contract.
  */
@@ -259,7 +259,7 @@ const server = http.createServer(async (req, res) => {
     sendJson(res, 200, {
       service: SERVICE_NAME,
       apiVersion: API_VERSION,
-      mode: "hybrid-foundation",
+      mode: "creative-studio",
       engine: "TESLAFIELD Universal AI Engine",
       integrations: {
         imageGeneration: Boolean(provider),
@@ -310,7 +310,7 @@ const server = http.createServer(async (req, res) => {
       if (prompt.length > 2000) return sendJson(res, 400, { error: "PROMPT_TOO_LONG", message: "Image prompts must be 2,000 characters or fewer." });
       if (!dimensions[ratio]) return sendJson(res, 400, { error: "INVALID_ASPECT_RATIO", message: "Choose 1:1, 16:9 or 9:16." });
 
-      const model = typeof input.model === "string" && input.model.trim() ? input.model.trim() : "black-forest-labs/flux.1-schnell";
+      const model = typeof input.model === "string" && input.model.trim() ? input.model.trim() : "black-forest-labs/FLUX.1-schnell";
       const allowedModels = new Set(["black-forest-labs/FLUX.1-schnell"]);
       if (!allowedModels.has(model)) return sendJson(res, 400, { error: "INVALID_IMAGE_MODEL", message: "Choose a supported image model." });
 
