@@ -168,7 +168,7 @@ jobs:
           VERSION="$(sed -n 's/.*styles\.css?v=\([^"]*\).*/\1/p' /tmp/teslafield-home.html | head -n1)"
           test -n "$VERSION"
           grep -q "theme-init.js?v=$VERSION" /tmp/teslafield-home.html
-          grep -q "Message TESLAFIELD" /tmp/teslafield-home.html
+          grep -q "Message Teslafield" /tmp/teslafield-home.html
           curl --fail --silent --show-error "${BASE}/teslafieldai-logo.png?v=$VERSION" -o /tmp/teslafieldai-logo.png
           test -s /tmp/teslafieldai-logo.png
           curl --fail --silent --show-error "${BASE}/manifest.webmanifest" -o /tmp/teslafield-manifest.json
@@ -210,4 +210,4 @@ jobs:
           echo "Verified /share route serves the share page with root-relative assets."
           curl --fail --silent --show-error "${BASE}/theme-init.js?v=$VERSION" -o /tmp/teslafield-theme-init.js
           grep -q "appearance.v2" /tmp/teslafield-theme-init.js
-          echo "Verified live TESLAFIELD guest UI, consent controls, legal pages, PNG logo, CSS and application JavaScript."
+          echo "Verified live Teslafield guest UI, consent controls, legal pages, PNG logo, CSS and application JavaScript."
