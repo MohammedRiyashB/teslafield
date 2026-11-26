@@ -299,6 +299,7 @@ The current AI Director screen is only a local planning demonstration. The displ
 | Screen | Current prototype behaviour | Production work still needed |
 |---|---|---|
 | Overview | Navigation, entry-point cards, activity list | Real project feed, onboarding, recommendations |
+| Explore presets | Curated visual directions that prefill a creative brief | Add server-managed templates, attribution and user collections |
 | Video Studio | Prompt, reference upload preview, ratio and camera controls, local demo job | Provider adapter, cost quote, job queue, outputs |
 | Image Studio | Image brief and shared settings UI | Image models, editing, variations |
 | Cinema Director | Editable starter shot list and scene brief | Storyboard model, shot prompt builder, continuity graph |
