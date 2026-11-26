@@ -61,13 +61,13 @@ jobs:
         run: |
           set -euo pipefail
           BASE="https://teslafieldai.web.app"
-          curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-connrefused "${BASE}/?release=20261126-05" -o /tmp/teslafield-home.html
-          grep -q "styles.css?v=20261126-09" /tmp/teslafield-home.html
+          curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-connrefused "${BASE}/?release=20261126-10" -o /tmp/teslafield-home.html
+          grep -q "styles.css?v=20261126-10" /tmp/teslafield-home.html
           grep -q "Message TESLAFIELD" /tmp/teslafield-home.html
           curl --fail --silent --show-error "${BASE}/teslafield-mark.svg?v=20261126-08" -o /tmp/teslafield-mark.svg
           grep -q "<svg" /tmp/teslafield-mark.svg
-          curl --fail --silent --show-error "${BASE}/styles.css?v=20261126-05" -o /tmp/teslafield-styles.css
+          curl --fail --silent --show-error "${BASE}/styles.css?v=20261126-10" -o /tmp/teslafield-styles.css
           grep -q "starter-grid" /tmp/teslafield-styles.css
-          curl --fail --silent --show-error "${BASE}/app.js?v=20261126-09" -o /tmp/teslafield-app.js
+          curl --fail --silent --show-error "${BASE}/app.js?v=20261126-10" -o /tmp/teslafield-app.js
           grep -q "conversations.v3" /tmp/teslafield-app.js
           echo "Verified live TESLAFIELD HTML, logo SVG, responsive CSS and chat application JavaScript."
