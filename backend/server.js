@@ -106,7 +106,7 @@ async function generateWithPollinations(input) {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: "black-forest-labs/flux.1-schnell",
+      model: input.model || "black-forest-labs/flux.1-schnell",
       prompt: input.prompt,
       n: 1,
       size: width + "x" + height,
@@ -217,7 +217,7 @@ const server = http.createServer(async (req, res) => {
       integrations: {
         imageGeneration: Boolean(provider),
         imageProvider: provider ? provider.name : null,
-        videoGeneration: false,
+        videoGeneration: Boolean(process.env.POLLINATIONS_API_KEY),
         audioGeneration: false,
         authentication: false,
         database: false
@@ -242,7 +242,7 @@ const server = http.createServer(async (req, res) => {
       version: API_VERSION,
       capabilities: [
         { id: "image.generate", status: getImageProvider() ? "available" : "provider-required", method: "POST", endpoint: "/api/v1/image/generate" },
-        { id: "video.generate", status: "planned" },
+        { id: "video.generate", status: process.env.POLLINATIONS_API_KEY ? "available" : "provider-required", method: "POST", endpoint: "/api/v1/video/generate" },
         { id: "audio.generate", status: "planned" },
         { id: "creative.plan", status: "prototype" },
         { id: "provider.routing", status: "active" },
@@ -286,6 +286,61 @@ const server = http.createServer(async (req, res) => {
       if (error.providerStatus === 401) return sendJson(res, 502, { error: "IMAGE_PROVIDER_AUTH_FAILED", message: "The image provider rejected its credentials. Check the server-side secret." });
       if (error.providerStatus === 402) return sendJson(res, 402, { error: "IMAGE_PROVIDER_BALANCE_REQUIRED", message: "The provider reports that payment or balance is required. No automatic retry was made." });
       sendJson(res, 504, { error: "IMAGE_REQUEST_FAILED", message: "The image request timed out or the provider could not complete it." });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/v1/video/generate") {
+    try {
+      const input = await readJson(req, 8 * 1024);
+      const prompt = typeof input.prompt === "string" ? input.prompt.trim() : "";
+      const model = typeof input.model === "string" ? input.model.trim() : "bytedance/seedance-2.0-mini";
+      const duration = Number(input.duration || 5);
+      const allowedModels = new Set([
+        "google/veo-3.1-fast",
+        "bytedance/seedance-2.0-mini",
+        "bytedance/seedance-2.0-fast",
+        "alibaba/wan-2.2-fast",
+        "x-ai/grok-imagine-video-1.5-lite"
+      ]);
+      if (!prompt) return sendJson(res, 400, { error: "PROMPT_REQUIRED", message: "Enter a video prompt first." });
+      if (prompt.length > 2000) return sendJson(res, 400, { error: "PROMPT_TOO_LONG", message: "Video prompts must be 2,000 characters or fewer." });
+      if (!allowedModels.has(model)) return sendJson(res, 400, { error: "INVALID_VIDEO_MODEL", message: "Choose a supported video model." });
+      if (![5, 8, 10].includes(duration)) return sendJson(res, 400, { error: "INVALID_DURATION", message: "Choose 5, 8 or 10 seconds." });
+      if (!process.env.POLLINATIONS_API_KEY) {
+        return sendJson(res, 503, { error: "VIDEO_PROVIDER_NOT_CONFIGURED", message: "Video generation needs a Pollinations API key. No generation request was sent." });
+      }
+      const target = "https://gen.pollinations.ai/video/" + encodeURIComponent(prompt) +
+        "?model=" + encodeURIComponent(model) + "&duration=" + duration;
+      const upstream = await fetch(target, {
+        headers: { "Authorization": "Bearer " + process.env.POLLINATIONS_API_KEY },
+        signal: AbortSignal.timeout(300000)
+      });
+      if (!upstream.ok) {
+        const error = new Error("VIDEO_PROVIDER_ERROR");
+        error.providerStatus = upstream.status;
+        throw error;
+      }
+      const contentType = upstream.headers.get("content-type") || "";
+      if (!contentType.includes("video/")) throw new Error("VIDEO_PROVIDER_INVALID_RESULT");
+      const bytes = Buffer.from(await upstream.arrayBuffer());
+      if (!bytes.length || bytes.length > 20 * 1024 * 1024) throw new Error("VIDEO_RESULT_SIZE_INVALID");
+      sendJson(res, 200, {
+        ok: true,
+        provider: "Pollinations",
+        model,
+        duration,
+        video: "data:video/mp4;base64," + bytes.toString("base64")
+      });
+    } catch (error) {
+      if (error.message === "BODY_TOO_LARGE") return sendJson(res, 413, { error: "REQUEST_TOO_LARGE" });
+      if (error.message === "INVALID_JSON") return sendJson(res, 400, { error: "INVALID_JSON" });
+      if (error.message === "VIDEO_PROVIDER_INVALID_RESULT") return sendJson(res, 502, { error: "VIDEO_PROVIDER_INVALID_RESULT", message: "The provider did not return an MP4 video." });
+      if (error.message === "VIDEO_RESULT_SIZE_INVALID") return sendJson(res, 502, { error: "VIDEO_RESULT_SIZE_INVALID", message: "The video was empty or exceeded the 20 MB response limit." });
+      if (error.providerStatus === 401) return sendJson(res, 502, { error: "VIDEO_PROVIDER_AUTH_FAILED", message: "The provider rejected its credentials. Check the server-side secret." });
+      if (error.providerStatus === 402) return sendJson(res, 402, { error: "VIDEO_PROVIDER_BALANCE_REQUIRED", message: "The provider requires available balance. No automatic retry was made." });
+      if (error.providerStatus === 429) return sendJson(res, 429, { error: "VIDEO_PROVIDER_RATE_LIMITED", message: "The provider rate limit was reached. Try again later." });
+      sendJson(res, 504, { error: "VIDEO_REQUEST_FAILED", message: "The video request timed out or the provider could not complete it." });
     }
     return;
   }
