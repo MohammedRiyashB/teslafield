@@ -312,12 +312,20 @@
     setGenerating(false);
     toast("Response stopped.");
   }
-  function speak(text) {
-    if (!("speechSynthesis" in window)) { toast("Read aloud is not supported in this browser."); return; }
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = document.documentElement.lang || "en";
-    window.speechSynthesis.speak(utterance);
+  async function speak(text) {
+    try {
+      await speakWithSpace(text);
+    } catch (error) {
+      if (!("speechSynthesis" in window)) {
+        toast(error.message || "TESLAFIELD voice is temporarily unavailable.");
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = /[\\u0B80-\\u0BFF]/.test(text) ? "ta-IN" : "en-IN";
+      window.speechSynthesis.speak(utterance);
+      toast("TESLAFIELD Voice is unavailable; using your device voice.");
+    }
   }
   function editUserMessage(index) {
     const chat = activeChat();
@@ -520,8 +528,11 @@
       const configured = Boolean(data.integrations && data.integrations.textChat);
       const speech = Boolean(data.integrations && data.integrations.speechToText);
       const voice = Boolean(data.integrations && data.integrations.voiceGeneration);
-      $("modelStatus").textContent = configured ? "Chat, Whisper speech and Mithi voice engines connected." : "AI engines are not reachable yet.";
-      $("composerProviderNote").textContent = configured && speech && voice ? "Chat, microphone transcription and AI voice replies are connected." : "One or more AI engines are still starting.";
+      const allReady = configured && speech && voice;
+      const engineState = (ready) => ready ? "online" : "starting / unavailable";
+      $("connectionStatus").querySelector("span").textContent = allReady ? "All engines online" : "API online · engines loading";
+      $("modelStatus").textContent = "Chat: " + engineState(configured) + " · Whisper: " + engineState(speech) + " · Mithi Voice: " + engineState(voice);
+      $("composerProviderNote").textContent = allReady ? "Chat, microphone transcription and TESLAFIELD voice replies are connected." : "The backend is online. One or more Hugging Face engines are still waking up or unavailable.";
     } catch (error) {
       $("connectionStatus").classList.remove("online");
       $("connectionStatus").querySelector("span").textContent = "API offline";
