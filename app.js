@@ -189,6 +189,8 @@
           closeSignupPrompt();
           if (pending) {
             clearPendingGuestPrompt();
+            activeId = null;
+            renderConversation();
             promptInput.value = pending;
             window.setTimeout(() => sendMessage(pending), 0);
           }
