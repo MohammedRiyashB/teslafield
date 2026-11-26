@@ -1330,3 +1330,24 @@ body.guest-mode:not(.guest-conversation-mode) .conversation-scroll{padding-botto
   body.guest-mode:not(.guest-conversation-mode) .guest-footer span{font-size:10px;line-height:1.4;text-align:left}
   body.guest-mode:not(.guest-conversation-mode) .conversation-scroll{padding-bottom:68px}
 }
+
+
+/* Footer layout: TESLAFIELD on its own line; company left and rights aligned right below. */
+body.guest-mode:not(.guest-conversation-mode) .guest-footer{
+  width:min(280px,calc(100vw - 28px));
+  display:flex;flex-direction:column;align-items:stretch;gap:4px;
+}
+body.guest-mode:not(.guest-conversation-mode) .guest-footer .guest-footer-meta{
+  width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+body.guest-mode:not(.guest-conversation-mode) .guest-footer .guest-footer-company,
+body.guest-mode:not(.guest-conversation-mode) .guest-footer .guest-footer-rights{
+  display:block;white-space:nowrap;font:500 10px/1.4 system-ui,sans-serif;
+  letter-spacing:.02em;color:rgba(225,225,225,.56);text-align:left;
+}
+body.guest-mode:not(.guest-conversation-mode) .guest-footer .guest-footer-rights{text-align:right}
+@media(max-width:760px){
+  body.guest-mode:not(.guest-conversation-mode) .guest-footer{width:min(260px,calc(100vw - 28px));gap:3px}
+  body.guest-mode:not(.guest-conversation-mode) .guest-footer .guest-footer-company,
+  body.guest-mode:not(.guest-conversation-mode) .guest-footer .guest-footer-rights{font-size:9px}
+}
