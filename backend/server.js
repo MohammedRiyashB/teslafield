@@ -175,6 +175,43 @@ async function generateWithHuggingFaceVideo(prompt) {
   return "data:video/mp4;base64," + bytes.toString("base64");
 }
 
+const CHAT_SPACE_URL = process.env.HF_CHAT_SPACE_URL || "https://earthaioa-earth-os-v10-docker.hf.space";
+const SPEECH_SPACE_ID = process.env.HF_SPEECH_SPACE_ID || "Earthaioa/OpenWhisper-Small";
+const VOICE_SPACE_ID = process.env.HF_VOICE_SPACE_ID || "Earthaioa/Earthaioa-Kokoro-TTS";
+
+async function transcribeWithSpace(audioBase64, mimeType, language) {
+  const { Client, handle_file } = require("@gradio/client");
+  const audio = Buffer.from(audioBase64, "base64");
+  if (!audio.length || audio.length > 8 * 1024 * 1024) throw new Error("AUDIO_SIZE_INVALID");
+  const client = await Client.connect(SPEECH_SPACE_ID);
+  const result = await client.predict("/predict", [
+    handle_file(new Blob([audio], { type: mimeType || "audio/webm" })),
+    language || "Auto detect"
+  ]);
+  const transcript = result.data && result.data[0];
+  if (typeof transcript !== "string" || !transcript.trim()) throw new Error("EMPTY_TRANSCRIPT");
+  return transcript.trim();
+}
+
+async function synthesizeWithSpace(text, language, voice) {
+  const { Client } = require("@gradio/client");
+  const client = await Client.connect(VOICE_SPACE_ID);
+  const result = await client.predict("/predict", [
+    text,
+    language || "Tamil",
+    voice || "ahana"
+  ]);
+  const file = result.data && result.data[0];
+  const fileUrl = typeof file === "string" ? file : file && (file.url || file.path);
+  if (!fileUrl) throw new Error("VOICE_EMPTY_RESULT");
+  const target = fileUrl.startsWith("http") ? fileUrl : new URL(fileUrl, "https://earthaioa-earthaioa-kokoro-tts.hf.space").toString();
+  const response = await fetch(target, { signal: AbortSignal.timeout(60000) });
+  if (!response.ok) throw new Error("VOICE_DOWNLOAD_FAILED");
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (!bytes.length || bytes.length > 12 * 1024 * 1024) throw new Error("VOICE_SIZE_INVALID");
+  return "data:audio/wav;base64," + bytes.toString("base64");
+}
+
 async function generateWithSelfHosted(input) {
   const endpoint = process.env.SELF_HOSTED_IMAGE_ENDPOINT;
   const model = process.env.SELF_HOSTED_IMAGE_MODEL;
@@ -265,10 +302,12 @@ const server = http.createServer(async (req, res) => {
         imageGeneration: Boolean(provider),
         imageProvider: provider ? provider.name : null,
         videoGeneration: Boolean(process.env.HF_VIDEO_SPACE_URL || process.env.POLLINATIONS_API_KEY),
-        audioGeneration: false,
+        audioGeneration: Boolean(process.env.HF_VOICE_SPACE_ID || true),
+        speechToText: true,
+        voiceGeneration: true,
         authentication: false,
         database: false,
-        textChat: Boolean(process.env.HF_TOKEN || process.env.HUGGINGFACEHUB_API_TOKEN)
+        textChat: Boolean(CHAT_SPACE_URL)
       }
     });
     return;
@@ -291,7 +330,8 @@ const server = http.createServer(async (req, res) => {
       capabilities: [
         { id: "image.generate", status: getImageProvider() ? "available" : "provider-required", method: "POST", endpoint: "/api/v1/image/generate" },
         { id: "video.generate", status: process.env.HF_VIDEO_SPACE_URL || process.env.POLLINATIONS_API_KEY ? "available" : "provider-required", method: "POST", endpoint: "/api/v1/video/generate" },
-        { id: "audio.generate", status: "planned" },
+        { id: "audio.transcribe", status: "available", method: "POST", endpoint: "/api/v1/speech/transcribe" },
+        { id: "audio.speak", status: "available", method: "POST", endpoint: "/api/v1/voice/synthesize" },
         { id: "creative.plan", status: "prototype" },
         { id: "provider.routing", status: "active" },
         { id: "self-hosted-adapter", status: process.env.SELF_HOSTED_IMAGE_ENDPOINT && process.env.SELF_HOSTED_IMAGE_MODEL ? "configured" : "ready-for-configuration" }
@@ -420,19 +460,49 @@ const server = http.createServer(async (req, res) => {
       if (!messages.length || messages.length > 30) return sendJson(res, 400, { error: "INVALID_MESSAGES", message: "Send between 1 and 30 chat messages." });
       const safeMessages = messages.map((m) => ({ role: m && ["user", "assistant"].includes(m.role) ? m.role : "user", content: typeof (m && m.content) === "string" ? m.content.slice(0, 12000) : "" })).filter((m) => m.content.trim());
       if (!safeMessages.length) return sendJson(res, 400, { error: "MESSAGE_REQUIRED", message: "Enter a message first." });
-      const token = process.env.HF_TOKEN || process.env.HUGGINGFACEHUB_API_TOKEN || "";
-      if (!token) return sendJson(res, 503, { error: "CHAT_PROVIDER_NOT_CONFIGURED", message: "Text AI is not connected yet. Set the existing Hugging Face token as a private Render environment variable named HF_TOKEN. No AI request was sent." });
-      const model = process.env.HF_CHAT_MODEL || "Qwen/Qwen2.5-7B-Instruct";
-      const upstream = await fetch("https://router.huggingface.co/v1/chat/completions", { method: "POST", headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" }, body: JSON.stringify({ model, messages: safeMessages, max_tokens: 900, temperature: 0.7, stream: false }), signal: AbortSignal.timeout(90000) });
+      const upstream = await fetch(CHAT_SPACE_URL + "/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: safeMessages, max_new_tokens: 384 }),
+        signal: AbortSignal.timeout(240000)
+      });
       const data = await upstream.json().catch(() => ({}));
-      if (!upstream.ok) return sendJson(res, upstream.status === 429 ? 429 : upstream.status === 402 ? 402 : 502, { error: "CHAT_PROVIDER_ERROR", message: upstream.status === 429 ? "Free inference rate limit reached. Wait and try again." : upstream.status === 402 ? "The selected inference provider requires paid credits. No payment was made; configure a free provider/model." : "Hugging Face inference could not complete this request. Check model availability and token permissions." });
-      const reply = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-      if (typeof reply !== "string" || !reply.trim()) return sendJson(res, 502, { error: "EMPTY_CHAT_RESPONSE", message: "The model returned no text." });
-      return sendJson(res, 200, { ok: true, model, reply });
+      if (!upstream.ok) return sendJson(res, upstream.status === 429 ? 429 : 502, { error: "CHAT_SPACE_ERROR", message: data.detail || "The TESLAFIELD Chat Space could not complete this request. It may still be waking up or loading its model." });
+      const reply = data.response;
+      if (typeof reply !== "string" || !reply.trim()) return sendJson(res, 502, { error: "EMPTY_CHAT_RESPONSE", message: "The Chat Space returned no text." });
+      return sendJson(res, 200, { ok: true, model: data.model || "Qwen/Qwen3-0.6B", reply });
     } catch (error) {
       if (error.message === "BODY_TOO_LARGE") return sendJson(res, 413, { error: "REQUEST_TOO_LARGE" });
       if (error.message === "INVALID_JSON") return sendJson(res, 400, { error: "INVALID_JSON" });
-      return sendJson(res, 504, { error: "CHAT_REQUEST_FAILED", message: "AI request timed out or could not be completed." });
+      return sendJson(res, 504, { error: "CHAT_REQUEST_FAILED", message: "The Chat Space timed out or is still loading. Please retry in a moment." });
+    }
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/v1/speech/transcribe") {
+    try {
+      const input = await readJson(req, 12 * 1024 * 1024);
+      const encoded = typeof input.audioBase64 === "string" ? input.audioBase64.replace(/^data:[^,]+,/, "") : "";
+      if (!encoded) return sendJson(res, 400, { error: "AUDIO_REQUIRED", message: "Record or upload audio first." });
+      const transcript = await transcribeWithSpace(encoded, input.mimeType, input.language);
+      return sendJson(res, 200, { ok: true, transcript, model: "Systran/faster-whisper-base" });
+    } catch (error) {
+      if (error.message === "BODY_TOO_LARGE") return sendJson(res, 413, { error: "AUDIO_TOO_LARGE", message: "Please record a shorter audio clip." });
+      if (error.message === "EMPTY_TRANSCRIPT") return sendJson(res, 200, { ok: true, transcript: "", message: "No speech detected." });
+      if (error.message === "AUDIO_SIZE_INVALID") return sendJson(res, 413, { error: "AUDIO_TOO_LARGE", message: "Audio must be under 8 MB." });
+      return sendJson(res, 502, { error: "SPEECH_REQUEST_FAILED", message: "The Whisper Space is unavailable or still loading. Please retry." });
+    }
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/v1/voice/synthesize") {
+    try {
+      const input = await readJson(req, 8 * 1024);
+      const text = typeof input.text === "string" ? input.text.trim() : "";
+      if (!text) return sendJson(res, 400, { error: "TEXT_REQUIRED", message: "Enter text to speak." });
+      if (text.length > 1500) return sendJson(res, 400, { error: "TEXT_TOO_LONG", message: "Voice requests must be 1,500 characters or fewer." });
+      const audio = await synthesizeWithSpace(text, input.language, input.voice);
+      return sendJson(res, 200, { ok: true, audio, model: "Oomni/mithi-v2-flash" });
+    } catch (error) {
+      return sendJson(res, 502, { error: "VOICE_REQUEST_FAILED", message: "The Mithi Voice Space is unavailable or still loading. Please retry." });
     }
   }
 
