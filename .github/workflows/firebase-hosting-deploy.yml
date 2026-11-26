@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - "index.html"
+      - "oauth.html"
+      - "oauth.js"
       - "terms.html"
       - "privacy.html"
       - "styles.css"
@@ -41,6 +43,8 @@ jobs:
       - name: Validate frontend and backend JavaScript
         run: |
           node --check app.js
+          node --check oauth.js
+          node --check backend/oauth-mcp.js
           node --check backend/server.js
           node --check sw.js
           python -m py_compile huggingface/chat-space/app.py
@@ -53,6 +57,9 @@ jobs:
           assert.match(html, /src="\/theme-init\.js\?v=/);
           const app = fs.readFileSync('app.js', 'utf8');
           const backend = fs.readFileSync('backend/server.js', 'utf8');
+          const oauthPage = fs.readFileSync('oauth.html', 'utf8');
+          const oauthClient = fs.readFileSync('oauth.js', 'utf8');
+          const mcpBridge = fs.readFileSync('backend/oauth-mcp.js', 'utf8');
           assert.match(html, /id="historySearch"/);
           assert.match(html, /id="personalizeModal"/);
           assert.ok(app.includes('/api/v1/chat/completions'), 'Frontend must call the complete-response model endpoint');
@@ -100,6 +107,15 @@ jobs:
           assert.ok(backend.includes('CHAT_SPACE_URL + "/stream"'));
           assert.ok(backend.includes('["/api/v1/chat/stream", "chat"]'));
           assert.ok(backend.includes('url.pathname === "/api/v1/chat/completions"'));
+          assert.ok(backend.includes('require("./oauth-mcp")'), 'API must load the OAuth/MCP bridge');
+          assert.ok(mcpBridge.includes('code_challenge_methods_supported: ["S256"]'));
+          assert.ok(mcpBridge.includes('client_id_metadata_document_supported: true'));
+          assert.ok(mcpBridge.includes('ask_teslafield'));
+          assert.ok(mcpBridge.includes('Qwen/Qwen3-0.6B'));
+          assert.ok(oauthPage.includes('/__/firebase/init.js'));
+          assert.ok(oauthPage.includes('src="/oauth.js?v='));
+          assert.ok(oauthClient.includes('/oauth/consent'));
+          assert.ok(oauthClient.includes('signInWithPopup'));
           assert.ok(backend.includes('url.pathname === "/api/v1/speech/transcribe"'));
           assert.ok(backend.includes('transcribeWithSpace(encoded, input.mimeType, input.language)'));
           assert.match(html, /<div class="composer-toolbar">\s*<div class="composer-tools">[\s\S]*?<span class="composer-hint">Ask anything<\/span>\s*<\/div>\s*<div class="composer-actions">[\s\S]*?<button class="send-button"/);
@@ -128,7 +144,7 @@ jobs:
       - name: Backend security smoke tests
         run: |
           set -euo pipefail
-          PORT=18765 CORS_ORIGIN="https://teslafieldai.web.app" FIREBASE_PROJECT_ID="teslafieldai" node backend/server.js >/tmp/teslafield-api.log 2>&1 &
+          PORT=18765 CORS_ORIGIN="https://teslafieldai.web.app" FIREBASE_PROJECT_ID="teslafieldai" PUBLIC_BASE_URL="https://teslafield-api.onrender.com" TESLAFIELD_OAUTH_SECRET="ci-only-secret-value-with-more-than-32-characters" node backend/server.js >/tmp/teslafield-api.log 2>&1 &
           SERVER_PID=$!
           trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
           ready=0
@@ -153,12 +169,18 @@ jobs:
           limited="$(curl --silent --output /dev/null --write-out '%{http_code}' -H "Content-Type: application/json" --data '{"messages":[{"role":"user","content":"test"}]}' http://127.0.0.1:18765/api/v1/chat/completions)"
           test "$limited" = "429"
           echo "Backend security checks passed: health, strict CORS, auth required and rate limiting."
+          curl --fail --silent --show-error http://127.0.0.1:18765/.well-known/oauth-protected-resource | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const x=JSON.parse(s);if(x.resource!=='https://teslafield-api.onrender.com/mcp'||!x.authorization_servers.includes('https://teslafield-api.onrender.com')||!x.scopes_supported.includes('teslafield:chat'))process.exit(1)})"
+          curl --fail --silent --show-error http://127.0.0.1:18765/.well-known/oauth-authorization-server | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const x=JSON.parse(s);if(!x.code_challenge_methods_supported.includes('S256')||!x.client_id_metadata_document_supported||x.token_endpoint_auth_methods_supported[0]!=='none')process.exit(1)})"
+          mcp_unauthorized="$(curl --silent --show-error -D /tmp/teslafield-mcp.headers -o /tmp/teslafield-mcp.json --write-out '%{http_code}' -X POST -H "Accept: application/json, text/event-stream" -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25"}}' http://127.0.0.1:18765/mcp)"
+          test "$mcp_unauthorized" = "401"
+          grep -qi 'resource_metadata=https://teslafield-api.onrender.com/.well-known/oauth-protected-resource' /tmp/teslafield-mcp.headers
+          echo "MCP and OAuth discovery checks passed: resource metadata, issuer metadata, PKCE and protected MCP endpoint."
 
       - name: Prepare Firebase Hosting files
         run: |
           set -euo pipefail
           mkdir -p public
-          cp index.html styles.css app.js theme-init.js terms.html privacy.html public/
+          cp index.html oauth.html oauth.js styles.css app.js theme-init.js terms.html privacy.html public/
           cp manifest.webmanifest sw.js teslafield-pwa-icon.svg teslafield-icon-192.png teslafield-icon-512.png public/
           test -s teslafieldai-logo.png
           cp teslafieldai-logo.png public/
@@ -167,6 +189,8 @@ jobs:
           if [ -f manifest.webmanifest ]; then cp manifest.webmanifest public/; fi
           if [ -f sw.js ]; then cp sw.js public/; fi
           test -s public/index.html
+          test -s public/oauth.html
+          test -s public/oauth.js
           test -s public/styles.css
           test -s public/app.js
           test -s public/theme-init.js
@@ -229,6 +253,12 @@ jobs:
           curl --fail --location --silent --show-error "${BASE}/terms" -o /tmp/teslafield-terms.html
           grep -q "Terms of Use" /tmp/teslafield-terms.html
           echo "Verified clean /terms page."
+          curl --fail --silent --show-error "\${BASE}/oauth.html?verify=\${GITHUB_SHA}" -o /tmp/teslafield-oauth.html
+          grep -q 'id="signInButton"' /tmp/teslafield-oauth.html
+          grep -q '/__/firebase/init.js' /tmp/teslafield-oauth.html
+          curl --fail --silent --show-error "\${BASE}/oauth.js?v=$VERSION&verify=\${GITHUB_SHA}" -o /tmp/teslafield-oauth.js
+          grep -q '/oauth/consent' /tmp/teslafield-oauth.js
+          echo "Verified Firebase-hosted OAuth sign-in and consent assets."
           curl --fail --location --silent --show-error "${BASE}/privacy" -o /tmp/teslafield-privacy.html
           grep -q "Privacy Policy" /tmp/teslafield-privacy.html
           echo "Verified clean /privacy page."
