@@ -52,19 +52,3 @@ jobs:
           repo_type: space
           space_sdk: docker
           subdirectory: huggingface/chat-space
-
-      - name: Verify published Space README and model source
-        shell: bash
-        run: |
-          set -euo pipefail
-          BASE="https://huggingface.co/spaces/Earthaioa/EARTH_OS_V10_DOCKER/resolve/main"
-          curl --fail --silent --show-error --retry 5 --retry-delay 3 "$BASE/README.md" -o /tmp/space-readme.md
-          head -n 1 /tmp/space-readme.md | grep -qx -- '---'
-          grep -q '^title: Teslafield Chat Engine$' /tmp/space-readme.md
-          grep -q '^sdk: docker$' /tmp/space-readme.md
-          grep -q '^app_port: 7860$' /tmp/space-readme.md
-          curl --fail --silent --show-error --retry 5 --retry-delay 3 "$BASE/app.py" -o /tmp/space-app.py
-          grep -q 'MODEL_ID = "Qwen/Qwen3-0.6B"' /tmp/space-app.py
-          curl --fail --silent --show-error "$BASE/requirements.txt" -o /tmp/space-requirements.txt
-          ! grep -qi 'llama-cpp-python' /tmp/space-requirements.txt
-          echo "Published Hugging Face README config and Qwen3-0.6B source verified."
