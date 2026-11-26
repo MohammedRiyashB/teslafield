@@ -3,6 +3,18 @@
   const API = "https://teslafield-api.onrender.com";
   const $ = (id) => document.getElementById(id);
   const root = document.documentElement;
+  // Protect TESLAFIELD brand artwork only; regular website images remain downloadable.
+  document.addEventListener("contextmenu", (event) => {
+    if (event.target && event.target.closest && event.target.closest('img[src*="teslafieldai-logo"]')) {
+      event.preventDefault();
+    }
+  }, true);
+  document.addEventListener("dragstart", (event) => {
+    if (event.target && event.target.closest && event.target.closest('img[src*="teslafieldai-logo"]')) {
+      event.preventDefault();
+    }
+  }, true);
+
   const syncVisualViewport = () => {
     const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     root.style.setProperty("--visual-viewport-height", Math.round(viewportHeight) + "px");
