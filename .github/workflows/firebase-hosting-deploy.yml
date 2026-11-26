@@ -64,16 +64,16 @@ jobs:
         run: |
           set -euo pipefail
           BASE="https://teslafieldai.web.app"
-          curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-connrefused "${BASE}/?release=20261126-16" -o /tmp/teslafield-home.html
-          grep -q "styles.css?v=20261126-16" /tmp/teslafield-home.html
-          grep -q "theme-init.js?v=20261126-16" /tmp/teslafield-home.html
+          curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-connrefused "${BASE}/?release=20261126-17" -o /tmp/teslafield-home.html
+          grep -q "styles.css?v=20261126-17" /tmp/teslafield-home.html
+          grep -q "theme-init.js?v=20261126-17" /tmp/teslafield-home.html
           grep -q "Message TESLAFIELD" /tmp/teslafield-home.html
-          curl --fail --silent --show-error "${BASE}/teslafieldai-logo.png?v=20261126-16" -o /tmp/teslafieldai-logo.png
+          curl --fail --silent --show-error "${BASE}/teslafieldai-logo.png?v=20261126-17" -o /tmp/teslafieldai-logo.png
           test -s /tmp/teslafieldai-logo.png
-          curl --fail --silent --show-error "${BASE}/styles.css?v=20261126-16" -o /tmp/teslafield-styles.css
+          curl --fail --silent --show-error "${BASE}/styles.css?v=20261126-17" -o /tmp/teslafield-styles.css
           grep -q "starter-grid" /tmp/teslafield-styles.css
-          curl --fail --silent --show-error "${BASE}/app.js?v=20261126-16" -o /tmp/teslafield-app.js
+          curl --fail --silent --show-error "${BASE}/app.js?v=20261126-17" -o /tmp/teslafield-app.js
           grep -q "conversations.v4." /tmp/teslafield-app.js
-          curl --fail --silent --show-error "${BASE}/theme-init.js?v=20261126-16" -o /tmp/teslafield-theme-init.js
+          curl --fail --silent --show-error "${BASE}/theme-init.js?v=20261126-17" -o /tmp/teslafield-theme-init.js
           grep -q "appearance.v2" /tmp/teslafield-theme-init.js
           echo "Verified live TESLAFIELD HTML, PNG logo, responsive CSS and chat application JavaScript."
