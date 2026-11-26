@@ -716,7 +716,7 @@
     const bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer());
     const ascii = (start, count) => String.fromCharCode(...bytes.slice(start, start + count));
     let valid = false;
-    if (extension === ".png") valid = bytes.length >= 8 && bytes[0] === 0x89 && ascii(1, 3) === "PNG";
+    if (extension === ".png") valid = bytes.length >= 8 && bytes[0] === 0x89 && ascii(1, 3) === "PNG" && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a;
     else if (extension === ".jpg" || extension === ".jpeg") valid = bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
     else if (extension === ".webp") valid = bytes.length >= 12 && ascii(0, 4) === "RIFF" && ascii(8, 4) === "WEBP";
     else if (extension === ".pdf") valid = ascii(0, 5) === "%PDF-";
