@@ -28,8 +28,10 @@ jobs:
       - name: Checkout main
         uses: actions/checkout@v4
 
-      - name: Validate frontend JavaScript
-        run: node --check app.js
+      - name: Validate frontend and backend JavaScript
+        run: |
+          node --check app.js
+          node --check backend/server.js
 
       - name: Prepare Firebase Hosting files
         run: |
@@ -56,11 +58,11 @@ jobs:
         run: |
           set -euo pipefail
           BASE="https://teslafieldai.web.app"
-          curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-connrefused "${BASE}/?release=20261126-03" -o /tmp/teslafield-home.html
-          grep -q "styles.css?v=20261126-03" /tmp/teslafield-home.html
+          curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-connrefused "${BASE}/?release=20261126-04" -o /tmp/teslafield-home.html
+          grep -q "styles.css?v=20261126-04" /tmp/teslafield-home.html
           grep -q "Message TESLAFIELD" /tmp/teslafield-home.html
-          curl --fail --silent --show-error "${BASE}/styles.css?v=20261126-03" -o /tmp/teslafield-styles.css
+          curl --fail --silent --show-error "${BASE}/styles.css?v=20261126-04" -o /tmp/teslafield-styles.css
           grep -q "starter-grid" /tmp/teslafield-styles.css
-          curl --fail --silent --show-error "${BASE}/app.js?v=20261126-03" -o /tmp/teslafield-app.js
+          curl --fail --silent --show-error "${BASE}/app.js?v=20261126-04" -o /tmp/teslafield-app.js
           grep -q "conversations.v3" /tmp/teslafield-app.js
           echo "Verified live TESLAFIELD HTML, responsive CSS and chat application JavaScript."
