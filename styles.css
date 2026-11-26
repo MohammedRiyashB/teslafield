@@ -772,3 +772,24 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 }
 .account-menu button#accountSignUp{background:var(--hover);margin-bottom:3px}
 .message-row.assistant .message-avatar{display:none!important}
+
+
+/* Privacy and account-security controls */
+.account-menu-status{
+  margin:2px 0 10px;
+  padding:0 10px;
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.5;
+}
+.account-menu [hidden]{display:none!important}
+.account-menu button.danger{color:#e06b6b}
+.privacy-disclosure{
+  max-width:760px;
+  margin:5px auto 0;
+  padding:0 12px;
+  color:var(--subtle);
+  font-size:10px;
+  line-height:1.45;
+  text-align:center;
+}
