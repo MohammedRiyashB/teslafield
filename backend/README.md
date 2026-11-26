@@ -29,7 +29,7 @@ Node.js API for the TESLAFIELD web app and ChatGPT MCP connection.
 - Authorization server metadata: `/.well-known/oauth-authorization-server`
 - OAuth authorization endpoint: `/oauth/authorize`
 - OAuth token endpoint: `/oauth/token`
-- Firebase sign-in and consent page: `https://teslafieldai.web.app/oauth.html`
+- Firebase sign-in and consent page: `https://teslafieldai.web.app/oauth`
 - MCP tool: `ask_teslafield`
 
 The MCP service exposes only the TESLAFIELD V1 text-chat capability. Users sign in with the existing Google/Firebase account, explicitly approve the connection, and receive a short-lived OAuth access token scoped to `teslafield:chat`. The Google password and Firebase ID token are never sent to ChatGPT. OAuth uses authorization code + PKCE (S256), validates ChatGPT's Client ID Metadata Document, and binds issued tokens to the MCP resource.
@@ -46,7 +46,7 @@ Keep this value only in Render's environment settings. Do not commit it or paste
 
 Optional settings:
 - `PUBLIC_BASE_URL` — defaults to `https://teslafield-api.onrender.com`
-- `TESLAFIELD_OAUTH_PAGE` — defaults to `https://teslafieldai.web.app/oauth.html`
+- `TESLAFIELD_OAUTH_PAGE` — defaults to `https://teslafieldai.web.app/oauth`
 - `FIREBASE_PROJECT_ID` — defaults to `teslafieldai`
 - `CORS_ORIGIN` — comma-separated trusted web origins; the default includes the TESLAFIELD Firebase Hosting domains
 
