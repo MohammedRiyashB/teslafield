@@ -253,10 +253,10 @@ jobs:
           curl --fail --location --silent --show-error "${BASE}/terms" -o /tmp/teslafield-terms.html
           grep -q "Terms of Use" /tmp/teslafield-terms.html
           echo "Verified clean /terms page."
-          curl --fail --silent --show-error "\${BASE}/oauth.html?verify=\${GITHUB_SHA}" -o /tmp/teslafield-oauth.html
+          curl --fail --silent --show-error "${BASE}/oauth.html?verify=${GITHUB_SHA}" -o /tmp/teslafield-oauth.html
           grep -q 'id="signInButton"' /tmp/teslafield-oauth.html
           grep -q '/__/firebase/init.js' /tmp/teslafield-oauth.html
-          curl --fail --silent --show-error "\${BASE}/oauth.js?v=$VERSION&verify=\${GITHUB_SHA}" -o /tmp/teslafield-oauth.js
+          curl --fail --silent --show-error "${BASE}/oauth.js?v=$VERSION&verify=${GITHUB_SHA}" -o /tmp/teslafield-oauth.js
           grep -q '/oauth/consent' /tmp/teslafield-oauth.js
           echo "Verified Firebase-hosted OAuth sign-in and consent assets."
           curl --fail --location --silent --show-error "${BASE}/privacy" -o /tmp/teslafield-privacy.html
