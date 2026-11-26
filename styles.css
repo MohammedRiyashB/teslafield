@@ -763,3 +763,12 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 .message-avatar:has(img){overflow:hidden;background:transparent!important;border-radius:8px}
 .message-avatar img{width:100%;height:100%;padding:1px}
 @media(max-width:760px){.composer{border-radius:25px!important}}
+
+
+/* Sidebar account menu: text-only identity and compact auth actions. */
+.account-button .account-copy{margin-left:2px}
+.account-menu button#accountSignUp,.account-menu button#accountLogIn{
+ min-height:38px;justify-content:flex-start;font-weight:600
+}
+.account-menu button#accountSignUp{background:var(--hover);margin-bottom:3px}
+.message-row.assistant .message-avatar{display:none!important}
