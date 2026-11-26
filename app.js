@@ -592,7 +592,7 @@
     const themeColor = document.querySelector('meta[name="theme-color"]');
     if (themeColor) themeColor.setAttribute("content", theme === "dark" ? "#000000" : "#ffffff");
     $("themeLabel").textContent = theme === "dark" ? "Dark" : "Light";
-    try { localStorage.setItem("teslafield.appearance", theme); } catch (error) {}
+    try { localStorage.setItem("teslafield.appearance.v2", theme); } catch (error) {}
   }
   function toggleTheme() {
     applyTheme(root.classList.contains("dark") ? "light" : "dark");
@@ -672,7 +672,7 @@
 
   loadStore();
   try {
-    const theme = localStorage.getItem("teslafield.appearance") || "dark";
+    const theme = localStorage.getItem("teslafield.appearance.v2") || "dark";
     applyTheme(theme);
   } catch (error) { applyTheme("dark"); }
   renderHistory();
