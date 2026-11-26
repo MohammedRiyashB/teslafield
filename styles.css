@@ -1130,3 +1130,54 @@ body.guest-mode .top-auth-button{display:inline-flex;align-items:center;justify-
   .legal-brand{margin-bottom:35px}
   .legal-shell h2{font-size:16px}
 }
+
+
+/* TESLAFIELD guest welcome refinement — release 23 */
+body.guest-mode .guest-brand{display:flex;align-items:center;justify-content:center;width:66px;height:66px;margin-left:2px}
+body.guest-mode .guest-brand img{
+  display:block;width:58px;height:58px;object-fit:contain;opacity:.88;
+  mix-blend-mode:screen;filter:drop-shadow(0 0 12px rgba(255,255,255,.08));
+}
+body.guest-mode .topbar-right{gap:18px}
+body.guest-mode .top-auth-button{
+  min-width:104px;height:44px;padding:0 22px;font-size:14px;font-weight:700;
+  letter-spacing:.01em;border-color:#4a4a4a;
+}
+body.guest-mode .top-auth-secondary{margin-right:5px;background:rgba(255,255,255,.035)}
+body.guest-mode .top-auth-primary{min-width:116px;background:#f4f4f4;border-color:#f4f4f4}
+body.guest-mode .composer-actions{gap:0}
+body.guest-mode .send-button{width:42px;height:42px}
+body.guest-mode .voice-input,body.guest-mode .voice-mode-button{display:none!important}
+.explore-fade{opacity:0;transform:translateY(7px);filter:blur(3px)}
+body.guest-mode .welcome-screen h1{
+  min-height:1.15em;transition:opacity .26s ease,transform .26s ease,filter .26s ease;
+}
+.guest-footer{display:none}
+body.guest-mode .guest-footer{
+  position:fixed;z-index:3;left:clamp(18px,3vw,38px);bottom:18px;
+  display:flex;align-items:center;gap:10px;pointer-events:none;
+  color:rgba(225,225,225,.48);font:500 10px/1.4 system-ui,sans-serif;
+  letter-spacing:.035em;
+}
+body.guest-mode .guest-footer img{
+  width:29px;height:29px;object-fit:contain;opacity:.68;
+  mix-blend-mode:screen;filter:grayscale(1);
+}
+@media(max-width:760px){
+  body.guest-mode .guest-brand{width:54px;height:54px}
+  body.guest-mode .guest-brand img{width:49px;height:49px}
+  body.guest-mode .topbar-right{gap:9px}
+  body.guest-mode .top-auth-button{min-width:82px;height:39px;padding:0 14px;font-size:12px}
+  body.guest-mode .top-auth-primary{min-width:92px}
+  body.guest-mode .top-auth-secondary{margin-right:3px}
+  body.guest-mode .guest-footer{left:13px;bottom:10px;gap:7px;font-size:9px}
+  body.guest-mode .guest-footer img{width:23px;height:23px}
+}
+@media(max-width:380px){
+  body.guest-mode .top-auth-button{min-width:72px;padding:0 10px}
+  body.guest-mode .top-auth-primary{min-width:82px}
+  body.guest-mode .guest-footer{font-size:8px}
+}
+@media(prefers-reduced-motion:reduce){
+  body.guest-mode .welcome-screen h1{transition:none}
+}
