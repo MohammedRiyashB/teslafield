@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#000000">
+  <title>Privacy Policy — TeslafieldAI ChatGPT Connector</title>
+  <link rel="icon" type="image/png" href="./teslafieldai-logo.png">
+  <link rel="stylesheet" href="./styles.css?v=20261127-02">
+</head>
+<body class="legal-page">
+  <main class="legal-shell">
+    <a class="legal-brand" href="./"><img src="./teslafieldai-logo.png" alt=""> TeslafieldAI</a>
+    <p class="legal-eyebrow">TESLAFIELDAI · CHATGPT CONNECTOR</p>
+    <h1>Privacy Policy</h1>
+    <p class="legal-updated">Effective November 27, 2026</p>
+    <p>This policy explains how the TeslafieldAI connection for ChatGPT handles information. It applies to the connector and its sign-in and authorization flow. The ChatGPT service and external model providers have their own privacy terms.</p>
+
+    <h2>1. Information used to connect your account</h2>
+    <p>To connect, you sign in with the Google account associated with TeslafieldAI. Firebase Authentication verifies that sign-in. The authorization page may show your account email to you so you can confirm which account you are connecting. Your Google password is handled by Google and Firebase and is not sent to ChatGPT or to the TeslafieldAI model.</p>
+    <p>The authorization service verifies the Firebase sign-in token and uses your Firebase user ID to associate the connection with your account. It issues a short-lived access token for the chat permission you approve. Do not share authentication codes or access tokens with anyone.</p>
+
+    <h2>2. Questions and conversation context</h2>
+    <p>When you use the connector, ChatGPT sends the question you ask TeslafieldAI and, where you choose to include it, relevant conversation context. The TeslafieldAI backend forwards that text to its configured Hugging Face chat service for model processing. The current chat engine is configured to use Qwen/Qwen3-0.6B.</p>
+    <p>Only send information you are comfortable submitting to the AI service. Do not include passwords, payment-card details, authentication tokens, or other highly sensitive information.</p>
+
+    <h2>3. Information in security logs</h2>
+    <p>The TeslafieldAI application audit events are designed to record event type, API route, time, and a shortened hash derived from the account user ID. The audit function does not record question text, conversation bodies, email addresses, passwords, authentication tokens, audio, file names, or IP addresses. Hosting and infrastructure providers may maintain their own operational or network logs under their policies.</p>
+
+    <h2>4. Storage and retention</h2>
+    <p>The ChatGPT connector does not provide a Teslafield cloud chat-history database. It sends the request to the model service to obtain a response. Temporary authorization requests and authorization codes are held in backend memory and expire after a few minutes; issued access tokens expire after one hour. ChatGPT may retain the conversation and tool result under ChatGPT's own settings and policies.</p>
+    <p>The external model and hosting providers may process or retain submitted text under their own terms, settings, and retention practices. TeslafieldAI does not control those providers' systems and cannot promise deletion from them.</p>
+
+    <h2>5. Your choices</h2>
+    <p>You choose whether to connect and approve the requested chat permission. You can stop future use by disconnecting TeslafieldAI from ChatGPT's connected-app controls. Disconnecting does not delete prior ChatGPT conversations or records held by external providers. You can also stop using the connector at any time.</p>
+    <p>Deleting your TeslafieldAI Firebase account prevents future sign-in with that account, but does not delete data already held by ChatGPT, Hugging Face, or other providers. Previously issued short-lived tokens may remain usable until they expire.</p>
+
+    <h2>6. Service providers</h2>
+    <p>TeslafieldAI relies on Google Firebase Authentication for account sign-in, Render for backend hosting, and Hugging Face for the configured model service. ChatGPT operates the host application and its own conversation storage. Each provider is responsible for its own privacy and security practices.</p>
+
+    <h2>7. Changes and contact</h2>
+    <p>This policy may change when the connector or its providers change. The effective date above identifies the current version. For privacy questions about the TeslafieldAI connector, contact <a href="mailto:riyashofficialpayment@gmail.com">riyashofficialpayment@gmail.com</a>.</p>
+
+    <p class="legal-back"><a href="./">← Back to TeslafieldAI</a> · <a href="./chatgpt-terms">Terms of Service</a></p>
+  </main>
+</body>
+</html>

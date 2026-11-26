@@ -9,6 +9,8 @@ on:
       - "oauth.js"
       - "terms.html"
       - "privacy.html"
+      - "chatgpt-privacy.html"
+      - "chatgpt-terms.html"
       - "styles.css"
       - "app.js"
       - "backend/**"
@@ -180,7 +182,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p public
-          cp index.html oauth.html oauth.js styles.css app.js theme-init.js terms.html privacy.html public/
+          cp index.html oauth.html oauth.js styles.css app.js theme-init.js terms.html privacy.html chatgpt-privacy.html chatgpt-terms.html public/
           cp manifest.webmanifest sw.js teslafield-pwa-icon.svg teslafield-icon-192.png teslafield-icon-512.png public/
           test -s teslafieldai-logo.png
           cp teslafieldai-logo.png public/
@@ -196,6 +198,8 @@ jobs:
           test -s public/theme-init.js
           test -s public/terms.html
           test -s public/privacy.html
+          test -s public/chatgpt-privacy.html
+          test -s public/chatgpt-terms.html
           test -s public/teslafieldai-logo.png
           test -s public/manifest.webmanifest
           test -s public/sw.js
@@ -262,6 +266,12 @@ jobs:
           curl --fail --location --silent --show-error "${BASE}/privacy" -o /tmp/teslafield-privacy.html
           grep -q "Privacy Policy" /tmp/teslafield-privacy.html
           echo "Verified clean /privacy page."
+          curl --fail --location --silent --show-error "${BASE}/chatgpt-terms" -o /tmp/teslafield-chatgpt-terms.html
+          grep -q "Terms of Service" /tmp/teslafield-chatgpt-terms.html
+          curl --fail --location --silent --show-error "${BASE}/chatgpt-privacy" -o /tmp/teslafield-chatgpt-privacy.html
+          grep -q "Privacy Policy" /tmp/teslafield-chatgpt-privacy.html
+          grep -q "Hugging Face" /tmp/teslafield-chatgpt-privacy.html
+          echo "Verified clean ChatGPT connector privacy and terms pages."
           curl --fail --location --silent --show-error --max-redirs 5 "${BASE}/share/123456789012345678?data=jZXhhbXBsZQ" -o /tmp/teslafield-share.html
           grep -q 'class="shared-message-page"' /tmp/teslafield-share.html
           grep -q 'href="/styles.css?v=' /tmp/teslafield-share.html
