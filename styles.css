@@ -15,8 +15,8 @@ a{color:inherit}
 .brand-mark,.welcome-mark{display:grid;place-items:center;flex:none;width:29px;height:29px;border-radius:9px;background:#151515;color:white;font:800 16px system-ui,sans-serif}
 .brand-word{font:750 14px system-ui,sans-serif;letter-spacing:.025em}
 .icon-button{width:35px;height:35px;display:grid;place-items:center;border:0;border-radius:9px;background:transparent;color:var(--muted);padding:0}
-.icon-button:hover,.composer-icon:hover{background:var(--hover);color:var(--text)}
-.icon-button svg,.side-action svg,.history-search svg,.share-button svg,.composer-icon svg,.tool-menu svg,.voice-mode-button svg,.send-button svg,.account-more{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.icon-button:hover,.composer-icon:hover{background:var(--hover);color:var(--text)}.icon-button svg,.side-action svg,.history-search svg,.share-button svg,.composer-icon svg,.tool-menu svg,.send-button svg,.account-more
+{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .sidebar-collapse{display:grid}
 .sidebar-close,.mobile-menu{display:none}
 .sidebar-primary{display:flex;flex-direction:column;gap:3px;padding:12px 0 16px}
@@ -131,9 +131,6 @@ a{color:inherit}
 .composer-divider{width:1px;height:19px;background:var(--border)}
 .composer-hint{color:#999;font-size:11px}
 .composer-actions{gap:7px}
-.voice-mode-button{width:34px;height:34px;display:grid;place-items:center;border:0;border-radius:50%;background:#171717;color:white}
-.voice-mode-button:hover{background:#333}
-.voice-mode-button svg{width:17px;height:17px}
 .send-button{width:34px;height:34px;display:grid;place-items:center;border:0;border-radius:50%;background:#111;color:#fff}
 .send-button:hover{background:#333}
 .send-button svg{width:18px;height:18px}
@@ -182,9 +179,9 @@ a{color:inherit}
 .dark .composer{border-color:#4a4a4a;box-shadow:0 7px 24px #00000020}
 .dark .composer:focus-within{border-color:#707070}
 .dark .composer textarea{color:#eee}
-.dark .composer textarea::placeholder{color:#999}
-.dark .voice-mode-button,.dark .send-button{background:#eee;color:#171717}
-.dark .voice-mode-button:hover,.dark .send-button:hover{background:#d8d8d8}
+.dark .composer textarea::placeholder{color:#999}.dark .send-button
+{background:#eee;color:#171717}.dark .send-button:hover
+{background:#d8d8d8}
 .dark .account-menu,.dark .tool-menu,.dark .history-row-menu{box-shadow:0 10px 30px #0008}
 @media(min-width:1500px){
   :root{--sidebar-width:280px;--content-width:820px}
@@ -247,8 +244,8 @@ a{color:inherit}
   .composer textarea{min-height:34px;max-height:140px;padding-bottom:8px;font-size:16px}
   .composer-hint{font-size:10px}
   .composer-actions{gap:4px}
-  .composer-icon{width:31px;height:31px}
-  .voice-mode-button,.send-button{width:33px;height:33px}
+  .composer-icon{width:31px;height:31px}.send-button
+{width:33px;height:33px}
   .composer-disclaimer{margin-top:6px;font-size:9px}
 }
 @media(max-width:380px){
@@ -299,9 +296,9 @@ a{color:inherit}
 .dark .composer{background:#050505;border-color:#292929;box-shadow:0 8px 28px #000}
 .dark .composer:focus-within{border-color:#555}
 .dark .composer textarea{color:#f5f5f5}
-.dark .composer textarea::placeholder{color:#858585}
-.dark .voice-mode-button,.dark .send-button{background:#f5f5f5;color:#000}
-.dark .voice-mode-button:hover,.dark .send-button:hover{background:#dcdcdc}
+.dark .composer textarea::placeholder{color:#858585}.dark .send-button
+{background:#f5f5f5;color:#000}.dark .send-button:hover
+{background:#dcdcdc}
 .dark .welcome-mark{border:1px solid #242424}
 
 
@@ -484,11 +481,11 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 }
 .composer textarea{font-size:16px;line-height:1.55;padding:4px 5px 10px}
 .composer-tools,.composer-actions{gap:9px}
-.composer-icon{width:38px;height:38px;transition:background-color var(--tf-fast) ease,color var(--tf-fast) ease,transform var(--tf-fast) var(--tf-ease)}
-.composer-icon:active,.voice-mode-button:active,.send-button:active{transform:scale(.93)}
-.plus-button{border-color:var(--border)}
-.voice-mode-button,.send-button{width:38px;height:38px;transition:background-color var(--tf-fast) ease,transform var(--tf-fast) var(--tf-ease),box-shadow var(--tf-fast) ease}
-.send-button:not(:disabled):hover,.voice-mode-button:hover{box-shadow:0 3px 12px rgba(0,0,0,.12)}
+.composer-icon{width:38px;height:38px;transition:background-color var(--tf-fast) ease,color var(--tf-fast) ease,transform var(--tf-fast) var(--tf-ease)}.composer-icon:active,.send-button:active
+{transform:scale(.93)}
+.plus-button{border-color:var(--border)}.send-button
+{width:38px;height:38px;transition:background-color var(--tf-fast) ease,transform var(--tf-fast) var(--tf-ease),box-shadow var(--tf-fast) ease}.send-button:not(:disabled):hover
+{box-shadow:0 3px 12px rgba(0,0,0,.12)}
 .composer-hint{font-size:12px}
 .composer-disclaimer{margin-top:9px;font-size:11px;line-height:1.45}
 .attachment-strip{padding:9px 11px;border-radius:12px}
@@ -531,8 +528,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 .message-actions{animation:tf-fade-in 180ms ease 50ms both}
 .history-row-menu,.account-menu:not([hidden]),.tool-menu:not([hidden]){animation:tf-menu-in 160ms var(--tf-ease-out) both}
 .attachment-strip:not([hidden]){animation:tf-pop-in 160ms var(--tf-ease-out) both}
-.toast-message{transition:opacity 190ms ease,transform 220ms var(--tf-ease-out)}
-.icon-button,.side-action,.history-row,.account-button,.composer-icon,.send-button,.voice-mode-button{touch-action:manipulation}
+.toast-message{transition:opacity 190ms ease,transform 220ms var(--tf-ease-out)}.icon-button,.side-action,.history-row,.account-button,.composer-icon,.send-button
+{touch-action:manipulation}
 
 /* 9 — Responsive comfort, keyboard-safe layout and accessibility */
 @media(min-width:1500px){
@@ -577,8 +574,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
   .composer{padding:10px 11px 8px;border-radius:22px}
   .composer textarea{min-height:38px;max-height:150px;padding:4px 4px 9px;font-size:16px}
   .composer-toolbar{gap:8px}
-  .composer-tools,.composer-actions{gap:5px}
-  .composer-icon,.voice-mode-button,.send-button{width:40px;height:40px;min-width:40px;min-height:40px}
+  .composer-tools,.composer-actions{gap:5px}.composer-icon,.send-button
+{width:40px;height:40px;min-width:40px;min-height:40px}
   .composer-hint{font-size:11px}
   .composer-disclaimer{margin-top:7px;font-size:10px}
   .attachment-strip{max-height:104px;overflow:auto}
@@ -882,11 +879,9 @@ body.guest-mode .composer-hint{color:#777}
 body.guest-mode .composer-divider{background:#333}
 body.guest-mode .composer-icon{color:#aaa}
 body.guest-mode .composer-icon:hover{background:#222;color:#fff}
-body.guest-mode .plus-button{border-color:#383838}
-body.guest-mode .voice-mode-button,
-body.guest-mode .send-button{background:#f2f2f2;color:#080808}
-body.guest-mode .voice-mode-button:hover,
-body.guest-mode .send-button:hover{background:#d8d8d8}
+body.guest-mode .plus-button{border-color:#383838}body.guest-mode .send-button
+{background:#f2f2f2;color:#080808}body.guest-mode .send-button:hover
+{background:#d8d8d8}
 body.guest-mode .composer-disclaimer,
 body.guest-mode .privacy-disclosure{display:none!important}
 .guest-legal{
@@ -1067,8 +1062,8 @@ body.modal-open{overflow:hidden}
   body.guest-mode .composer-area{margin-top:29px}
   body.guest-mode .composer{padding:12px 12px 9px;border-radius:24px!important}
   body.guest-mode .composer textarea{min-height:42px;font-size:16px}
-  body.guest-mode .composer-icon{width:36px;height:36px}
-  body.guest-mode .voice-mode-button,body.guest-mode .send-button{width:36px;height:36px}
+  body.guest-mode .composer-icon{width:36px;height:36px}body.guest-mode .send-button
+{width:36px;height:36px}
   body.guest-mode .guest-legal{max-width:340px;font-size:9px}
   body.guest-mode .guest-watermark{left:14px;bottom:12px;gap:5px;font-size:8px}
   body.guest-mode .guest-watermark img{width:19px;height:19px}
@@ -1146,8 +1141,8 @@ body.guest-mode .top-auth-button{
 body.guest-mode .top-auth-secondary{margin-right:5px;background:rgba(255,255,255,.035)}
 body.guest-mode .top-auth-primary{min-width:116px;background:#f4f4f4;border-color:#f4f4f4}
 body.guest-mode .composer-actions{gap:0}
-body.guest-mode .send-button{width:42px;height:42px}
-body.guest-mode .voice-input,body.guest-mode .voice-mode-button{display:none!important}
+body.guest-mode .send-button{width:42px;height:42px}body.guest-mode .voice-input
+{display:none!important}
 .explore-fade{opacity:0;transform:translateY(7px);filter:blur(3px)}
 body.guest-mode .welcome-screen h1{
   min-height:1.15em;transition:opacity .26s ease,transform .26s ease,filter .26s ease;
