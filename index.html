@@ -1,4 +1,87 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#101014"><meta name="description" content="TESLAFIELD — your AI conversation workspace."><title>TESLAFIELD — AI workspace</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="./styles.css"></head>
-<body><div class="app"><div class="scrim" id="scrim"></div><aside class="sidebar" id="sidebar"><div class="side-head"><a class="brand" href="#"><span class="brand-mark">T</span><span>TESLAFIELD</span></a><button class="icon-btn collapse-btn" id="closeSidebar" aria-label="Close sidebar">×</button></div><button class="new-chat" id="newChat"><span>＋</span> New chat <kbd>⌘ K</kbd></button><div class="side-label">WORKSPACE</div><button class="side-link active"><span>◈</span> Chat</button><button class="side-link" id="imageNav"><span>▧</span> Image studio <small>SOON</small></button><button class="side-link" id="videoNav"><span>▷</span> Video studio <small>SOON</small></button><div class="history-head"><span class="side-label">RECENT</span><button id="clearHistory" class="text-btn">Clear</button></div><div class="history-list" id="historyList"></div><div class="side-bottom"><button class="side-link" id="themeToggle"><span>◐</span> Switch appearance</button><div class="account"><div class="account-avatar">T</div><div><strong>TESLAFIELD user</strong><small>Free workspace</small></div><span class="more">•••</span></div></div></aside>
-<main class="main"><header class="topbar"><button class="icon-btn mobile-menu" id="openSidebar" aria-label="Open sidebar">☰</button><div class="model-select"><span class="brand-mini">T</span><strong>TESLAFIELD</strong><span class="model-tag">AI</span><span class="chevron">⌄</span></div><div class="top-actions"><span class="connection" id="connection"><i></i> Connecting</span><button class="icon-btn" id="shareBtn" aria-label="Share chat">↗</button></div></header><section class="conversation" id="conversation"><div class="welcome" id="welcome"><div class="welcome-mark">T</div><p class="eyebrow">YOUR AI WORKSPACE</p><h1>What can I help you with?</h1><p class="welcome-sub">Ask anything. Explore ideas. Make progress.</p><div class="suggestions"><button class="suggestion" data-prompt="Explain a complex topic in simple words."><span>✳</span><strong>Explain something</strong><small>Make a difficult topic easy to understand</small></button><button class="suggestion" data-prompt="Help me write a clear, professional email."><span>✎</span><strong>Write anything</strong><small>Draft, rewrite, and polish your words</small></button><button class="suggestion" data-prompt="Help me brainstorm creative ideas for a new project."><span>✧</span><strong>Brainstorm ideas</strong><small>Explore possibilities and new directions</small></button><button class="suggestion" data-prompt="Help me debug this code step by step."><span>⌘</span><strong>Code with me</strong><small>Build, debug, and understand code</small></button></div></div><div class="messages" id="messages" aria-live="polite"></div></section><div class="composer-wrap"><form class="composer" id="composer"><textarea id="prompt" rows="1" maxlength="12000" placeholder="Message TESLAFIELD..." aria-label="Message TESLAFIELD"></textarea><div class="composer-bottom"><div class="composer-tools"><button type="button" class="tool-btn" id="attachBtn" aria-label="Attach file">＋</button><span class="tool-hint">AI chat</span></div><div class="send-tools"><span class="model-hint">Standard</span><button class="send-btn" id="sendBtn" type="submit" aria-label="Send message">↑</button></div></div></form><p class="disclaimer">TESLAFIELD can make mistakes. Check important information.</p></div><input id="fileInput" type="file" hidden multiple accept="image/*,.pdf,.txt,.doc,.docx"></main></div><div class="toast" id="toast" role="status"></div><script src="./app.js" defer></script></body></html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7f7f8"><meta name="description" content="TESLAFIELD — your AI workspace.">
+<title>TESLAFIELD — AI workspace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<div class="app-shell">
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-top">
+    <a class="brand" href="#" aria-label="TESLAFIELD home"><span class="brand-icon">T</span><span>TESLAFIELD</span></a>
+    <button class="icon-button sidebar-close" id="sidebarClose" aria-label="Close sidebar">×</button>
+  </div>
+  <button class="new-chat-button" id="newChat"><span class="plus">＋</span><span>New chat</span><kbd>Ctrl K</kbd></button>
+  <label class="search-box"><span>⌕</span><input id="historySearch" type="search" placeholder="Search chats" autocomplete="off"><kbd>⌘ F</kbd></label>
+  <nav class="primary-nav" aria-label="Workspace">
+    <div class="nav-label">WORKSPACE</div>
+    <button class="nav-item selected" id="chatNav"><span class="nav-icon">◈</span><span>Chat</span></button>
+    <button class="nav-item" id="imageNav"><span class="nav-icon">▧</span><span>Images</span><span class="nav-soon">SOON</span></button>
+    <button class="nav-item" id="videoNav"><span class="nav-icon">▷</span><span>Video</span><span class="nav-soon">SOON</span></button>
+  </nav>
+  <div class="history-section">
+    <div class="history-heading"><span class="nav-label">YOUR CHATS</span><button id="clearHistory" class="subtle-button">Clear</button></div>
+    <div class="history-list" id="historyList"></div>
+    <p class="history-empty" id="historyEmpty">Your conversations will appear here.</p>
+  </div>
+  <div class="sidebar-bottom">
+    <button class="nav-item" id="themeToggle"><span class="nav-icon">◐</span><span>Appearance</span><span class="nav-end" id="themeLabel">Light</span></button>
+    <button class="account-row" id="accountButton"><span class="account-avatar">T</span><span class="account-copy"><strong>TESLAFIELD user</strong><small>Free workspace</small></span><span class="account-more">•••</span></button>
+  </div>
+</aside>
+<main class="main-panel">
+  <header class="topbar">
+    <div class="topbar-start">
+      <button class="icon-button menu-open" id="sidebarOpen" aria-label="Open navigation">☰</button>
+      <div class="current-page"><strong>TESLAFIELD</strong><span class="model-badge">AI</span><span class="model-chevron">⌄</span></div>
+    </div>
+    <div class="topbar-end">
+      <span class="connection-status" id="connectionStatus"><i></i><span>Connecting</span></span>
+      <button class="icon-button share-button" id="shareChat" aria-label="Copy conversation link" title="Copy conversation">↗</button>
+    </div>
+  </header>
+  <section class="conversation-scroll" id="conversationScroll">
+    <div class="welcome-screen" id="welcomeScreen">
+      <div class="welcome-symbol">T</div>
+      <p class="welcome-kicker">YOUR AI WORKSPACE</p>
+      <h1>What can I help with?</h1>
+      <p class="welcome-description">Ask a question, explore an idea, or start something new.</p>
+      <div class="prompt-suggestions">
+        <button class="suggestion-card" data-prompt="Explain a difficult topic in simple, clear language."><span class="suggestion-icon">✳</span><span><strong>Learn something</strong><small>Understand a topic step by step</small></span></button>
+        <button class="suggestion-card" data-prompt="Help me write a polished and professional email."><span class="suggestion-icon">✎</span><span><strong>Write anything</strong><small>Draft, rewrite, and improve text</small></span></button>
+        <button class="suggestion-card" data-prompt="Let's brainstorm original ideas for a new project."><span class="suggestion-icon">✧</span><span><strong>Explore ideas</strong><small>Brainstorm and plan your next move</small></span></button>
+        <button class="suggestion-card" data-prompt="Help me write and debug code, explaining each step."><span class="suggestion-icon">⌘</span><span><strong>Build with code</strong><small>Understand, create, and debug code</small></span></button>
+      </div>
+    </div>
+    <div class="message-list" id="messageList" aria-live="polite"></div>
+  </section>
+  <div class="composer-area">
+    <div class="attachment-preview" id="attachmentPreview" hidden></div>
+    <form class="composer" id="composer">
+      <textarea id="promptInput" rows="1" maxlength="12000" placeholder="Message TESLAFIELD" aria-label="Message TESLAFIELD"></textarea>
+      <div class="composer-controls">
+        <div class="composer-left">
+          <button class="composer-icon" type="button" id="attachButton" aria-label="Attach a file" title="Attach a file">＋</button>
+          <span class="composer-hint">Ask anything</span>
+        </div>
+        <div class="composer-right">
+          <button class="composer-icon voice-button" type="button" id="voiceButton" aria-label="Voice input" title="Voice input">♩</button>
+          <span class="model-caption">TESLAFIELD AI</span>
+          <button class="send-button" type="submit" id="sendButton" aria-label="Send message">↑</button>
+        </div>
+      </div>
+    </form>
+    <p class="composer-disclaimer">TESLAFIELD may make mistakes. Verify important information.</p>
+  </div>
+  <input id="fileInput" type="file" hidden multiple accept="image/*,.pdf,.txt,.doc,.docx">
+</main>
+</div>
+<div class="toast-message" id="toastMessage" role="status" aria-live="polite"></div>
+<script src="./app.js" defer></script>
+</body>
+</html>
