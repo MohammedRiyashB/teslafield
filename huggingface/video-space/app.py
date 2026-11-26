@@ -9,7 +9,7 @@ from diffusers.utils import export_to_video
 
 MODEL_ID = "Wan-AI/Wan2.2-TI2V-5B-Diffusers"
 
-# Model card recipe uses a float32 VAE and bfloat16 denoiser weights.
+# Keep model placement at module scope for ZeroGPU compatibility.
 vae = AutoencoderKLWan.from_pretrained(
     MODEL_ID, subfolder="vae", torch_dtype=torch.float32
 )
@@ -22,15 +22,15 @@ pipe.scheduler = UniPCMultistepScheduler.from_config(
 pipe.to("cuda")
 pipe.set_progress_bar_config(disable=True)
 
-@spaces.GPU(duration=300)
+# ZeroGPU applies a hardware-dependent duration multiplier. 180s keeps
+# the effective request below the free-tier 300s ceiling.
+@spaces.GPU(duration=180)
 def generate_video(prompt, seed):
     prompt = (prompt or "").strip()
     if not prompt:
         raise gr.Error("Enter a prompt before generating.")
     if len(prompt) > 1600:
         raise gr.Error("Prompt must be 1,600 characters or fewer.")
-    # 49 frames at 24fps = about 2 seconds; short first-run profile
-    # keeps the free daily ZeroGPU allowance from being silently exceeded.
     actual_seed = int(seed) if seed is not None and int(seed) >= 0 else 12345
     generator = torch.Generator(device="cuda").manual_seed(actual_seed)
     with torch.inference_mode():
