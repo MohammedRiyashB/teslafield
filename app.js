@@ -672,9 +672,9 @@
 
   loadStore();
   try {
-    const theme = localStorage.getItem("teslafield.appearance") || "light";
+    const theme = localStorage.getItem("teslafield.appearance") || "dark";
     applyTheme(theme);
-  } catch (error) { applyTheme("light"); }
+  } catch (error) { applyTheme("dark"); }
   renderHistory();
   let connectionTimer = null;
   function startConnectionMonitor() {
