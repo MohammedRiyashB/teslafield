@@ -1,0 +1,50 @@
+name: Deploy TESLAFIELD to Firebase Hosting
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "styles.css"
+      - "app.js"
+      - "assets/**"
+      - "public/**"
+      - "firebase.json"
+      - ".firebaserc"
+      - ".github/workflows/firebase-hosting-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: teslafield-firebase-hosting-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+
+      - name: Prepare Firebase Hosting files
+        run: |
+          set -euo pipefail
+          mkdir -p public
+          cp index.html styles.css app.js public/
+          if [ -d assets ]; then cp -R assets public/assets; fi
+          if [ -f favicon.ico ]; then cp favicon.ico public/; fi
+          if [ -f manifest.webmanifest ]; then cp manifest.webmanifest public/; fi
+          if [ -f sw.js ]; then cp sw.js public/; fi
+          test -s public/index.html
+          test -s public/styles.css
+          test -s public/app.js
+          echo "TESLAFIELD static files prepared."
+
+      - name: Deploy to Firebase Hosting live
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TESLAFIELDAI }}
+          projectId: teslafieldai
+          channelId: live
