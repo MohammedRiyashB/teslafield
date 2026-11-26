@@ -13,6 +13,8 @@
   let controller = null;
   let selectedFiles = [];
   let toastTimer = null;
+  let mediaRecorder = null;
+  let voiceModeEnabled = false;
 
   const makeId = () => "chat-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
   const safeText = (value) => String(value == null ? "" : value);
@@ -328,6 +330,90 @@
     promptInput.focus();
     promptInput.dispatchEvent(new Event("input"));
   }
+  async function speakWithSpace(text) {
+    const response = await fetch(API + "/api/v1/voice/synthesize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: String(text).slice(0, 1500), language: /[\\u0B80-\\u0BFF]/.test(text) ? "Tamil" : "English", voice: "ahana" }),
+      signal: AbortSignal.timeout(180000)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.audio) throw new Error(data.message || "Voice generation is temporarily unavailable.");
+    const audio = new Audio(data.audio);
+    await new Promise((resolve, reject) => {
+      audio.onended = resolve;
+      audio.onerror = () => reject(new Error("Generated voice audio could not be played."));
+      audio.play().catch(reject);
+    });
+  }
+
+  async function startRecording(mode) {
+    if (mediaRecorder) return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+      toast("Audio recording is not supported here. Allow microphone access or use a supported browser.");
+      voiceModeEnabled = false;
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const preferred = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find((type) => MediaRecorder.isTypeSupported(type));
+      const recorder = preferred ? new MediaRecorder(stream, { mimeType: preferred }) : new MediaRecorder(stream);
+      const chunks = [];
+      mediaRecorder = recorder;
+      recorder.ondataavailable = (event) => { if (event.data && event.data.size) chunks.push(event.data); };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((track) => track.stop());
+        mediaRecorder = null;
+        const clip = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+        if (!clip.size) {
+          if (mode === "conversation" && voiceModeEnabled) startRecording("conversation");
+          else toast("No audio was recorded. Try again.");
+          return;
+        }
+        try {
+          const bytes = new Uint8Array(await clip.arrayBuffer());
+          let binary = "";
+          for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+          const response = await fetch(API + "/api/v1/speech/transcribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ audioBase64: btoa(binary), mimeType: clip.type, language: "Auto detect" }),
+            signal: AbortSignal.timeout(180000)
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(data.message || "Whisper could not transcribe this recording.");
+          const transcript = String(data.transcript || "").trim();
+          if (!transcript) {
+            toast("No speech detected. Please try again.");
+            if (mode === "conversation" && voiceModeEnabled) startRecording("conversation");
+            return;
+          }
+          if (mode === "conversation") {
+            await sendMessage(transcript);
+          } else {
+            promptInput.value = (promptInput.value ? promptInput.value + " " : "") + transcript;
+            promptInput.dispatchEvent(new Event("input"));
+            promptInput.focus();
+            toast("Speech converted to text.");
+          }
+        } catch (error) {
+          toast(error.message || "Speech recognition failed. Please retry.");
+          if (mode === "conversation" && voiceModeEnabled) startRecording("conversation");
+        }
+      };
+      recorder.start();
+      toast(mode === "conversation" ? "Voice conversation listening… tap Voice Mode to finish." : "Listening… tap the microphone again to finish.");
+    } catch (error) {
+      mediaRecorder = null;
+      voiceModeEnabled = false;
+      toast("Microphone permission is needed. Allow it in your browser settings and try again.");
+    }
+  }
+
+  function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+  }
+
   async function requestReply(chat) {
     showTyping();
     setGenerating(true);
@@ -349,6 +435,11 @@
       chat.updated = Date.now();
       saveStore();
       renderConversation();
+      if (voiceModeEnabled) {
+        try { await speakWithSpace(reply); }
+        catch (voiceError) { toast(voiceError.message || "Voice playback failed."); }
+        if (voiceModeEnabled) startRecording("conversation");
+      }
     } catch (error) {
       const typing = $("typingIndicator");
       if (typing) typing.remove();
@@ -427,8 +518,10 @@
       $("connectionStatus").classList.add("online");
       $("connectionStatus").querySelector("span").textContent = "API online";
       const configured = Boolean(data.integrations && data.integrations.textChat);
-      $("modelStatus").textContent = configured ? "Text AI provider configured on server." : "Text AI provider needs a private server credential.";
-      $("composerProviderNote").textContent = configured ? "Check important information in AI responses." : "Text AI is awaiting provider configuration.";
+      const speech = Boolean(data.integrations && data.integrations.speechToText);
+      const voice = Boolean(data.integrations && data.integrations.voiceGeneration);
+      $("modelStatus").textContent = configured ? "Chat, Whisper speech and Mithi voice engines connected." : "AI engines are not reachable yet.";
+      $("composerProviderNote").textContent = configured && speech && voice ? "Chat, microphone transcription and AI voice replies are connected." : "One or more AI engines are still starting.";
     } catch (error) {
       $("connectionStatus").classList.remove("online");
       $("connectionStatus").querySelector("span").textContent = "API offline";
@@ -497,23 +590,19 @@
     event.target.value = "";
   };
   $("voiceButton").onclick = () => {
-    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!Recognition) { toast("Dictation is not supported in this browser."); return; }
-    const recognition = new Recognition();
-    recognition.lang = navigator.language || "en-US";
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    recognition.onresult = (event) => {
-      const words = event.results[0][0].transcript;
-      promptInput.value = (promptInput.value ? promptInput.value + " " : "") + words;
-      promptInput.dispatchEvent(new Event("input"));
-      promptInput.focus();
-    };
-    recognition.onerror = () => toast("Could not access speech recognition. Check microphone permission.");
-    recognition.start();
-    toast("Listening… speak now.");
+    if (mediaRecorder && mediaRecorder.state === "recording") stopRecording();
+    else startRecording("dictation");
   };
-  $("voiceModeButton").onclick = () => toast("Full live voice conversation is not connected yet. Use the microphone for dictation.");
+  $("voiceModeButton").onclick = () => {
+    if (voiceModeEnabled) {
+      voiceModeEnabled = false;
+      stopRecording();
+      toast("Voice conversation stopped.");
+    } else {
+      voiceModeEnabled = true;
+      startRecording("conversation");
+    }
+  };
   $("shareChat").onclick = () => {
     const chat = activeChat();
     if (!chat) { toast("Start a conversation first."); return; }
