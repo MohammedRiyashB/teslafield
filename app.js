@@ -74,6 +74,7 @@
 
   function setGuestLayout(guest) {
     document.body.classList.toggle("guest-mode", !!guest);
+    document.body.classList.toggle("guest-conversation-mode", !!guest && guestConversationStarted);
     if (guest) {
       if (guestConversationStarted) {
         const mainPanel = document.querySelector(".main-panel");
@@ -536,6 +537,7 @@
   function newChat() {
     if (generating) stopGeneration();
     guestConversationStarted = false;
+    setGuestLayout(!currentUser);
     clearPendingGuestPrompt();
     messageList.innerHTML = "";
     activeId = null;
@@ -761,7 +763,7 @@
   function showGuestContinueCard() {
     const card = document.createElement("section");
     card.className = "guest-continue-card";
-    card.innerHTML = '<div class="guest-continue-kicker">TESLAFIELD AI</div><h2>Want to continue?</h2><p>Sign in or create a free account to continue your conversation with TESLAFIELD.</p><div class="guest-continue-actions"><button type="button" class="guest-continue-primary" id="guestContinueSignup">Sign up for free</button><button type="button" class="guest-continue-secondary" id="guestContinueLogin">Log in</button></div><div class="guest-continue-footnote">Your message is ready. Continue securely with your Google account.</div>';
+    card.innerHTML = '<div class="guest-continue-kicker">YOUR TESLAFIELD CHAT</div><h2>Want to continue?</h2><p>Create a free account to keep going with your message. Already have an account? Or continue the chat from <strong>Log in</strong>.</p><div class="guest-continue-actions"><button type="button" class="guest-continue-primary" id="guestContinueSignup">Sign up for free</button><button type="button" class="guest-continue-secondary" id="guestContinueLogin">Log in to continue</button></div><div class="guest-continue-footnote"><span class="guest-ready-dot"></span>Your message is ready. Continue securely with Google.</div>';
     messageList.appendChild(card);
     $("guestContinueSignup").onclick = accountEntry;
     $("guestContinueLogin").onclick = accountEntry;
