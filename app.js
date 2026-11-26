@@ -160,7 +160,7 @@
       }
       try {
         if (typeof navigator.install === "function") {
-          await navigator.install({ manifest: new URL("/manifest.webmanifest", location.origin).href });
+          await navigator.install();
           hideBanner();
           return;
         }
