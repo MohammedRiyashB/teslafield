@@ -3,15 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#000000">
+  <script>try{document.documentElement.classList.toggle("dark",(localStorage.getItem("teslafield.appearance")||"dark")==="dark")}catch(e){document.documentElement.classList.add("dark")}</script>
   <meta name="description" content="TESLAFIELD — an AI workspace for ideas, answers and creation.">
   <title>TESLAFIELD</title>
-  <link rel="icon" type="image/svg+xml" href="./teslafield-mark.svg?v=20261126-08">
-  <link rel="apple-touch-icon" href="./teslafield-mark.svg?v=20261126-08">
+  <link rel="icon" type="image/png" href="./teslafieldai-logo.png?v=20261126-11">
+  <link rel="apple-touch-icon" href="./teslafieldai-logo.png?v=20261126-11">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Manrope:wght@500;600;650;700;750;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20261126-10">
+  <link rel="stylesheet" href="./styles.css?v=20261126-11">
 </head>
 <body>
 <div class="app-shell" id="appShell">
@@ -19,7 +20,7 @@
   <aside class="sidebar" id="sidebar" aria-label="Main navigation">
     <div class="sidebar-header">
       <a class="brand" href="./" aria-label="TESLAFIELD home">
-        <img class="brand-mark" src="./teslafield-mark.svg?v=20261126-08" alt=""><span class="brand-word">TESLAFIELD</span>
+        <img class="brand-mark" src="./teslafieldai-logo.png?v=20261126-11" alt=""><span class="brand-word">TESLAFIELD</span>
       </a>
       <button class="icon-button sidebar-collapse" id="sidebarCollapse" aria-label="Collapse sidebar" title="Collapse sidebar">
         <svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="3"/><path d="M9 4v16"/></svg>
@@ -62,7 +63,7 @@
       </button>
       <div class="account-wrap">
         <button class="account-button" id="accountButton" aria-expanded="false">
-          <span class="account-avatar"><img src="./teslafield-mark.svg?v=20261126-08" alt=""></span>
+          <span class="account-avatar"><img src="./teslafieldai-logo.png?v=20261126-11" alt=""></span>
           <span class="account-copy"><strong>TESLAFIELD</strong><small>Personal workspace</small></span>
           <svg class="account-more" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg>
         </button>
@@ -96,7 +97,7 @@
 
     <section class="conversation-scroll" id="conversationScroll" aria-label="Conversation">
       <div class="welcome-screen" id="welcomeScreen">
-        <div class="welcome-mark"><img src="./teslafield-mark.svg?v=20261126-08" alt=""></div>
+        <div class="welcome-mark"><img src="./teslafieldai-logo.png?v=20261126-11" alt=""></div>
         <h1>What can I help with?</h1>
         <p class="welcome-subtitle">Ask anything, explore an idea, or make something useful.</p>
         <div class="starter-grid">
@@ -163,6 +164,6 @@
 
 <input id="fileInput" type="file" hidden multiple accept="image/*,.pdf,.txt,.doc,.docx,.csv">
 <div class="toast-message" id="toastMessage" role="status" aria-live="polite"></div>
-<script src="./app.js?v=20261126-10" defer></script>
+<script src="./app.js?v=20261126-11" defer></script>
 </body>
 </html>
