@@ -69,6 +69,9 @@
   let activeId = null;
   let generating = false;
   let controller = null;
+  let mediaRecorder = null;
+  let mediaRecorderStream = null;
+  let recordingTimer = null;
   let selectedFiles = [];
   let toastTimer = null;
   let healthRequest = null;
@@ -921,7 +924,7 @@
     row.className = "message-row assistant typing-row";
     row.setAttribute("role", "status");
     row.setAttribute("aria-label", "Teslafield is preparing a response");
-    row.innerHTML = '<div class="typing-status"><span class="typing-dots"><i></i><i></i><i></i></span><span>Preparing response…</span></div>';
+    row.innerHTML = '<div class="typing-status"><span class="typing-dots"><i></i><i></i><i></i></span><span>Thinking…</span></div>';
     messageList.appendChild(row);
     scrollBottom();
     return row;
@@ -979,30 +982,131 @@
     });
   }
 
-  async function revealAssistantText(element, fullText, signal) {
-    const characters = Array.from(String(fullText || ""));
-    let visible = "";
-    element.textContent = "";
-    element.classList.add("is-revealing");
-    const chunkSize = 18;
-    for (let index = 0; index < characters.length; index += chunkSize) {
-      if (signal.aborted) break;
-      visible += characters.slice(index, index + chunkSize).join("");
-      element.textContent = visible;
-      if (index % (chunkSize * 4) === 0) scrollBottom();
-      await new Promise((resolve) => {
-        let timer;
-        const finish = () => {
-          clearTimeout(timer);
-          signal.removeEventListener("abort", finish);
-          resolve();
-        };
-        timer = setTimeout(finish, 18);
-        signal.addEventListener("abort", finish, { once: true });
-      });
+  async function startVoiceRecording() {
+    if (!currentUser) {
+      toast("Sign in to use voice input.");
+      return;
     }
-    element.classList.remove("is-revealing");
-    return visible;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+      toast("Voice recording is not supported by this browser. Try Chrome on Android.");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+      });
+      const supportedTypes = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
+      const mimeType = supportedTypes.find((type) => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(type));
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      let chunks = [];
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size) chunks.push(event.data);
+      };
+      recorder.onerror = () => {
+        stream.getTracks().forEach((track) => track.stop());
+        resetMicButton();
+        toast("The microphone recording failed. Please try again.");
+      };
+      recorder.onstop = async () => {
+        clearTimeout(recordingTimer);
+        stream.getTracks().forEach((track) => track.stop());
+        mediaRecorder = null;
+        mediaRecorderStream = null;
+        const audioBlob = new Blob(chunks, { type: recorder.mimeType || mimeType || "audio/webm" });
+        chunks = [];
+        resetMicButton();
+        if (!audioBlob.size) {
+          toast("No audio was captured. Please try again.");
+          return;
+        }
+        if (audioBlob.size > 8 * 1024 * 1024) {
+          toast("That recording is too large. Please record a shorter message.");
+          return;
+        }
+        await transcribeVoiceRecording(audioBlob);
+      };
+      mediaRecorder = recorder;
+      mediaRecorderStream = stream;
+      recorder.start(250);
+      const button = $("micButton");
+      button.classList.add("recording");
+      button.setAttribute("aria-label", "Stop recording");
+      button.title = "Stop recording";
+      recordingTimer = setTimeout(() => stopVoiceRecording(), 45000);
+      toast("Listening… tap the microphone again when finished.");
+    } catch (error) {
+      if (mediaRecorderStream) mediaRecorderStream.getTracks().forEach((track) => track.stop());
+      mediaRecorder = null;
+      mediaRecorderStream = null;
+      resetMicButton();
+      const message = error && error.name === "NotAllowedError"
+        ? "Allow microphone access in your browser settings, then try again."
+        : "Teslafield could not start the microphone. Please try again.";
+      toast(message);
+    }
+  }
+
+  function resetMicButton() {
+    const button = $("micButton");
+    if (!button) return;
+    button.classList.remove("recording", "transcribing");
+    button.disabled = false;
+    button.setAttribute("aria-label", "Record voice message");
+    button.title = "Record voice message";
+  }
+
+  function stopVoiceRecording() {
+    clearTimeout(recordingTimer);
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
+      const button = $("micButton");
+      button.classList.remove("recording");
+      button.classList.add("transcribing");
+      button.disabled = true;
+      button.setAttribute("aria-label", "Transcribing voice");
+      button.title = "Transcribing voice…";
+    }
+  }
+
+  async function transcribeVoiceRecording(audioBlob) {
+    const button = $("micButton");
+    button.classList.add("transcribing");
+    button.disabled = true;
+    button.setAttribute("aria-label", "Transcribing voice");
+    button.title = "Transcribing voice…";
+    try {
+      const token = await getAuthToken();
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error("The microphone recording could not be read."));
+        reader.readAsDataURL(audioBlob);
+      });
+      const response = await fetch(API + "/api/v1/speech/transcribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({
+          audioBase64: dataUrl,
+          mimeType: audioBlob.type || "audio/webm",
+          language: "Auto detect"
+        })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || "Speech recognition could not transcribe this recording.");
+      const transcript = safeText(data.transcript).trim();
+      if (!transcript) {
+        toast(data.message || "No speech detected. Please try again.");
+        return;
+      }
+      promptInput.value = (promptInput.value.trim() ? promptInput.value.trim() + " " : "") + transcript;
+      promptInput.dispatchEvent(new Event("input", { bubbles: true }));
+      promptInput.focus();
+      toast("Voice transcribed. Review your message, then tap Send.");
+    } catch (error) {
+      toast(error.message || "Voice transcription is temporarily unavailable.");
+    } finally {
+      resetMicButton();
+    }
   }
 
   async function requestReply(chat) {
@@ -1010,20 +1114,12 @@
     const requestSignal = requestController.signal;
     controller = requestController;
     const typingIndicator = showTyping();
-    let assistantMessage = null;
-    let replyText = "";
-    let streamBody = null;
-    const setStatus = (value) => {
-      const label = typingIndicator.querySelector(".typing-status span:last-child");
-      if (label) label.textContent = value;
-    };
     setGenerating(true);
     try {
       await waitForApiReady(90000, requestSignal);
       if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
       const token = await getAuthToken();
       if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
-      setStatus("Connecting to the model…");
       const chatRequest = {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
@@ -1033,9 +1129,8 @@
       let response;
       for (let attempt = 0; attempt < 3; attempt += 1) {
         if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
-        response = await fetch(API + "/api/v1/chat/stream", chatRequest);
+        response = await fetch(API + "/api/v1/chat/completions", chatRequest);
         if (response.ok || ![502, 503, 504].includes(response.status) || attempt === 2) break;
-        if (response.body) await response.body.cancel().catch(() => {});
         await new Promise((resolve, reject) => {
           let timer;
           const abort = () => { clearTimeout(timer); reject(new DOMException("Request cancelled", "AbortError")); };
@@ -1046,58 +1141,17 @@
       }
       if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
       if (!response) throw new Error("Teslafield could not reach the chat service. Please retry.");
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.message || data.error || "AI request failed (" + response.status + ").");
-      }
-      if (response.body && response.body.getReader) {
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        while (true) {
-          if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
-          const part = await reader.read();
-          if (part.done) break;
-          const piece = decoder.decode(part.value, { stream: true });
-          if (!piece) continue;
-          replyText += piece;
-          if (!assistantMessage) {
-            assistantMessage = { role: "assistant", content: "" };
-            chat.messages.push(assistantMessage);
-            streamBody = document.createElement("div");
-            streamBody.className = "message-content is-revealing";
-            const streamRow = document.createElement("article");
-            streamRow.className = "message-row assistant";
-            const streamStack = document.createElement("div");
-            streamStack.className = "message-stack assistant-stack";
-            streamStack.appendChild(streamBody);
-            streamRow.appendChild(streamStack);
-            messageList.appendChild(streamRow);
-            typingIndicator.remove();
-          }
-          assistantMessage.content = replyText;
-          streamBody.textContent = replyText;
-          scrollBottom();
-        }
-        replyText += decoder.decode();
-      } else {
-        replyText = await response.text();
-      }
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || data.error || "AI request failed (" + response.status + ").");
+      const replyText = safeText(data.reply).trim();
+      if (!replyText) throw new Error("The connected model returned an empty response.");
       if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
-      if (!replyText.trim()) throw new Error("The connected model returned an empty response.");
-      if (!assistantMessage) {
-        assistantMessage = { role: "assistant", content: replyText };
-        chat.messages.push(assistantMessage);
-      } else assistantMessage.content = replyText;
+      chat.messages.push({ role: "assistant", content: replyText });
       chat.updated = Date.now();
       saveStore();
-      if (streamBody) streamBody.classList.remove("is-revealing");
       showBannerWhenDue(chat);
     } catch (error) {
-      if (assistantMessage && replyText.trim()) {
-        assistantMessage.content = replyText;
-        chat.updated = Date.now();
-        saveStore();
-      } else if (error.name !== "AbortError" && !requestSignal.aborted) {
+      if (error.name !== "AbortError" && !requestSignal.aborted) {
         const message = error.message || "The AI service could not complete this request.";
         chat.messages.push({ role: "assistant", content: "**Teslafield service notice**\n\n" + message + "\n\nYour prompt is saved in this conversation. You can retry after the service is connected." });
         chat.updated = Date.now();
