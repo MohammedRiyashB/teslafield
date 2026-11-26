@@ -19,11 +19,11 @@ concurrency:
 
 jobs:
   keep-services-awake:
-    name: Ping Render and Hugging Face services
+    name: Ping TESLAFIELD core services
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Check Render backend and warm integrated Spaces
+      - name: Check Render backend and core AI integrations
         shell: bash
         run: |
           set -uo pipefail
@@ -66,10 +66,6 @@ jobs:
           fi
           rm -f "$warmup_file"
 
-          # The Image and Video Spaces are checked directly because they are not
-          # currently included in the backend's /api/v1/warmup integration checks.
-          ping "Hugging Face Image Space" "https://earthaioa-teslafield-image.hf.space/config"
-          ping "Hugging Face Video Space" "https://earthaioa-teslafield-video.hf.space/config"
 
           if [ "$failures" -gt 0 ]; then
             echo "::warning::$failures keepalive check(s) failed. The next scheduled run will retry."
