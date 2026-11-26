@@ -97,7 +97,7 @@ jobs:
           set -euo pipefail
           BASE="https://teslafieldai.web.app"
           curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-connrefused "${BASE}/?verify=${GITHUB_SHA}" -o /tmp/teslafield-home.html
-          VERSION="$(grep -oE 'styles.css\\?v=[^"]+' /tmp/teslafield-home.html | head -n1 | cut -d= -f2)"
+          VERSION="$(sed -n 's/.*styles\.css?v=\([^"]*\).*/\1/p' /tmp/teslafield-home.html | head -n1)"
           test -n "$VERSION"
           grep -q "theme-init.js?v=$VERSION" /tmp/teslafield-home.html
           grep -q "Message TESLAFIELD" /tmp/teslafield-home.html
