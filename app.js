@@ -149,6 +149,7 @@
       window.requestAnimationFrame(() => banner.classList.add("is-visible"));
       try { localStorage.setItem(installBannerStorageKey, String(Date.now())); } catch (error) {}
     };
+    window.showBannerWhenDue = showBannerWhenDue;
 
     window.addEventListener("beforeinstallprompt", (event) => {
       event.preventDefault();
@@ -1187,7 +1188,7 @@
       chat.messages.push({ role: "assistant", content: replyText });
       chat.updated = Date.now();
       saveStore();
-      showBannerWhenDue(chat);
+      if (typeof window.showBannerWhenDue === "function") window.showBannerWhenDue(chat);
     } catch (error) {
       if (error.name !== "AbortError" && !requestSignal.aborted) {
         const message = error.message || "The AI service could not complete this request.";
