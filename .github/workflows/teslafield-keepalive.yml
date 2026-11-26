@@ -49,7 +49,22 @@ jobs:
           ping "Render API health" "https://teslafield-api.onrender.com/health"
 
           # This endpoint also checks the Chat, Speech and Voice Hugging Face Spaces.
-          ping "Render integration warmup (Chat, Speech and Voice)" "https://teslafield-api.onrender.com/api/v1/warmup"
+          warmup_file="$(mktemp)"
+          if curl --location --silent --show-error --fail \
+            --connect-timeout 15 --max-time 60 \
+            --retry 2 --retry-delay 5 --retry-all-errors \
+            --output "$warmup_file" "https://teslafield-api.onrender.com/api/v1/warmup"; then
+            echo "::notice::Render integration warmup responded."
+            jq -r '.engines // {} | to_entries[] | "\(.key): \(.value)"' "$warmup_file"
+            if ! jq -e '.engines.chat == "online" and .engines.speech == "online" and .engines.voice == "online"' "$warmup_file" >/dev/null; then
+              echo "::warning::At least one Chat, Speech or Voice Space is not reported online."
+              failures=$((failures + 1))
+            fi
+          else
+            echo "::warning::Render integration warmup endpoint did not return a successful response."
+            failures=$((failures + 1))
+          fi
+          rm -f "$warmup_file"
 
           # The Image and Video Spaces are checked directly because they are not
           # currently included in the backend's /api/v1/warmup integration checks.
