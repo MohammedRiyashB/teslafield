@@ -1361,3 +1361,12 @@ body.guest-mode:not(.guest-conversation-mode) .guest-footer{
   letter-spacing:.02em!important;color:rgba(225,225,225,.56)!important;
 }
 @media(max-width:760px){body.guest-mode:not(.guest-conversation-mode) .guest-footer{font-size:9px!important}}
+
+
+/* Center the single-line guest footer horizontally at the bottom. */
+body.guest-mode:not(.guest-conversation-mode) .guest-footer{
+  left:50%!important;right:auto!important;bottom:calc(10px + env(safe-area-inset-bottom))!important;
+  inset:auto auto calc(10px + env(safe-area-inset-bottom)) 50%!important;
+  transform:translateX(-50%)!important;text-align:center!important;
+  justify-content:center!important;align-items:center!important;
+}
