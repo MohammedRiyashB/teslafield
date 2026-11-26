@@ -20,3 +20,4 @@ Free-tier ZeroGPU-ready image generation Space using FLUX.1-schnell.
 - FLUX access conditions must be accepted on the model page.
 - Add `HF_TOKEN` as a Space Secret if the gated model download requires authentication.
 - No paid hardware is selected by this repository.
+- Deployment is synchronized from the TESLAFIELD GitHub repository.
