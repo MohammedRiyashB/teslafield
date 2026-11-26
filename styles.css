@@ -1637,3 +1637,47 @@ html[data-motion="reduced"] *,html[data-motion="reduced"] *:before,html[data-mot
  .personalize-modal{padding:23px 19px;border-radius:17px}
  .preference-field select{width:118px}
 }
+
+
+/* TESLAFIELD PWA install banner — top-centre, five-minute frequency controlled in app.js */
+.install-experience-banner{
+  position:fixed;z-index:180;top:calc(env(safe-area-inset-top,0px) + 12px);left:50%;
+  width:max-content;max-width:calc(100vw - 24px);min-height:54px;
+  display:flex;align-items:center;justify-content:center;gap:11px;padding:8px 9px 8px 13px;
+  border:1px solid rgba(255,255,255,.15);border-radius:17px;
+  background:rgba(9,10,14,.94);color:#f7f8ff;
+  box-shadow:0 14px 42px rgba(0,0,0,.32),0 0 28px rgba(98,105,255,.13);
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+  opacity:0;visibility:hidden;pointer-events:none;transform:translate(-50%,-145%);
+  transition:opacity 240ms ease,transform 420ms cubic-bezier(.18,.85,.24,1),visibility 240ms;
+}
+.install-experience-banner.is-visible{opacity:1;visibility:visible;pointer-events:auto;transform:translate(-50%,0)}
+.install-experience-banner[hidden]{display:none}
+.install-experience-mark{
+  width:27px;height:27px;display:grid;place-items:center;flex:none;
+  border:1px solid rgba(255,255,255,.24);border-radius:9px;
+  background:linear-gradient(145deg,#24283b,#11131b);color:#fff;
+  font-size:15px;font-weight:800;letter-spacing:-.08em;
+}
+.install-experience-copy{color:#f4f5fb;font-size:12px;font-weight:650;letter-spacing:.005em;white-space:nowrap}
+.install-experience-download{
+  min-height:35px;flex:none;padding:0 14px;border:0;border-radius:11px;
+  background:#f5f6fb;color:#101116;font:700 11px/1 system-ui,sans-serif;white-space:nowrap;cursor:pointer;
+  transition:transform 150ms ease,background 150ms ease;
+}
+.install-experience-download:hover{background:#fff;transform:translateY(-1px)}
+.install-experience-download:active{transform:scale(.97)}
+.install-experience-close{
+  width:29px;height:31px;flex:none;display:grid;place-items:center;border:0;border-radius:9px;
+  background:transparent;color:#9da0ad;font:400 22px/1 system-ui,sans-serif;cursor:pointer;
+}
+.install-experience-close:hover{background:rgba(255,255,255,.09);color:#fff}
+.install-experience-banner button:focus-visible{outline:2px solid #aab2ff;outline-offset:3px}
+@media(max-width:420px){
+  .install-experience-banner{gap:7px;min-height:49px;padding:7px 7px 7px 9px;border-radius:14px}
+  .install-experience-mark{width:24px;height:24px;border-radius:8px;font-size:13px}
+  .install-experience-copy{font-size:10.5px}
+  .install-experience-download{min-height:33px;padding:0 10px;border-radius:9px;font-size:10px}
+  .install-experience-close{width:25px;height:29px;font-size:20px}
+}
+@media(prefers-reduced-motion:reduce){.install-experience-banner,.install-experience-download{transition:none}}
