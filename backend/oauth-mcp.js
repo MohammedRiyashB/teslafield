@@ -4,7 +4,7 @@ const crypto = require("node:crypto");
 
 const PUBLIC_BASE_URL = trimSlash(process.env.PUBLIC_BASE_URL || "https://teslafield-api.onrender.com");
 const MCP_RESOURCE = PUBLIC_BASE_URL + "/mcp";
-const OAUTH_PAGE_URL = process.env.TESLAFIELD_OAUTH_PAGE || "https://teslafieldai.web.app/oauth.html";
+const OAUTH_PAGE_URL = process.env.TESLAFIELD_OAUTH_PAGE || "https://teslafieldai.web.app/oauth";
 const OAUTH_ISSUER = PUBLIC_BASE_URL;
 const REQUIRED_SCOPE = "teslafield:chat";
 const KNOWN_PROTOCOL_VERSIONS = new Set(["2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"]);
