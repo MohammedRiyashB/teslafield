@@ -1409,6 +1409,7 @@
   $("desktopMenu").onclick = () => document.body.classList.remove("sidebar-collapsed");
   $("sidebarCollapse").onclick = () => document.body.classList.add("sidebar-collapsed");
   $("composer").onsubmit = (event) => { event.preventDefault(); if (generating) stopGeneration(); else sendMessage(); };
+  $("micButton").onclick = () => { if (mediaRecorder && mediaRecorder.state !== "inactive") stopVoiceRecording(); else startVoiceRecording(); };
   $("sendButton").onclick = (event) => { if (generating) { event.preventDefault(); stopGeneration(); } };
   promptInput.oninput = () => {
     promptInput.style.height = "auto";
