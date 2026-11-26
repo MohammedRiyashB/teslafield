@@ -5,7 +5,7 @@
   const root = document.documentElement;
   let connectReturnFocus = null;
   let gmailAccessToken = null;
-  // Protect TESLAFIELD brand artwork only; regular website images remain downloadable.
+  // Protect Teslafield brand artwork only; regular website images remain downloadable.
   document.addEventListener("contextmenu", (event) => {
     if (event.target && event.target.closest && event.target.closest('img[src*="teslafieldai-logo"]')) {
       event.preventDefault();
@@ -62,7 +62,7 @@
     if (document.visibilityState === "visible" && !welcome.hidden) showNextWelcomeMessage();
   }, 5500);
   const composerArea = $("composerArea");
-  const composerHome = document.createComment("TESLAFIELD composer home");
+  const composerHome = document.createComment("Teslafield composer home");
   composerArea.parentNode.insertBefore(composerHome, composerArea);
   const MAX_HISTORY = 100;
   let chats = [];
@@ -148,14 +148,14 @@
     window.addEventListener("appinstalled", () => {
       deferredInstallPrompt = null;
       hideBanner();
-      toast("TESLAFIELD has been installed on your device.");
+      toast("Teslafield has been installed on your device.");
     });
 
     closeButton.addEventListener("click", hideBanner);
     installButton.addEventListener("click", async () => {
       if (isTeslafieldInstalled()) {
         hideBanner();
-        toast("TESLAFIELD is already installed.");
+        toast("Teslafield is already installed.");
         return;
       }
       try {
@@ -174,12 +174,12 @@
         }
         const userAgent = navigator.userAgent || "";
         if (/iphone|ipad|ipod/i.test(userAgent)) {
-          toast("To add TESLAFIELD: tap Share in Safari, choose Add to Home Screen, then tap Add.");
+          toast("To add Teslafield: tap Share in Safari, choose Add to Home Screen, then tap Add.");
         } else {
-          toast("To install TESLAFIELD, open your browser menu ⋮ and choose Install app or Add to Home screen.");
+          toast("To install Teslafield, open your browser menu ⋮ and choose Install app or Add to Home screen.");
         }
       } catch (error) {
-        toast("The install prompt could not open. Use your browser menu to install TESLAFIELD.");
+        toast("The install prompt could not open. Use your browser menu to install Teslafield.");
       }
     });
 
@@ -241,7 +241,7 @@
   function updateAccountUI() {
     const signedIn = !!currentUser;
     document.body.classList.toggle("signed-in", signedIn);
-    const displayName = signedIn ? (currentUser.displayName || (currentUser.email || "Google user").split("@")[0]) : "TESLAFIELD";
+    const displayName = signedIn ? (currentUser.displayName || (currentUser.email || "Google user").split("@")[0]) : "Teslafield";
     $("accountDisplayName").textContent = displayName;
     $("accountDisplayEmail").textContent = signedIn ? (currentUser.email || "Google account") : "Sign in to your account";
     $("accountAvatarFallback").textContent = displayName.trim().charAt(0).toUpperCase() || "T";
@@ -260,7 +260,7 @@
       document.body.classList.remove("guest-mode", "guest-conversation-mode");
       const heading = welcome.querySelector("h1");
       const subtitle = welcome.querySelector(".welcome-subtitle");
-      if (heading) heading.textContent = "Welcome to TESLAFIELD";
+      if (heading) heading.textContent = "Welcome to Teslafield";
       if (subtitle) showNextWelcomeMessage();
     } else {
       const heading = welcome.querySelector("h1");
@@ -271,7 +271,7 @@
     setGuestLayout(!signedIn);
     $("accountStatus").textContent = signedIn
       ? "Signed in securely. Your chat history stays on this device."
-      : "Sign in with Google to use TESLAFIELD securely.";
+      : "Sign in with Google to use Teslafield securely.";
     $("accountSignUp").hidden = signedIn;
     $("accountLogIn").hidden = signedIn;
     $("accountSignOut").hidden = !signedIn;
@@ -302,7 +302,7 @@
     $("gmailDetailStatus").textContent = connected ? "Connected for this session" : "Not connected";
     $("gmailConnectAction").innerHTML = connected ? "Manage" : '<span aria-hidden="true">＋</span> Connect';
     $("gmailDetailConnect").hidden = connected; $("gmailDisconnect").hidden = !connected;
-    $("gmailSetupNote").textContent = connected ? "Gmail access is temporary for this browser session. Disconnect at any time." : "Google OAuth setup is required before Gmail can be connected. Your Gmail password is never shared with TESLAFIELD.";
+    $("gmailSetupNote").textContent = connected ? "Gmail access is temporary for this browser session. Disconnect at any time." : "Google OAuth setup is required before Gmail can be connected. Your Gmail password is never shared with Teslafield.";
   }
   function showGmailDetails() { $("connectAppList").hidden = true; $("gmailDetailCard").hidden = false; updateGmailConnectionUI(); $("gmailDetailBack").focus(); }
   function beginGmailConnect() { showGmailDetails(); toast("Gmail connection is not activated yet. Google OAuth client setup is required first."); }
@@ -415,7 +415,7 @@
               "auth/unauthorized-domain": "Google sign-in domain is not authorized in Firebase.",
               "auth/operation-not-allowed": "Google sign-in is disabled in Firebase Authentication.",
               "auth/network-request-failed": "Network interrupted Google sign-in. Please try again.",
-              "auth/web-storage-unsupported": "This browser is blocking sign-in storage. Open TESLAFIELD in Chrome and allow site storage."
+              "auth/web-storage-unsupported": "This browser is blocking sign-in storage. Open Teslafield in Chrome and allow site storage."
             };
             toast(messages[error.code] || ("Google sign-in could not finish (" + error.code + "). Please try again."));
           }
@@ -425,7 +425,7 @@
       resolveAuthReady();
       authClient = null;
       updateAccountUI();
-      toast("TESLAFIELD could not initialize Google sign-in. Reload and try again.");
+      toast("Teslafield could not initialize Google sign-in. Reload and try again.");
     }
   }
 
@@ -475,7 +475,7 @@
           const redirectCode = redirectError && redirectError.code;
           toast(redirectCode === "auth/unauthorized-domain"
             ? "Firebase blocked the return address. Add teslafieldai.web.app to Authorized domains."
-            : "Google sign-in could not return to TESLAFIELD. Please retry in Chrome.");
+            : "Google sign-in could not return to Teslafield. Please retry in Chrome.");
           return;
         }
       }
@@ -493,7 +493,7 @@
   async function deleteAccountAndLocalData() {
     if (!currentUser) return;
     const uid = currentUser.uid;
-    if (!window.confirm("Permanently delete this TESLAFIELD sign-in account and its locally saved chats on this device? This cannot be undone. This does not erase records that external AI providers may retain under their own policies.")) return;
+    if (!window.confirm("Permanently delete this Teslafield sign-in account and its locally saved chats on this device? This cannot be undone. This does not erase records that external AI providers may retain under their own policies.")) return;
     try {
       await currentUser.delete();
       localStorage.removeItem("teslafield.conversations.v4." + uid);
@@ -697,7 +697,7 @@
       const shareUrl = location.origin + "/share/" + id + "?data=" + encodeURIComponent(encoded);
       if (navigator.share) {
         try {
-          await navigator.share({ title: "TESLAFIELD AI response", text: "A response shared from TESLAFIELD AI", url: shareUrl });
+          await navigator.share({ title: "Teslafield AI response", text: "A response shared from Teslafield AI", url: shareUrl });
           return;
         } catch (error) { if (error && error.name === "AbortError") return; }
       }
@@ -742,8 +742,8 @@
       $("sharedMessageContent").innerHTML = renderMarkdown(data.content);
       $("copySharedMessage").hidden = false;
       $("copySharedMessage").onclick = () => copyText(data.content);
-      $("sharedMessageTitle").textContent = "A response shared from TESLAFIELD";
-      document.title = "Shared response | TESLAFIELD AI";
+      $("sharedMessageTitle").textContent = "A response shared from Teslafield";
+      document.title = "Shared response | Teslafield AI";
     } catch (error) {
       $("sharedMessageTitle").textContent = "This shared response is unavailable";
       $("sharedMessageContent").textContent = "The link is incomplete or its response data was removed. Ask the sender to create a fresh share link.";
@@ -889,7 +889,7 @@
     row.id = "typingIndicator";
     row.className = "message-row assistant typing-row";
     row.setAttribute("role", "status");
-    row.setAttribute("aria-label", "TESLAFIELD is preparing a response");
+    row.setAttribute("aria-label", "Teslafield is preparing a response");
     row.innerHTML = '<div class="typing-status"><span class="typing-dots"><i></i><i></i><i></i></span><span>Preparing response…</span></div>';
     messageList.appendChild(row);
     scrollBottom();
@@ -909,14 +909,14 @@
       await speakWithSpace(text);
     } catch (error) {
       if (!("speechSynthesis" in window)) {
-        toast(error.message || "TESLAFIELD voice is temporarily unavailable.");
+        toast(error.message || "Teslafield voice is temporarily unavailable.");
         return;
       }
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = /[\u0B80-\u0BFF]/.test(text) ? "ta-IN" : "en-IN";
       window.speechSynthesis.speak(utterance);
-      toast("TESLAFIELD Voice is unavailable; using your device voice.");
+      toast("Teslafield Voice is unavailable; using your device voice.");
     }
   }
   function editUserMessage(index) {
@@ -1014,7 +1014,7 @@
         });
       }
       if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
-      if (!response) throw new Error("TESLAFIELD could not reach the chat service. Please retry.");
+      if (!response) throw new Error("Teslafield could not reach the chat service. Please retry.");
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         throw new Error(data.message || data.error || "AI request failed (" + response.status + ").");
@@ -1067,7 +1067,7 @@
         saveStore();
       } else if (error.name !== "AbortError" && !requestSignal.aborted) {
         const message = error.message || "The AI service could not complete this request.";
-        chat.messages.push({ role: "assistant", content: "**TESLAFIELD service notice**\n\n" + message + "\n\nYour prompt is saved in this conversation. You can retry after the service is connected." });
+        chat.messages.push({ role: "assistant", content: "**Teslafield service notice**\n\n" + message + "\n\nYour prompt is saved in this conversation. You can retry after the service is connected." });
         chat.updated = Date.now();
         saveStore();
         toast(message);
@@ -1085,7 +1085,7 @@
   function showGuestContinueCard() {
     const card = document.createElement("section");
     card.className = "guest-continue-card";
-    card.innerHTML = '<div class="guest-continue-kicker">YOUR TESLAFIELD CHAT</div><h2>Want to continue?</h2><p>Create a free account to keep going with your message. Already have an account? Or continue the chat from <strong>Log in</strong>.</p><div class="guest-continue-actions"><button type="button" class="guest-continue-primary" id="guestContinueSignup">Sign up for free</button><button type="button" class="guest-continue-secondary" id="guestContinueLogin">Log in to continue</button></div><div class="guest-continue-footnote"><span class="guest-ready-dot"></span>Your message is ready. Continue securely with Google.</div>';
+    card.innerHTML = '<div class="guest-continue-kicker">YOUR Teslafield CHAT</div><h2>Want to continue?</h2><p>Create a free account to keep going with your message. Already have an account? Or continue the chat from <strong>Log in</strong>.</p><div class="guest-continue-actions"><button type="button" class="guest-continue-primary" id="guestContinueSignup">Sign up for free</button><button type="button" class="guest-continue-secondary" id="guestContinueLogin">Log in to continue</button></div><div class="guest-continue-footnote"><span class="guest-ready-dot"></span>Your message is ready. Continue securely with Google.</div>';
     messageList.appendChild(card);
     $("guestContinueSignup").onclick = accountEntry;
     $("guestContinueLogin").onclick = accountEntry;
@@ -1238,7 +1238,7 @@
       });
       attempt += 1;
     }
-    throw new Error("TESLAFIELD is temporarily unavailable. Please retry shortly.");
+    throw new Error("Teslafield is temporarily unavailable. Please retry shortly.");
   }
   async function checkConnection() {
     const online = await pingApi();
@@ -1306,7 +1306,7 @@
     catch (error) { toast("Your preferences could not be saved in this browser."); }
     applyPersonalization();
     closePersonalize();
-    toast("Your TESLAFIELD preferences are saved.");
+    toast("Your Teslafield preferences are saved.");
   }
 
   $("newChat").onclick = newChat;
