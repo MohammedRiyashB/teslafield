@@ -304,3 +304,33 @@ a{color:inherit}
 .account-avatar img{display:block;width:100%;height:100%;object-fit:contain}
 .model-option-icon{overflow:hidden;padding:3px}
 .model-option-icon img{display:block;width:100%;height:100%;object-fit:contain}
+
+
+/* AMOLED black theme: applied only when Dark appearance is selected */
+:root.dark{color-scheme:dark;--page:#000;--sidebar:#000;--surface:#080808;--surface-2:#0d0d0d;--hover:#171717;--text:#f5f5f5;--muted:#b5b5b5;--subtle:#777;--border:#242424;--accent:#fff;--accent-contrast:#000}
+.dark html,.dark body,.dark .app-shell,.dark .main-panel,.dark .topbar,.dark .conversation-scroll,.dark .composer-area,.dark .sidebar{background:#000}
+.dark .sidebar{border-right-color:#202020}
+.dark .side-action{color:#ededed}
+.dark .side-action:hover,.dark .side-action.active,.dark .history-row:hover,.dark .history-row.active,.dark .account-button:hover,.dark .model-button:hover,.dark .model-button[aria-expanded=true],.dark .composer-icon:hover{background:#151515}
+.dark .side-action svg,.dark .icon-button{color:#bdbdbd}
+.dark .history-title{color:#e8e8e8}
+.dark .history-search:focus-within{background:#080808;border-color:#292929}
+.dark .history-row-menu,.dark .account-menu,.dark .model-menu,.dark .tool-menu{background:#080808;border-color:#292929}
+.dark .model-option{background:#101010}
+.dark .starter-card{background:#080808;border-color:#262626}
+.dark .starter-card:hover{background:#111;border-color:#444}
+.dark .starter-icon{background:#171717;color:#eee}
+.dark .message-row.user .message-content{background:#171717;color:#f4f4f4}
+.dark .message-content pre{background:#080808;color:#eee;border-color:#282828}
+.dark .message-content blockquote{border-color:#777;color:#ccc}
+.dark .message-content a{color:#b8d7ff}
+.dark .composer{background:#050505;border-color:#292929;box-shadow:0 8px 28px #000}
+.dark .composer:focus-within{border-color:#555}
+.dark .composer textarea{color:#f5f5f5}
+.dark .composer textarea::placeholder{color:#858585}
+.dark .voice-mode-button,.dark .send-button{background:#f5f5f5;color:#000}
+.dark .voice-mode-button:hover,.dark .send-button:hover{background:#dcdcdc}
+.dark .connection-status{color:#aaa}
+.dark .brand-mark,.dark .welcome-mark,.dark .account-avatar,.dark .model-option-icon{background:#000!important;color:#fff!important;box-shadow:none}
+.dark .welcome-mark{border:1px solid #242424}
+.dark .composer-disclaimer,.dark .composer-provider-note{color:#777}
