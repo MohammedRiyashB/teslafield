@@ -96,15 +96,16 @@ jobs:
         run: |
           set -euo pipefail
           BASE="https://teslafieldai.web.app"
-          curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-connrefused "${BASE}/?release=20261126-22" -o /tmp/teslafield-home.html
-          grep -q "styles.css?v=20261126-22" /tmp/teslafield-home.html
-          grep -q "theme-init.js?v=20261126-22" /tmp/teslafield-home.html
+          curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-connrefused "${BASE}/?verify=${GITHUB_SHA}" -o /tmp/teslafield-home.html
+          VERSION="$(grep -oE 'styles.css\\?v=[^"]+' /tmp/teslafield-home.html | head -n1 | cut -d= -f2)"
+          test -n "$VERSION"
+          grep -q "theme-init.js?v=$VERSION" /tmp/teslafield-home.html
           grep -q "Message TESLAFIELD" /tmp/teslafield-home.html
-          curl --fail --silent --show-error "${BASE}/teslafieldai-logo.png?v=20261126-22" -o /tmp/teslafieldai-logo.png
+          curl --fail --silent --show-error "${BASE}/teslafieldai-logo.png?v=$VERSION" -o /tmp/teslafieldai-logo.png
           test -s /tmp/teslafieldai-logo.png
-          curl --fail --silent --show-error "${BASE}/styles.css?v=20261126-22" -o /tmp/teslafield-styles.css
+          curl --fail --silent --show-error "${BASE}/styles.css?v=$VERSION" -o /tmp/teslafield-styles.css
           grep -q "starter-grid" /tmp/teslafield-styles.css
-          curl --fail --silent --show-error "${BASE}/app.js?v=20261126-22" -o /tmp/teslafield-app.js
+          curl --fail --silent --show-error "${BASE}/app.js?v=$VERSION" -o /tmp/teslafield-app.js
           grep -q "conversations.v4." /tmp/teslafield-app.js
           grep -q "savePendingGuestPrompt" /tmp/teslafield-app.js
           grep -q "storeCookieChoices" /tmp/teslafield-app.js
@@ -116,6 +117,6 @@ jobs:
           curl --fail --location --silent --show-error "${BASE}/privacy" -o /tmp/teslafield-privacy.html
           grep -q "Privacy Policy" /tmp/teslafield-privacy.html
           echo "Verified clean /privacy page."
-          curl --fail --silent --show-error "${BASE}/theme-init.js?v=20261126-22" -o /tmp/teslafield-theme-init.js
+          curl --fail --silent --show-error "${BASE}/theme-init.js?v=$VERSION" -o /tmp/teslafield-theme-init.js
           grep -q "appearance.v2" /tmp/teslafield-theme-init.js
           echo "Verified live TESLAFIELD guest UI, consent controls, legal pages, PNG logo, CSS and application JavaScript."
