@@ -108,6 +108,90 @@
     toastTimer = setTimeout(() => box.classList.remove("visible"), 2800);
   }
 
+  let deferredInstallPrompt = null;
+  const installBannerStorageKey = "teslafield.installBanner.lastShown.v1";
+  const installBannerCooldown = 5 * 60 * 1000;
+
+  function isTeslafieldInstalled() {
+    const standaloneMode = window.matchMedia && window.matchMedia("(display-mode: standalone)").matches;
+    return !!(standaloneMode || window.navigator.standalone === true);
+  }
+
+  function initializePwaInstall() {
+    const banner = $("installExperienceBanner");
+    const installButton = $("installExperienceDownload");
+    const closeButton = $("installExperienceClose");
+    if (!banner || !installButton || !closeButton) return;
+
+    const hideBanner = () => {
+      banner.classList.remove("is-visible");
+      window.setTimeout(() => {
+        if (!banner.classList.contains("is-visible")) banner.hidden = true;
+      }, 220);
+    };
+
+    const showBannerWhenDue = () => {
+      if (isTeslafieldInstalled()) return;
+      let lastShown = 0;
+      try { lastShown = Number(localStorage.getItem(installBannerStorageKey)) || 0; } catch (error) {}
+      if (lastShown && Date.now() - lastShown < installBannerCooldown) return;
+      banner.hidden = false;
+      window.requestAnimationFrame(() => banner.classList.add("is-visible"));
+      try { localStorage.setItem(installBannerStorageKey, String(Date.now())); } catch (error) {}
+    };
+
+    window.addEventListener("beforeinstallprompt", (event) => {
+      event.preventDefault();
+      deferredInstallPrompt = event;
+    });
+
+    window.addEventListener("appinstalled", () => {
+      deferredInstallPrompt = null;
+      hideBanner();
+      toast("TESLAFIELD has been installed on your device.");
+    });
+
+    closeButton.addEventListener("click", hideBanner);
+    installButton.addEventListener("click", async () => {
+      if (isTeslafieldInstalled()) {
+        hideBanner();
+        toast("TESLAFIELD is already installed.");
+        return;
+      }
+      try {
+        if (typeof navigator.install === "function") {
+          await navigator.install({ manifest: new URL("/manifest.webmanifest", location.origin).href });
+          hideBanner();
+          return;
+        }
+        if (deferredInstallPrompt) {
+          const promptEvent = deferredInstallPrompt;
+          deferredInstallPrompt = null;
+          await promptEvent.prompt();
+          const choice = await promptEvent.userChoice;
+          if (choice && choice.outcome === "accepted") hideBanner();
+          return;
+        }
+        const userAgent = navigator.userAgent || "";
+        if (/iphone|ipad|ipod/i.test(userAgent)) {
+          toast("To add TESLAFIELD: tap Share in Safari, choose Add to Home Screen, then tap Add.");
+        } else {
+          toast("To install TESLAFIELD, open your browser menu ⋮ and choose Install app or Add to Home screen.");
+        }
+      } catch (error) {
+        toast("The install prompt could not open. Use your browser menu to install TESLAFIELD.");
+      }
+    });
+
+    window.setTimeout(showBannerWhenDue, 850);
+    if ("serviceWorker" in navigator) {
+      const registerServiceWorker = () => navigator.serviceWorker.register("/sw.js").catch(() => {});
+      if (document.readyState === "complete") registerServiceWorker();
+      else window.addEventListener("load", registerServiceWorker, { once: true });
+    }
+  }
+
+
   function setGuestLayout(guest) {
     document.body.classList.toggle("guest-mode", !!guest);
     document.body.classList.toggle("guest-conversation-mode", !!guest && guestConversationStarted);
@@ -1398,6 +1482,7 @@
   setGuestLayout(true);
   initializeFirebaseAuth();
   initializeCookieChoices();
+  initializePwaInstall();
   try {
     const theme = localStorage.getItem("teslafield.appearance.v2") || "dark";
     applyTheme(theme);
