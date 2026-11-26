@@ -8,7 +8,7 @@ on:
       - "styles.css"
       - "app.js"
       - "assets/**"
-      - "teslafield-mark.svg"
+      - "teslafieldai-logo.png"
       - "public/**"
       - "firebase.json"
       - ".firebaserc"
@@ -39,7 +39,8 @@ jobs:
           set -euo pipefail
           mkdir -p public
           cp index.html styles.css app.js public/
-          if [ -f teslafield-mark.svg ]; then cp teslafield-mark.svg public/; fi
+          test -s teslafieldai-logo.png
+          cp teslafieldai-logo.png public/
           if [ -d assets ]; then cp -R assets public/assets; fi
           if [ -f favicon.ico ]; then cp favicon.ico public/; fi
           if [ -f manifest.webmanifest ]; then cp manifest.webmanifest public/; fi
@@ -47,7 +48,7 @@ jobs:
           test -s public/index.html
           test -s public/styles.css
           test -s public/app.js
-          test -s public/teslafield-mark.svg
+          test -s public/teslafieldai-logo.png
           echo "TESLAFIELD static files prepared."
 
       - name: Deploy Firebase Hosting live
@@ -62,12 +63,12 @@ jobs:
           set -euo pipefail
           BASE="https://teslafieldai.web.app"
           curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-connrefused "${BASE}/?release=20261126-10" -o /tmp/teslafield-home.html
-          grep -q "styles.css?v=20261126-10" /tmp/teslafield-home.html
+          grep -q "styles.css?v=20261126-11" /tmp/teslafield-home.html
           grep -q "Message TESLAFIELD" /tmp/teslafield-home.html
-          curl --fail --silent --show-error "${BASE}/teslafield-mark.svg?v=20261126-08" -o /tmp/teslafield-mark.svg
-          grep -q "<svg" /tmp/teslafield-mark.svg
+          curl --fail --silent --show-error "${BASE}/teslafieldai-logo.png?v=20261126-11" -o /tmp/teslafieldai-logo.png
+          test -s /tmp/teslafieldai-logo.png
           curl --fail --silent --show-error "${BASE}/styles.css?v=20261126-10" -o /tmp/teslafield-styles.css
           grep -q "starter-grid" /tmp/teslafield-styles.css
-          curl --fail --silent --show-error "${BASE}/app.js?v=20261126-10" -o /tmp/teslafield-app.js
+          curl --fail --silent --show-error "${BASE}/app.js?v=20261126-11" -o /tmp/teslafield-app.js
           grep -q "conversations.v3" /tmp/teslafield-app.js
-          echo "Verified live TESLAFIELD HTML, logo SVG, responsive CSS and chat application JavaScript."
+          echo "Verified live TESLAFIELD HTML, PNG logo, responsive CSS and chat application JavaScript."
