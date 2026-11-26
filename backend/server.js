@@ -1,12 +1,126 @@
 const http = require("node:http");
+const crypto = require("node:crypto");
+const admin = require("firebase-admin");
 
 const PORT = Number(process.env.PORT || 10000);
 const SERVICE_NAME = "teslafield-api";
 const API_VERSION = "v1";
-const allowedOrigins = (process.env.CORS_ORIGIN || "")
+const allowedOrigins = (process.env.CORS_ORIGIN || "https://teslafieldai.web.app,https://teslafieldai.firebaseapp.com")
   .split(",")
   .map((value) => value.trim())
   .filter(Boolean);
+const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || "teslafieldai";
+const firebaseAdminApp = admin.apps.length
+  ? admin.app()
+  : admin.initializeApp({ projectId: FIREBASE_PROJECT_ID });
+const firebaseAuth = admin.auth(firebaseAdminApp);
+
+const RATE_LIMITS = {
+  global: { limit: 120, windowMs: 60_000 },
+  chat: { limit: 20, windowMs: 60_000 },
+  speech: { limit: 5, windowMs: 60_000 },
+  voice: { limit: 10, windowMs: 60_000 },
+  image: { limit: 3, windowMs: 60_000 },
+  video: { limit: 2, windowMs: 60_000 }
+};
+const rateBuckets = new Map();
+
+function requestClientKey(req) {
+  const forwarded = req.headers["x-forwarded-for"];
+  if (typeof forwarded === "string" && forwarded.trim()) {
+    return forwarded.split(",").pop().trim().slice(0, 80);
+  }
+  return String(req.socket && req.socket.remoteAddress || "unknown").slice(0, 80);
+}
+
+function allowRate(req, res, bucketName) {
+  const policy = RATE_LIMITS[bucketName] || RATE_LIMITS.global;
+  const key = bucketName + ":" + requestClientKey(req);
+  const now = Date.now();
+  let bucket = rateBuckets.get(key);
+  if (!bucket || now >= bucket.resetAt) {
+    bucket = { count: 0, resetAt: now + policy.windowMs };
+    rateBuckets.set(key, bucket);
+  }
+  if (bucket.count >= policy.limit) {
+    res.setHeader("Retry-After", String(Math.max(1, Math.ceil((bucket.resetAt - now) / 1000))));
+    sendJson(res, 429, { error: "RATE_LIMITED", message: "Too many requests. Please wait and try again." });
+    return false;
+  }
+  bucket.count += 1;
+  return true;
+}
+
+function audit(eventName, userId, route) {
+  const actor = userId
+    ? crypto.createHash("sha256").update(String(userId)).digest("hex").slice(0, 12)
+    : "anonymous";
+  // Never log message bodies, prompts, file names, audio, tokens, email or IP addresses.
+  console.info(JSON.stringify({
+    type: "security_audit",
+    event: eventName,
+    actor,
+    route,
+    at: new Date().toISOString()
+  }));
+}
+
+async function authenticateFirebase(req, res) {
+  const header = req.headers.authorization || "";
+  const match = header.match(/^Bearer ([A-Za-z0-9._~-]{20,8192})$/);
+  if (!match) {
+    sendJson(res, 401, { error: "AUTH_REQUIRED", message: "Sign in to TESLAFIELD to continue." });
+    audit("auth.denied", null, "protected-api");
+    return null;
+  }
+  try {
+    const decoded = await firebaseAuth.verifyIdToken(match[1]);
+    if (!decoded || !decoded.uid || decoded.aud !== FIREBASE_PROJECT_ID) throw new Error("INVALID_FIREBASE_ID_TOKEN");
+    return decoded;
+  } catch (error) {
+    sendJson(res, 401, { error: "INVALID_AUTH_TOKEN", message: "Your session is invalid or expired. Sign in again." });
+    audit("auth.invalid_token", null, "protected-api");
+    return null;
+  }
+}
+
+const protectedApiRoutes = new Map([
+  ["/api/v1/chat/completions", "chat"],
+  ["/api/v1/speech/transcribe", "speech"],
+  ["/api/v1/voice/synthesize", "voice"],
+  ["/api/v1/image/generate", "image"],
+  ["/api/v1/video/generate", "video"],
+  ["/api/v1/creative/plan", "chat"]
+]);
+
+const rateCleanup = setInterval(() => {
+  const now = Date.now();
+  for (const [key, bucket] of rateBuckets) {
+    if (now >= bucket.resetAt) rateBuckets.delete(key);
+  }
+  if (rateBuckets.size > 10_000) rateBuckets.clear();
+}, 60_000);
+if (typeof rateCleanup.unref === "function") rateCleanup.unref();
+
+function validateAudioPayload(base64, mimeType) {
+  const normalizedType = String(mimeType || "").split(";")[0].trim().toLowerCase();
+  const supportedTypes = new Set(["audio/webm", "audio/mp4", "audio/mpeg", "audio/wav", "audio/x-wav", "audio/ogg"]);
+  if (!supportedTypes.has(normalizedType)) throw new Error("AUDIO_TYPE_INVALID");
+  if (!base64 || base64.length > 12 * 1024 * 1024 || !/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) {
+    throw new Error("AUDIO_SIZE_INVALID");
+  }
+  const bytes = Buffer.from(base64, "base64");
+  if (!bytes.length || bytes.length > 8 * 1024 * 1024) throw new Error("AUDIO_SIZE_INVALID");
+  const starts = (text) => bytes.subarray(0, text.length).toString("ascii") === text;
+  const signatureValid =
+    (normalizedType === "audio/webm" && bytes.length > 4 && bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3) ||
+    (normalizedType === "audio/mp4" && bytes.length > 12 && bytes.subarray(4, 8).toString("ascii") === "ftyp") ||
+    ((normalizedType === "audio/wav" || normalizedType === "audio/x-wav") && starts("RIFF") && bytes.subarray(8, 12).toString("ascii") === "WAVE") ||
+    (normalizedType === "audio/ogg" && starts("OggS")) ||
+    (normalizedType === "audio/mpeg" && (starts("ID3") || (bytes.length > 1 && bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0));
+  if (!signatureValid) throw new Error("AUDIO_TYPE_INVALID");
+  return bytes;
+}
 
 function sendJson(res, statusCode, payload) {
   const body = JSON.stringify(payload);
@@ -23,16 +137,18 @@ function readJson(req, maxBytes = 32 * 1024) {
   return new Promise((resolve, reject) => {
     let body = "";
     let size = 0;
+    let tooLarge = false;
     req.on("data", (chunk) => {
       size += chunk.length;
       if (size > maxBytes) {
-        reject(new Error("BODY_TOO_LARGE"));
-        req.destroy();
+        tooLarge = true;
+        body = "";
         return;
       }
-      body += chunk.toString("utf8");
+      if (!tooLarge) body += chunk.toString("utf8");
     });
     req.on("end", () => {
+      if (tooLarge) return reject(new Error("BODY_TOO_LARGE"));
       if (!body.trim()) return resolve({});
       try { resolve(JSON.parse(body)); }
       catch { reject(new Error("INVALID_JSON")); }
@@ -266,17 +382,25 @@ async function generateImage(input, provider) {
 }
 
 const server = http.createServer(async (req, res) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  res.setHeader("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'");
+  res.setHeader("Cache-Control", "no-store");
   const origin = req.headers.origin;
+  if (origin && !allowedOrigins.includes(origin)) {
+    sendJson(res, 403, { error: "ORIGIN_NOT_ALLOWED" });
+    return;
+  }
   if (origin) {
-    if (allowedOrigins.length > 0 && !allowedOrigins.includes(origin)) {
-      sendJson(res, 403, { error: "ORIGIN_NOT_ALLOWED" });
-      return;
-    }
-    res.setHeader("Access-Control-Allow-Origin", allowedOrigins.length ? origin : "*");
+    res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
   }
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Max-Age", "600");
 
   if (req.method === "OPTIONS") {
     res.writeHead(204);
@@ -285,6 +409,18 @@ const server = http.createServer(async (req, res) => {
   }
 
   const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+  if (!allowRate(req, res, "global")) return;
+  if (req.method === "POST" && protectedApiRoutes.has(url.pathname)) {
+    if (!allowRate(req, res, protectedApiRoutes.get(url.pathname))) return;
+    if (!/^application\\/json(?:;|$)/i.test(req.headers["content-type"] || "")) {
+      sendJson(res, 415, { error: "UNSUPPORTED_MEDIA_TYPE" });
+      return;
+    }
+    const authUser = await authenticateFirebase(req, res);
+    if (!authUser) return;
+    req.authUser = authUser;
+    audit("api.request_authorized", authUser.uid, url.pathname);
+  }
 
   if (req.method === "GET" && url.pathname === "/") {
     sendJson(res, 200, {
@@ -321,7 +457,7 @@ const server = http.createServer(async (req, res) => {
         audioGeneration: voiceReady,
         speechToText: speechReady,
         voiceGeneration: voiceReady,
-        authentication: false,
+        authentication: true,
         database: false,
         textChat: chatReady
       },
@@ -479,8 +615,14 @@ const server = http.createServer(async (req, res) => {
       const input = await readJson(req, 48 * 1024);
       const messages = Array.isArray(input.messages) ? input.messages : [];
       if (!messages.length || messages.length > 30) return sendJson(res, 400, { error: "INVALID_MESSAGES", message: "Send between 1 and 30 chat messages." });
-      const safeMessages = messages.map((m) => ({ role: m && ["user", "assistant"].includes(m.role) ? m.role : "user", content: typeof (m && m.content) === "string" ? m.content.slice(0, 12000) : "" })).filter((m) => m.content.trim());
+      if (messages.some((m) => !m || !["user", "assistant"].includes(m.role) || typeof m.content !== "string" || m.content.length > 12000)) {
+        return sendJson(res, 400, { error: "INVALID_MESSAGE_CONTENT", message: "Messages must contain valid text and be 12,000 characters or fewer." });
+      }
+      const safeMessages = messages.map((m) => ({ role: m.role, content: m.content.trim() })).filter((m) => m.content);
       if (!safeMessages.length) return sendJson(res, 400, { error: "MESSAGE_REQUIRED", message: "Enter a message first." });
+      if (safeMessages.reduce((total, message) => total + message.content.length, 0) > 36000) {
+        return sendJson(res, 413, { error: "CHAT_CONTEXT_TOO_LARGE", message: "Reduce the conversation length and try again." });
+      }
       const upstream = await fetch(CHAT_SPACE_URL + "/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -491,6 +633,7 @@ const server = http.createServer(async (req, res) => {
       if (!upstream.ok) return sendJson(res, upstream.status === 429 ? 429 : 502, { error: "CHAT_SPACE_ERROR", message: data.detail || "The TESLAFIELD Chat Space could not complete this request. It may still be waking up or loading its model." });
       const reply = data.response;
       if (typeof reply !== "string" || !reply.trim()) return sendJson(res, 502, { error: "EMPTY_CHAT_RESPONSE", message: "The Chat Space returned no text." });
+      audit("chat.completed", req.authUser && req.authUser.uid, url.pathname);
       return sendJson(res, 200, { ok: true, model: data.model || "Qwen/Qwen3-0.6B", reply });
     } catch (error) {
       if (error.message === "BODY_TOO_LARGE") return sendJson(res, 413, { error: "REQUEST_TOO_LARGE" });
@@ -504,12 +647,15 @@ const server = http.createServer(async (req, res) => {
       const input = await readJson(req, 12 * 1024 * 1024);
       const encoded = typeof input.audioBase64 === "string" ? input.audioBase64.replace(/^data:[^,]+,/, "") : "";
       if (!encoded) return sendJson(res, 400, { error: "AUDIO_REQUIRED", message: "Record or upload audio first." });
+      validateAudioPayload(encoded, input.mimeType);
       const transcript = await transcribeWithSpace(encoded, input.mimeType, input.language);
       return sendJson(res, 200, { ok: true, transcript, model: "Systran/faster-whisper-base" });
     } catch (error) {
       if (error.message === "BODY_TOO_LARGE") return sendJson(res, 413, { error: "AUDIO_TOO_LARGE", message: "Please record a shorter audio clip." });
       if (error.message === "EMPTY_TRANSCRIPT") return sendJson(res, 200, { ok: true, transcript: "", message: "No speech detected." });
       if (error.message === "AUDIO_SIZE_INVALID") return sendJson(res, 413, { error: "AUDIO_TOO_LARGE", message: "Audio must be under 8 MB." });
+      if (error.message === "AUDIO_TYPE_INVALID") return sendJson(res, 415, { error: "UNSUPPORTED_AUDIO_TYPE", message: "Upload a supported audio recording only." });
+      audit("speech.failed", req.authUser && req.authUser.uid, url.pathname);
       return sendJson(res, 502, { error: "SPEECH_REQUEST_FAILED", message: "The Whisper Space is unavailable or still loading. Please retry." });
     }
   }
