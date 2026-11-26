@@ -16,6 +16,8 @@ on:
       - "manifest.webmanifest"
       - "sw.js"
       - "teslafield-pwa-icon.svg"
+      - "teslafield-icon-192.png"
+      - "teslafield-icon-512.png"
       - "public/**"
       - "firebase.json"
       - ".firebaserc"
@@ -62,8 +64,10 @@ jobs:
           const manifest = JSON.parse(fs.readFileSync('manifest.webmanifest', 'utf8'));
           assert.equal(manifest.id, '/');
           assert.equal(manifest.display, 'standalone');
+          assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-icon-192.png' && icon.sizes === '192x192'));
+          assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-icon-512.png' && icon.sizes === '512x512'));
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-pwa-icon.svg'));
-          assert.ok(fs.readFileSync('sw.js', 'utf8').includes('teslafield-pwa-shell-v1'));
+          assert.ok(fs.readFileSync('sw.js', 'utf8').includes('teslafield-pwa-shell-v2'));
           const chatEngine = fs.readFileSync('chat-engine/app.py', 'utf8');
           assert.ok(chatEngine.includes('response_style: Literal'));
           assert.ok(chatEngine.includes('StreamingResponse'));
@@ -126,7 +130,7 @@ jobs:
           set -euo pipefail
           mkdir -p public
           cp index.html styles.css app.js theme-init.js terms.html privacy.html public/
-          cp manifest.webmanifest sw.js teslafield-pwa-icon.svg public/
+          cp manifest.webmanifest sw.js teslafield-pwa-icon.svg teslafield-icon-192.png teslafield-icon-512.png public/
           test -s teslafieldai-logo.png
           cp teslafieldai-logo.png public/
           if [ -d assets ]; then cp -R assets public/assets; fi
@@ -143,6 +147,8 @@ jobs:
           test -s public/manifest.webmanifest
           test -s public/sw.js
           test -s public/teslafield-pwa-icon.svg
+          test -s public/teslafield-icon-192.png
+          test -s public/teslafield-icon-512.png
           echo "TESLAFIELD static files prepared."
 
       - name: Deploy Firebase Hosting live
@@ -169,6 +175,16 @@ jobs:
           grep -q "teslafield-pwa-shell-v1" /tmp/teslafield-sw.js
           curl --fail --silent --show-error "${BASE}/teslafield-pwa-icon.svg" -o /tmp/teslafield-icon.svg
           grep -q "<svg" /tmp/teslafield-icon.svg
+          curl --fail --silent --show-error "${BASE}/teslafield-icon-192.png" -o /tmp/teslafield-icon-192.png
+          curl --fail --silent --show-error "${BASE}/teslafield-icon-512.png" -o /tmp/teslafield-icon-512.png
+          node - <<'NODE'
+          const fs = require('node:fs');
+          for (const [file, size] of [['/tmp/teslafield-icon-192.png', 192], ['/tmp/teslafield-icon-512.png', 512]]) {
+            const image = fs.readFileSync(file);
+            if (image.readUInt32BE(16) !== size || image.readUInt32BE(20) !== size) throw new Error('Invalid PWA icon dimensions: ' + file);
+          }
+          console.log('Verified 192px and 512px PNG install icons.');
+          NODE
           echo "Verified PWA manifest, service worker and app icon."
           curl --fail --silent --show-error "${BASE}/styles.css?v=$VERSION" -o /tmp/teslafield-styles.css
           grep -q "starter-grid" /tmp/teslafield-styles.css
