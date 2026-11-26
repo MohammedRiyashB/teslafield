@@ -67,7 +67,7 @@ jobs:
           grep -q "Message TESLAFIELD" /tmp/teslafield-home.html
           curl --fail --silent --show-error "${BASE}/teslafieldai-logo.png?v=20261126-11" -o /tmp/teslafieldai-logo.png
           test -s /tmp/teslafieldai-logo.png
-          curl --fail --silent --show-error "${BASE}/styles.css?v=20261126-10" -o /tmp/teslafield-styles.css
+          curl --fail --silent --show-error "${BASE}/styles.css?v=20261126-11" -o /tmp/teslafield-styles.css
           grep -q "starter-grid" /tmp/teslafield-styles.css
           curl --fail --silent --show-error "${BASE}/app.js?v=20261126-11" -o /tmp/teslafield-app.js
           grep -q "conversations.v3" /tmp/teslafield-app.js
