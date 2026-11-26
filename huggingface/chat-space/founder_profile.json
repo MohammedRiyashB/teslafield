@@ -1,0 +1,33 @@
+{
+  "profile_version": 1,
+  "founder": {
+    "name": "Mohammed Riyash B",
+    "roles": [
+      "Founder",
+      "CEO",
+      "Owner"
+    ],
+    "attribution": "Founder-provided profile information"
+  },
+  "companies": [
+    "TESLAFIELD",
+    "BMR INC"
+  ],
+  "bmrinc_website": null,
+  "known_projects": [
+    "TESLAFIELD is an AI assistant and chat-engine project created by Mohammed Riyash B.",
+    "The user-facing assistant/model identity is TESLAFIELD V1.",
+    "The current underlying chat model configured in this repository is Qwen/Qwen3-0.6B; TESLAFIELD V1 is the product identity, not a claim that the model weights were newly trained.",
+    "The TESLAFIELD repository contains a Node.js API backend and a Hugging Face chat Space implementation.",
+    "The founder is building TESLAFIELD with connected text-chat, speech transcription, voice synthesis, and creative-generation services."
+  ],
+  "profile_expansion_rules": [
+    "Add new biographical or company facts only when supplied or confirmed by the founder.",
+    "Do not infer sensitive personal details or legal ownership facts from a project account or repository.",
+    "Use the BMRINC_WEBSITE_URL environment variable for the official BMR INC website. Until configured, say the official URL has not been supplied."
+  ],
+  "question_coverage": {
+    "target": "Handle a wide range of natural-language phrasings about the founder and projects, including creator, founder, CEO, owner, company, model identity, product, history, and contact/website questions.",
+    "policy": "Do not manufacture 10,000 repetitive Q&A pairs or invent unknown facts. Answer from this profile and request missing facts when needed."
+  }
+}
