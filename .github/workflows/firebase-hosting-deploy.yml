@@ -48,3 +48,11 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TESLAFIELDAI }}
           projectId: teslafieldai
           channelId: live
+
+      - name: Verify live Firebase website
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-connrefused \
+            https://teslafieldai.web.app/ -o /tmp/teslafield-home.html
+          grep -qi "<html" /tmp/teslafield-home.html
+          echo "TESLAFIELD live website returned HTTP 200 and HTML content."
