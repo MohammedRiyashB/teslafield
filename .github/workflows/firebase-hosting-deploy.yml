@@ -55,7 +55,13 @@ jobs:
           const backend = fs.readFileSync('backend/server.js', 'utf8');
           assert.match(html, /id="historySearch"/);
           assert.match(html, /id="personalizeModal"/);
-          assert.ok(app.includes('/api/v1/chat/stream'));
+          assert.ok(app.includes('/api/v1/chat/completions'), 'Frontend must call the complete-response model endpoint');
+          assert.ok(!app.includes('/api/v1/chat/stream'), 'Frontend must not render token-by-token streaming');
+          assert.ok(app.includes('Thinking…'), 'Chat must show a thinking-only indicator');
+          assert.ok(app.includes('async function transcribeVoiceRecording'));
+          assert.ok(app.includes('/api/v1/speech/transcribe'));
+          assert.ok(app.includes('new MediaRecorder'));
+          assert.ok(html.includes('id="micButton"'), 'Composer microphone button must exist');
           assert.ok(!app.includes('followup-suggestions'));
           assert.ok(app.includes('response_style: userPreferences.responseStyle'));
           const authInitStart = app.indexOf('async function initializeFirebaseAuth()');
@@ -93,6 +99,9 @@ jobs:
           assert.ok(!chatEngine.includes('llama_cpp'));
           assert.ok(backend.includes('CHAT_SPACE_URL + "/stream"'));
           assert.ok(backend.includes('["/api/v1/chat/stream", "chat"]'));
+          assert.ok(backend.includes('url.pathname === "/api/v1/chat/completions"'));
+          assert.ok(backend.includes('url.pathname === "/api/v1/speech/transcribe"'));
+          assert.ok(backend.includes('transcribeWithSpace(encoded, input.mimeType, input.language)'));
           assert.match(html, /<div class="composer-toolbar">\s*<div class="composer-tools">[\s\S]*?<span class="composer-hint">Ask anything<\/span>\s*<\/div>\s*<div class="composer-actions">[\s\S]*?<button class="send-button"/);
           console.log('Frontend structure checks passed: absolute assets and one aligned composer toolbar.');
           NODE
