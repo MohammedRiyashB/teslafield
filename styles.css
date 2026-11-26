@@ -1141,8 +1141,7 @@ body.guest-mode .top-auth-button{
 body.guest-mode .top-auth-secondary{margin-right:5px;background:rgba(255,255,255,.035)}
 body.guest-mode .top-auth-primary{min-width:116px;background:#f4f4f4;border-color:#f4f4f4}
 body.guest-mode .composer-actions{gap:0}
-body.guest-mode .send-button{width:42px;height:42px}body.guest-mode .voice-input
-{display:none!important}
+body.guest-mode .send-button{width:42px;height:42px}
 .explore-fade{opacity:0;transform:translateY(7px);filter:blur(3px)}
 body.guest-mode .welcome-screen h1{
   min-height:1.15em;transition:opacity .26s ease,transform .26s ease,filter .26s ease;
