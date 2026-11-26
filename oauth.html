@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#080b12">
   <meta name="robots" content="noindex,nofollow">
-  <title>Connect TESLAFIELD to ChatGPT</title>
+  <title>Connect TeslafieldAI to ChatGPT</title>
   <style>
     :root{color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#080b12;color:#f5f7fb}
     *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(ellipse at 50% 0%,#17243d 0,transparent 54%),#080b12}
@@ -26,30 +26,30 @@
 </head>
 <body>
   <main>
-    <div class="brand"><img src="/teslafieldai-logo.png" alt=""><span>TESLAFIELD</span></div>
+    <div class="brand"><img src="/teslafieldai-logo.png" alt=""><span>TeslafieldAI</span></div>
     <div id="loginPanel">
       <div class="eyebrow">Secure account connection</div>
-      <h1>Connect TESLAFIELD V1</h1>
-      <p>Sign in with the Google account you use for TESLAFIELD. Your password is handled by Firebase Authentication and is never shared with ChatGPT.</p>
+      <h1>Connect TeslafieldAI</h1>
+      <p>Sign in with the Google account you use for TeslafieldAI. Your password is handled by Firebase Authentication and is never shared with ChatGPT.</p>
       <button class="primary" id="signInButton" type="button">Continue with Google</button>
       <p class="notice" id="loginNotice" role="status" aria-live="polite"></p>
-      <p class="fine">This connection uses your TESLAFIELD account. You can disconnect it from ChatGPT's connected apps settings.</p>
+      <p class="fine">This connection uses your TeslafieldAI account. You can disconnect it from ChatGPT's connected apps settings.</p>
     </div>
     <div id="consentPanel" class="hidden">
       <div class="eyebrow">Permission requested</div>
-      <h1>Allow ChatGPT to use TESLAFIELD?</h1>
-      <p>ChatGPT is requesting permission to send questions to TESLAFIELD V1 using your account.</p>
+      <h1>Allow ChatGPT to use TeslafieldAI?</h1>
+      <p>ChatGPT is requesting permission to send questions to TeslafieldAI using your account.</p>
       <div class="account" id="accountEmail"></div>
       <div class="permissions">
         <strong>Access requested</strong>
-        <ul><li>Send questions and optional conversation context to TESLAFIELD V1</li><li>Receive AI-generated text answers</li></ul>
+        <ul><li>Send questions and optional conversation context to TeslafieldAI</li><li>Receive AI-generated text answers</li></ul>
       </div>
       <button class="primary" id="approveButton" type="button">Allow access</button>
       <button class="secondary" id="switchAccountButton" type="button">Use another account</button>
       <button class="secondary" id="denyButton" type="button">Cancel</button>
       <p class="notice" id="consentNotice" role="status" aria-live="polite"></p>
     </div>
-    <p class="fine">TESLAFIELD will not provide your Google password or Firebase sign-in credentials to ChatGPT.</p>
+    <p class="fine">TeslafieldAI will not provide your Google password or Firebase sign-in credentials to ChatGPT.</p>
   </main>
   <script defer src="/__/firebase/8.10.1/firebase-app.js"></script>
   <script defer src="/__/firebase/8.10.1/firebase-auth.js"></script>
