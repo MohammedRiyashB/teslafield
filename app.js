@@ -807,8 +807,9 @@
   $("historySearch").oninput = renderHistory;
   $("clearSearch").onclick = () => { $("historySearch").value = ""; renderHistory(); $("historySearch").focus(); };
   $("clearHistory").onclick = () => {
-    if (!chats.length) { toast("There are no saved conversations."); return; }
-    if (window.confirm("Delete all conversations for this signed-in account from this browser?")) {
+    const hasLegacyHistory = !!(localStorage.getItem("teslafield.conversations.v2") || localStorage.getItem("teslafield.conversations.v3"));
+    if (!chats.length && !hasLegacyHistory) { toast("There are no saved conversations."); return; }
+    if (window.confirm("Delete all conversations for this signed-in account and remove older unassigned device history?")) {
       chats = [];
       saveStore();
       try {
