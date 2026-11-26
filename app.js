@@ -15,6 +15,10 @@
   let toastTimer = null;
   let mediaRecorder = null;
   let voiceModeEnabled = false;
+  let healthRequest = null;
+  let engineStatusRequest = null;
+  let lastEngineCheck = 0;
+  let reconnectTimer = null;
 
   const makeId = () => "chat-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
   const safeText = (value) => String(value == null ? "" : value);
@@ -427,6 +431,7 @@
     setGenerating(true);
     controller = new AbortController();
     try {
+      await waitForApiReady(90000);
       const chatRequest = {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -534,27 +539,87 @@
       chip.appendChild(remove); strip.appendChild(chip);
     });
   }
-  async function checkConnection() {
+  function setApiLabel(state, detail) {
+    const status = $("connectionStatus");
+    status.classList.toggle("online", state === "online");
+    status.querySelector("span").textContent = detail;
+  }
+  async function pingApi() {
+    if (healthRequest) return healthRequest;
+    healthRequest = (async () => {
+      const response = await fetch(API + "/health", {
+        cache: "no-store",
+        signal: AbortSignal.timeout(10000)
+      });
+      if (!response.ok) throw new Error("API is starting");
+      setApiLabel("online", "API online");
+      return true;
+    })();
     try {
-      const response = await fetch(API + "/api/v1/status", { signal: AbortSignal.timeout(90000), cache: "no-store" });
-      if (!response.ok) throw new Error("offline");
-      const data = await response.json().catch(() => ({}));
-      $("connectionStatus").classList.add("online");
-      $("connectionStatus").querySelector("span").textContent = "API online";
-      const configured = Boolean(data.integrations && data.integrations.textChat);
-      const speech = Boolean(data.integrations && data.integrations.speechToText);
-      const voice = Boolean(data.integrations && data.integrations.voiceGeneration);
-      const allReady = configured && speech && voice;
-      const engineState = (ready) => ready ? "online" : "starting / unavailable";
-      $("connectionStatus").querySelector("span").textContent = allReady ? "All engines online" : "API online · engines loading";
-      $("modelStatus").textContent = "Chat: " + engineState(configured) + " · Whisper: " + engineState(speech) + " · Mithi Voice: " + engineState(voice);
-      $("composerProviderNote").textContent = allReady ? "Chat, microphone transcription and TESLAFIELD voice replies are connected." : "The backend is online. One or more Hugging Face engines are still waking up or unavailable.";
+      return await healthRequest;
     } catch (error) {
-      $("connectionStatus").classList.remove("online");
-      $("connectionStatus").querySelector("span").textContent = "API offline";
-      $("modelStatus").textContent = "Cannot reach the TESLAFIELD API.";
-      $("composerProviderNote").textContent = "The chat API is currently unreachable.";
+      setApiLabel("offline", "API reconnecting…");
+      return false;
+    } finally {
+      healthRequest = null;
     }
+  }
+  async function waitForApiReady(maxWaitMs) {
+    const deadline = Date.now() + maxWaitMs;
+    let attempt = 0;
+    while (Date.now() < deadline) {
+      if (await pingApi()) return true;
+      setApiLabel("offline", "Waking API…");
+      $("modelStatus").textContent = "Connecting to TESLAFIELD backend. Automatic retry in progress.";
+      $("composerProviderNote").textContent = "The API is waking up. Your message will be sent automatically when it is ready.";
+      await new Promise((resolve) => setTimeout(resolve, Math.min(5000, 1200 + attempt * 700)));
+      attempt += 1;
+    }
+    throw new Error("TESLAFIELD API is still waking up. Please retry shortly.");
+  }
+  async function checkEngineStatus(force) {
+    if (engineStatusRequest) return engineStatusRequest;
+    if (!force && Date.now() - lastEngineCheck < 180000) return;
+    engineStatusRequest = (async () => {
+      try {
+        const response = await fetch(API + "/api/v1/status", {
+          cache: "no-store",
+          signal: AbortSignal.timeout(90000)
+        });
+        if (!response.ok) throw new Error("Engine status unavailable");
+        const data = await response.json().catch(() => ({}));
+        const configured = Boolean(data.integrations && data.integrations.textChat);
+        const speech = Boolean(data.integrations && data.integrations.speechToText);
+        const voice = Boolean(data.integrations && data.integrations.voiceGeneration);
+        const engineState = (ready) => ready ? "online" : "starting / unavailable";
+        $("modelStatus").textContent = "Chat: " + engineState(configured) + " · Whisper: " + engineState(speech) + " · Mithi Voice: " + engineState(voice);
+        $("composerProviderNote").textContent = configured
+          ? "TESLAFIELD API is connected. Model engines are checked separately."
+          : "API connected. One or more model engines are still starting or unavailable.";
+        setApiLabel("online", "API online");
+        lastEngineCheck = Date.now();
+      } catch (error) {
+        $("modelStatus").textContent = "API online · model readiness is still being checked.";
+        $("composerProviderNote").textContent = "The backend is connected. Model status will refresh automatically.";
+        setApiLabel("online", "API online");
+      } finally {
+        engineStatusRequest = null;
+      }
+    })();
+    return engineStatusRequest;
+  }
+  async function checkConnection() {
+    const online = await pingApi();
+    if (!online) {
+      $("modelStatus").textContent = "Waiting for the backend to wake up. Retrying automatically…";
+      $("composerProviderNote").textContent = "TESLAFIELD will reconnect automatically while this page is open.";
+      if (!reconnectTimer) reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        checkConnection();
+      }, 5000);
+      return;
+    }
+    await checkEngineStatus(false);
   }
   function toggleMenu(menuId, buttonId) {
     const menu = $(menuId);
