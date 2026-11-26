@@ -8,7 +8,7 @@ sdk_version: 5.49.1
 python_version: 3.10
 app_file: app.py
 pinned: false
-suggested_hardware: zero
+suggested_hardware: zero-a10g
 ---
 
 # TESLAFIELD Video Studio
