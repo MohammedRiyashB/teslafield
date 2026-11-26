@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#090d18">
-  <meta name="description" content="TESLAFIELD — a creative AI workspace for chat, image, video and voice.">
-  <title>TESLAFIELD — Creative AI Studio</title>
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="TESLAFIELD — an AI workspace for ideas, answers and creation.">
+  <title>TESLAFIELD</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Manrope:wght@500;600;650;700;750;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20261126-05">
+  <link rel="stylesheet" href="./styles.css?v=20261126-04">
 </head>
 <body>
 <div class="app-shell" id="appShell">
@@ -105,28 +105,9 @@
 
     <section class="conversation-scroll" id="conversationScroll" aria-label="Conversation">
       <div class="welcome-screen" id="welcomeScreen">
-        <div class="welcome-mark" aria-hidden="true">T</div>
-        <div class="welcome-eyebrow"><span class="eyebrow-spark">✦</span><span>YOUR CREATIVE AI WORKSPACE</span><span class="eyebrow-divider"></span><span class="eyebrow-live"><i></i> READY TO CREATE</span></div>
-        <h1>Imagine it. <span class="headline-gradient">Make it real.</span></h1>
-        <p class="welcome-subtitle">One space for bold ideas, brilliant conversations and next-level creations.</p>
-        <div class="welcome-tools" aria-label="Explore TESLAFIELD creative tools">
-          <a class="welcome-tool-card image-tool" href="https://huggingface.co/spaces/Earthaioa/teslafield-image" target="_blank" rel="noopener">
-            <span class="welcome-tool-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m4 17 5-5 3.5 3 2.5-3 5 5"/></svg></span>
-            <span class="welcome-tool-copy"><small>VISUAL CREATION</small><strong>Image studio</strong><em>Turn prompts into visuals</em></span>
-            <span class="welcome-tool-arrow">↗</span>
-          </a>
-          <a class="welcome-tool-card video-tool" href="https://huggingface.co/spaces/Earthaioa/teslafield-video" target="_blank" rel="noopener">
-            <span class="welcome-tool-icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="4"/><path d="m10 9 5 3-5 3z"/></svg></span>
-            <span class="welcome-tool-copy"><small>MOTION CREATION</small><strong>Video studio</strong><em>Bring stories to motion</em></span>
-            <span class="welcome-tool-arrow">↗</span>
-          </a>
-          <button class="welcome-tool-card voice-tool" id="welcomeVoice" type="button">
-            <span class="welcome-tool-icon"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 18v3m-3 0h6"/></svg></span>
-            <span class="welcome-tool-copy"><small>HANDS-FREE CHAT</small><strong>Talk to TESLAFIELD</strong><em>Start a voice conversation</em></span>
-            <span class="welcome-tool-arrow">↗</span>
-          </button>
-        </div>
-        <div class="starter-heading"><span>START WITH A SPARK</span><span>Choose a direction</span></div>
+        <div class="welcome-mark">T</div>
+        <h1>What can I help with?</h1>
+        <p class="welcome-subtitle">Ask anything, explore an idea, or make something useful.</p>
         <div class="starter-grid">
           <button class="starter-card" data-prompt="Explain a difficult topic in simple language, step by step.">
             <span class="starter-icon learn-icon"><svg viewBox="0 0 24 24"><path d="M12 3 3.5 7.5 12 12l8.5-4.5L12 3Z"/><path d="M5.5 9v5c3.8 3.2 9.2 3.2 13 0V9M20.5 8v7"/></svg></span>
@@ -192,6 +173,6 @@
 
 <input id="fileInput" type="file" hidden multiple accept="image/*,.pdf,.txt,.doc,.docx,.csv">
 <div class="toast-message" id="toastMessage" role="status" aria-live="polite"></div>
-<script src="./app.js?v=20261126-06" defer></script>
+<script src="./app.js?v=20261126-05" defer></script>
 </body>
 </html>

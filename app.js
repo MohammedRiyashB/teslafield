@@ -631,7 +631,7 @@
   function applyTheme(theme) {
     root.classList.toggle("dark", theme === "dark");
     $("themeLabel").textContent = theme === "dark" ? "Dark" : "Light";
-    try { localStorage.setItem("teslafield.appearance.v2", theme); } catch (error) {}
+    try { localStorage.setItem("teslafield.appearance", theme); } catch (error) {}
   }
   function toggleTheme() {
     applyTheme(root.classList.contains("dark") ? "light" : "dark");
@@ -685,7 +685,6 @@
     if (mediaRecorder && mediaRecorder.state === "recording") stopRecording();
     else startRecording("dictation");
   };
-  $("welcomeVoice").onclick = () => { $("voiceModeButton").click(); };
   $("voiceModeButton").onclick = () => {
     if (voiceModeEnabled) {
       voiceModeEnabled = false;
@@ -713,7 +712,7 @@
 
   loadStore();
   try {
-    const theme = localStorage.getItem("teslafield.appearance.v2") || "dark";
+    const theme = localStorage.getItem("teslafield.appearance") || "light";
     applyTheme(theme);
   } catch (error) { applyTheme("light"); }
   renderHistory();
