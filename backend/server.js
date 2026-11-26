@@ -259,8 +259,8 @@ const server = http.createServer(async (req, res) => {
     sendJson(res, 200, {
       service: SERVICE_NAME,
       apiVersion: API_VERSION,
-      mode: "creative-studio",
-      engine: "TESLAFIELD Universal AI Engine",
+      mode: "assistant-chat",
+      engine: "TESLAFIELD Chat API",
       integrations: {
         imageGeneration: Boolean(provider),
         imageProvider: provider ? provider.name : null,
@@ -285,7 +285,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/v1/capabilities") {
     sendJson(res, 200, {
       ok: true,
-      engine: "TESLAFIELD Universal AI Engine",
+      engine: "TESLAFIELD Chat API",
       version: API_VERSION,
       capabilities: [
         { id: "image.generate", status: getImageProvider() ? "available" : "provider-required", method: "POST", endpoint: "/api/v1/image/generate" },
