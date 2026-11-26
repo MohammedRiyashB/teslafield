@@ -1583,3 +1583,23 @@ body.signed-in .connect-entry-button{display:inline-flex!important;visibility:vi
  .message-row,.typing-dots i,.message-content.is-revealing::after{animation:none!important}
  .send-button,.message-actions{transition:none!important}
 }
+
+/* Centered rotating welcome messages: 10 x 10 x 10 = 1,000 combinations. */
+.welcome-screen .welcome-subtitle{
+  display:block;
+  width:min(760px,100%);
+  min-height:3.2em;
+  margin:14px auto 0;
+  padding:0 12px;
+  text-align:center;
+  text-wrap:balance;
+  line-height:1.65;
+  transition:opacity .18s ease,transform .18s ease;
+}
+.welcome-screen .welcome-subtitle.welcome-message-changing{
+  opacity:0;
+  transform:translateY(5px);
+}
+@media(prefers-reduced-motion:reduce){
+  .welcome-screen .welcome-subtitle{transition:none}
+}
