@@ -85,20 +85,9 @@
         <button class="icon-button desktop-menu" id="desktopMenu" aria-label="Open sidebar" title="Open sidebar">
           <svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="3"/><path d="M9 4v16"/></svg>
         </button>
-        <div class="model-wrap">
-          <button class="model-button" id="modelButton" aria-expanded="false">
-            <span class="model-name">TESLAFIELD</span><span class="model-tier">AI</span>
-            <svg viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg>
-          </button>
-          <div class="model-menu" id="modelMenu" hidden>
-            <div class="menu-eyebrow">CHAT EXPERIENCE</div>
-            <div class="model-option selected"><span class="model-option-icon"><img src="./teslafield-mark.svg?v=20261126-08" alt=""></span><span><strong>TESLAFIELD Chat</strong><small>Everyday conversations</small></span><span class="checkmark">✓</span></div>
-            <div class="model-menu-note" id="modelStatus">Checking text AI connection…</div>
-          </div>
-        </div>
+        <div class="topbar-brand" aria-label="TESLAFIELD AI">TESLAFIELD <span class="model-tier">AI</span></div>
       </div>
       <div class="topbar-right">
-        <span class="connection-status" id="connectionStatus"><i></i><span>Connecting</span></span>
         <button class="icon-button share-button" id="shareChat" aria-label="Copy conversation" title="Copy conversation">
           <svg viewBox="0 0 24 24"><path d="M12 16V4m-5 5 5-5 5 5"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>
         </button>
@@ -168,7 +157,6 @@
         </form>
       </div>
       <p class="composer-disclaimer">TESLAFIELD can make mistakes. Check important information.</p>
-      <p class="composer-provider-note" id="composerProviderNote">AI responses depend on the connected model provider.</p>
     </div>
   </main>
 </div>
