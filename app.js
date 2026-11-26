@@ -511,7 +511,7 @@
   }
   async function shareAssistantMessage(content) {
     try {
-      const payload = JSON.stringify({ content: String(content || "").slice(0, 30000), createdAt: new Date().toISOString() });
+      const payload = JSON.stringify({ content: String(content || ""), createdAt: new Date().toISOString() });
       const bytes = new TextEncoder().encode(payload);
       let encoded;
       if ("CompressionStream" in window) {
