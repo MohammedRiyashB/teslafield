@@ -354,7 +354,7 @@
       if (typing) typing.remove();
       if (error.name !== "AbortError") {
         const message = error.message || "The AI service could not complete this request.";
-        chat.messages.push({ role: "assistant", content: "**TESLAFIELD service notice**\\n\\n" + message + "\\n\\nYour prompt is saved in this conversation. You can retry after the service is connected." });
+        chat.messages.push({ role: "assistant", content: "**TESLAFIELD service notice**\n\n" + message + "\n\nYour prompt is saved in this conversation. You can retry after the service is connected." });
         chat.updated = Date.now();
         saveStore();
         renderConversation();
