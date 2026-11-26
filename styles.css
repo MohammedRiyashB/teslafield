@@ -1302,3 +1302,31 @@ body.guest-mode .guest-pending-message .message-content{
 @media(prefers-reduced-motion:reduce){
   body.guest-mode .guest-continue-card,body.guest-mode .guest-pending-message .message-content{animation:none!important}
 }
+
+
+/* Exact compact first-visit footer: plain matching text, no bar or divider. */
+body.guest-mode:not(.guest-conversation-mode) .guest-footer{
+  position:fixed;z-index:8;left:clamp(18px,3vw,38px);right:auto;bottom:16px;inset:auto auto 16px clamp(18px,3vw,38px);
+  width:auto;min-height:0;padding:0;display:flex;flex-direction:column;
+  align-items:flex-start;justify-content:flex-end;gap:4px;
+  border:0;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;
+  box-shadow:none;color:rgba(225,225,225,.56);pointer-events:none;
+}
+body.guest-mode:not(.guest-conversation-mode) .guest-footer strong,
+body.guest-mode:not(.guest-conversation-mode) .guest-footer span{
+  display:block;margin:0;padding:0;
+  color:rgba(225,225,225,.56);
+  font:500 11px/1.45 system-ui,sans-serif;
+  letter-spacing:.035em;text-align:left;
+}
+body.guest-mode:not(.guest-conversation-mode) .guest-footer strong{font-weight:500;letter-spacing:.035em}
+body.guest-mode:not(.guest-conversation-mode) .conversation-scroll{padding-bottom:72px}
+@media(max-width:760px){
+  body.guest-mode:not(.guest-conversation-mode) .guest-footer{
+    left:14px;right:auto;bottom:10px;inset:auto auto calc(10px + env(safe-area-inset-bottom)) 14px;
+    width:auto;min-height:0;padding:0;align-items:flex-start;gap:3px;
+  }
+  body.guest-mode:not(.guest-conversation-mode) .guest-footer strong,
+  body.guest-mode:not(.guest-conversation-mode) .guest-footer span{font-size:10px;line-height:1.4;text-align:left}
+  body.guest-mode:not(.guest-conversation-mode) .conversation-scroll{padding-bottom:68px}
+}
