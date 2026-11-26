@@ -530,15 +530,6 @@
       field.remove();
     }
   }
-  function getFollowupPrompts(chat, index) {
-    const previousUser = chat.messages.slice(0, index).reverse().find((item) => item.role === "user");
-    const context = (previousUser && previousUser.content || "").toLowerCase();
-    if (/code|javascript|python|html|css|bug|error|function|api/.test(context)) return ["Explain the solution step by step", "Show a practical working example", "Find edge cases and improve it"];
-    if (/email|letter|proposal|caption|post|write|draft|rewrite/.test(context)) return ["Make it more professional", "Create a shorter version", "Adapt it for my audience"];
-    if (/[\u0B80-\u0BFF]/.test(context)) return ["இதை படிப்படியாக விளக்கு", "ஒரு நடைமுறை உதாரணம் கொடு", "இதை இன்னும் சுருக்கமாக சொல்"];
-    return ["Give me a step-by-step plan", "Show a practical example", "Explain this more simply"];
-  }
-
   function renderMessage(message, index, chat) {
     const row = document.createElement("article");
     row.className = "message-row " + message.role;
@@ -600,18 +591,6 @@
       actions.append(copy, edit);
     }
     stack.appendChild(actions);
-    if (message.role === "assistant" && index === chat.messages.length - 1 && message.content.trim()) {
-      const suggestions = document.createElement("div");
-      suggestions.className = "followup-suggestions";
-      suggestions.setAttribute("aria-label", "Suggested follow-up prompts");
-      getFollowupPrompts(chat, index).forEach((prompt) => {
-        const chip = document.createElement("button");
-        chip.type = "button"; chip.className = "followup-chip"; chip.textContent = prompt;
-        chip.onclick = () => { promptInput.value = prompt; promptInput.focus(); promptInput.dispatchEvent(new Event("input")); };
-        suggestions.appendChild(chip);
-      });
-      stack.appendChild(suggestions);
-    }
     row.appendChild(stack);
     messageList.appendChild(row);
   }
