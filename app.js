@@ -126,26 +126,26 @@
     var viewLabel = isImage ? "IMAGE CREATION" : "MOTION CREATION";
     var promptLabel = isImage ? "Describe the image" : "Describe the video";
     var sample = isImage ? "A sculptural glass perfume bottle on black stone, soft directional light, premium editorial product photography..." : "A lone explorer walks through a vast salt desert at blue hour. Fine dust drifts across the frame as the camera slowly pushes forward...";
-    var modes = isImage ? '<button class="selected" data-choice-group="mode">Text to image</button><button data-choice-group="mode">Image edit</button>' : '<button class="selected" data-choice-group="mode">Text to video</button><button data-choice-group="mode">Image to video</button>';
+    var modes = isImage ? '<button class="selected" data-choice-group="mode">Text to image</button>' : '<button class="selected" data-choice-group="mode">Text to video</button>';
     var durationControl = isImage ? "" : '<div class="control-section"><div class="control-label">Duration <small>Clip length</small></div><div class="segmented"><button class="selected" data-choice-group="duration">5 sec</button><button data-choice-group="duration">8 sec</button><button data-choice-group="duration">10 sec</button></div></div>';
     var directionControl = isImage ? '<div class="control-section"><div class="control-label">Composition</div><div class="chip-row"><button class="choice-chip selected" data-choice="editorial close-up">Editorial close-up</button><button class="choice-chip" data-choice="wide frame">Wide frame</button><button class="choice-chip" data-choice="top-down">Top-down</button><button class="choice-chip" data-choice="symmetrical">Symmetrical</button><button class="choice-chip" data-choice="macro">Macro detail</button></div></div>' : '<div class="control-section"><div class="control-label">Camera movement</div><div class="chip-row"><button class="choice-chip selected" data-choice="slow push">Slow push</button><button class="choice-chip" data-choice="orbit">Orbit</button><button class="choice-chip" data-choice="tracking">Tracking</button><button class="choice-chip" data-choice="crane">Crane</button><button class="choice-chip" data-choice="static">Static</button></div></div>';
     return heading(viewLabel, title, intro, '<button class="btn btn-quiet" data-view="library">My generations</button><button class="btn btn-primary" data-action="new-project">＋ New project</button>') +
       '<div class="studio-layout"><section class="studio-main">' +
       '<div class="studio-preview"><div class="preview-tools"><button data-action="preview-reset">Reset preview</button><button data-action="upload">＋ Reference</button></div><div class="preview-frame" id="previewFrame"><div class="preview-overlay"><div class="preview-topline"><span>TESLAFIELD / ' + (isImage ? "IMAGE" : "MOTION") + '</span><span>PREVIEW CANVAS</span></div><div class="preview-center">▶</div><div class="preview-caption">' + (isImage ? "Shape the impossible." : "Every frame has a story.") + '</div></div></div><div class="preview-hint" id="previewHint">Reference preview · Upload a file to personalise this frame</div></div>' +
-      '<div class="section-head"><div><h2>Creation workspace</h2><p>Adjust the brief before sending it to a generation engine.</p></div><span class="badge badge-green">INTERACTIVE DEMO</span></div>' +
+      '<div class="section-head"><div><h2>Creation workspace</h2><p>Adjust the brief before sending it to a generation engine.</p></div><span class="badge badge-green">GENERATION WORKSPACE</span></div>' +
       '<div class="panel"><div class="panel-title-row"><h3>Generation settings</h3><span>Step 1 of 2</span></div><div class="control-section"><div class="control-label">Creation mode</div><div class="segmented">' + modes + '</div></div>' +
       '<div class="control-section"><div class="control-label">' + promptLabel + '<small>Be specific about subject, action and atmosphere</small></div><textarea class="textarea-field" id="creationPrompt" placeholder="' + sample + '"></textarea><div class="field-note">Tip: describe one main action and one clear camera move for a more controllable shot.</div></div>' +
       '<div class="control-section"><div class="control-label">Reference media <small>Optional</small></div><button class="upload-zone" style="width:100%" data-action="upload"><span class="upload-symbol">＋</span><strong id="uploadTitle">Drop a reference image or browse files</strong><small id="uploadNote">PNG, JPG, WEBP · Local preview only</small></button></div>' +
       '<div class="control-section"><div class="control-label">Visual direction</div><div class="chip-row"><button class="choice-chip selected" data-choice="cinematic">Cinematic</button><button class="choice-chip" data-choice="editorial">Editorial</button><button class="choice-chip" data-choice="photoreal">Photoreal</button><button class="choice-chip" data-choice="dreamlike">Dreamlike</button><button class="choice-chip" data-choice="minimal">Minimal</button></div></div>' +
       '</div></section>' +
-      '<aside class="studio-controls"><div class="panel-title-row"><h3>Output controls</h3><span>DEMO ENGINE</span></div>' +
-      '<div class="control-section"><div class="control-label">Model route <small>Provider connection required</small></div><select class="select-field" id="modelRoute"><option>Pollinations · Flux Schnell</option></select></div>' +
+      '<aside class="studio-controls"><div class="panel-title-row"><h3>Output controls</h3><span>MODEL SETTINGS</span></div>' +
+      '<div class="control-section"><div class="control-label">AI model <small>Provider pricing and limits may apply</small></div><select class="select-field" id="modelRoute">'+ (isImage ? '<option value="black-forest-labs/flux.1-schnell">FLUX.1 Schnell</option><option value="black-forest-labs/flux.1.1-pro">FLUX 1.1 Pro</option>' : '<option value="bytedance/seedance-2.0-mini">Seedance 2.0 Mini</option><option value="bytedance/seedance-2.0-fast">Seedance 2.0 Fast</option><option value="google/veo-3.1-fast">Veo 3.1 Fast</option><option value="alibaba/wan-2.2-fast">Wan 2.2 Fast</option><option value="x-ai/grok-imagine-video-1.5-lite">Grok Imagine Video Lite</option>') + '</select></div>' +
       '<div class="control-section"><div class="control-label">Aspect ratio</div><div class="segmented" id="ratioOptions"><button class="selected" data-ratio="16:9">16:9</button><button data-ratio="9:16">9:16</button><button data-ratio="1:1">1:1</button></div></div>' +
       durationControl +
       directionControl +
       '<div class="control-section"><div class="control-label">Quality</div><select class="select-field"><option>Preview · 720p</option><option>1080p · Planned</option><option>4K · Planned</option></select></div>' +
-      '<button class="generate-button" data-action="' + (isImage ? "generate-image" : "generate-video") + '">✦  ' + (isImage ? "Generate image" : "Create video concept") + '</button><div class="demo-disclaimer"><span>ⓘ</span><span>' + (isImage ? "Image requests are routed securely through TESLAFIELD. Provider key and available balance are required before generation can run." : "Video generation is not connected yet. This button creates no AI video.") + '</span></div>' +
-      '</aside></div>' + (isImage ? '<div id="imageResult" aria-live="polite"></div>' : "");
+      '<button class="generate-button" data-action="' + (isImage ? "generate-image" : "generate-video") + '">✦  ' + (isImage ? "Generate image" : "Generate video") + '</button><div class="demo-disclaimer"><span>ⓘ</span><span>' + (isImage ? "Real image generation uses the connected provider. A valid API key and available model budget are required." : "Real MP4 generation uses the selected video model. A valid API key and sufficient provider budget are required.") + '</span></div>' +
+      '</aside></div>' + (isImage ? '<div id="imageResult" aria-live="polite"></div>' : '<div id="videoResult" aria-live="polite"></div>');
   }
 
   function renderCinema() {
@@ -330,6 +330,55 @@
     }
   }
 
+
+  async function createVideo() {
+    var promptField = document.getElementById("creationPrompt");
+    var prompt = promptField ? promptField.value.trim() : "";
+    var result = document.getElementById("videoResult");
+    var button = document.querySelector('[data-action="generate-video"]');
+    var modelNode = document.getElementById("modelRoute");
+    var model = modelNode ? modelNode.value : "bytedance/seedance-2.0-mini";
+    var durationNode = document.querySelector('[data-choice-group="duration"].selected');
+    var duration = durationNode ? Number(durationNode.textContent.replace(/[^0-9]/g, "")) : 5;
+    if (!prompt) {
+      toast("Describe the video you want to create first.", "!");
+      if (promptField) promptField.focus();
+      return;
+    }
+    if (prompt.length > 2000) {
+      toast("Keep the video prompt under 2,000 characters.", "!");
+      return;
+    }
+    if (button) { button.disabled = true; button.textContent = "Generating video…"; }
+    if (result) result.innerHTML = '<section class="panel" style="margin-top:16px"><p>Sending your request to the selected video model. Generation may take several minutes. Provider charges may apply.</p></section>';
+    try {
+      var response = await fetch(API_BASE_URL + "/api/v1/video/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: prompt, model: model, duration: duration })
+      });
+      var data = await response.json().catch(function () { return {}; });
+      if (!response.ok) {
+        var message = data && data.message ? data.message : "Video generation is not available yet.";
+        if (result) result.innerHTML = '<section class="panel" style="margin-top:16px"><div class="panel-title-row"><h3>Video generation unavailable</h3><span class="badge">SETUP REQUIRED</span></div><p>' + esc(message) + '</p><p class="field-note">No video was created. Check the provider key and its available budget before retrying.</p></section>';
+        toast(message, "!");
+        return;
+      }
+      if (!data.video || data.video.indexOf("data:video/") !== 0) throw new Error("The provider returned no playable MP4 video.");
+      var title = prompt.length > 52 ? prompt.slice(0, 49) + "..." : prompt;
+      addJob("VIDEO", title);
+      jobs[0].videoUrl = data.video;
+      if (result) result.innerHTML = '<section class="panel" style="margin-top:16px"><div class="panel-title-row"><h3>Your generated video</h3><span class="badge badge-green">GENERATED</span></div><video controls playsinline style="display:block;width:100%;max-height:680px;border-radius:12px;background:#080a0e"><source src="' + esc(data.video) + '" type="video/mp4"></video><div class="heading-actions" style="margin-top:12px"><a class="btn btn-primary btn-small" href="' + esc(data.video) + '" download="teslafield-video.mp4">Download MP4 ↗</a><button class="btn btn-quiet btn-small" data-view="library">Open library</button></div></section>';
+      toast("Video generated successfully.", "✓");
+    } catch (error) {
+      var errorMessage = error && error.message ? error.message : "Could not contact the TESLAFIELD video service.";
+      if (result) result.innerHTML = '<section class="panel" style="margin-top:16px"><h3>Video generation error</h3><p>' + esc(errorMessage) + '</p></section>';
+      toast(errorMessage, "!");
+    } finally {
+      if (button && document.body.contains(button)) { button.disabled = false; button.textContent = "✦  Generate video"; }
+    }
+  }
+
   function planDirector() {
     var brief = document.getElementById("directorBrief") || document.getElementById("sceneBrief");
     var value = brief ? brief.value.trim() : "";
@@ -362,7 +411,7 @@
     } else if (action === "upload") {
       fileInput.value = "";
       fileInput.click();
-    } else if (action === "generate-video") createConcept("VIDEO");
+    } else if (action === "generate-video") createVideo();
     else if (action === "generate-image") createImage();
     else if (action === "new-project") openModal("Start a new project", '<p>Choose a creative path to start your next project.</p><div class="tool-grid" style="grid-template-columns:repeat(2,1fr)">' + toolCard("▶","Video","Create a motion concept.","video","rgba(141,184,255,.16)") + toolCard("▧","Image","Build a visual direction.","image","rgba(173,155,255,.16)") + '</div>');
     else if (action === "credits") openModal("Plans & generation credits", '<span class="badge badge-green">PROTOTYPE MODE</span><p>TESLAFIELD currently has no paid plans, credit balance or AI provider connected. Before accepting payments, the product needs real generation-cost estimates, billing infrastructure, terms, commercial-use rules and user protections.</p><p><strong>Recommended first step:</strong> launch the creative planning tools, validate demand, then connect one permitted image or video provider with clear per-generation pricing.</p>');
@@ -523,5 +572,4 @@
   });
 
   renderCurrentView();
-  checkBackendConnection();
 })();
