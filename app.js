@@ -427,12 +427,28 @@
     setGenerating(true);
     controller = new AbortController();
     try {
-      const response = await fetch(API + "/api/v1/chat/completions", {
+      const chatRequest = {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: chat.messages.slice(-30) }),
         signal: controller.signal
-      });
+      };
+      let response;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          response = await fetch(API + "/api/v1/chat/completions", chatRequest);
+          if (response.ok || ![502, 503, 504].includes(response.status) || attempt === 2) break;
+        } catch (networkError) {
+          if (networkError.name === "AbortError" || attempt === 2) throw networkError;
+        }
+        await new Promise((resolve, reject) => {
+          const timer = setTimeout(resolve, attempt === 0 ? 1800 : 4500);
+          controller.signal.addEventListener("abort", () => {
+            clearTimeout(timer);
+            reject(new DOMException("Request cancelled", "AbortError"));
+          }, { once: true });
+        });
+      }
       const data = await response.json().catch(() => ({}));
       const typing = $("typingIndicator");
       if (typing) typing.remove();
@@ -520,7 +536,7 @@
   }
   async function checkConnection() {
     try {
-      const response = await fetch(API + "/api/v1/status", { signal: AbortSignal.timeout(15000) });
+      const response = await fetch(API + "/api/v1/status", { signal: AbortSignal.timeout(90000), cache: "no-store" });
       if (!response.ok) throw new Error("offline");
       const data = await response.json().catch(() => ({}));
       $("connectionStatus").classList.add("online");
@@ -635,6 +651,15 @@
     applyTheme(theme);
   } catch (error) { applyTheme("light"); }
   renderHistory();
-  checkConnection();
-  setInterval(checkConnection, 60000);
+  let connectionTimer = null;
+  function startConnectionMonitor() {
+    if (connectionTimer) clearInterval(connectionTimer);
+    checkConnection();
+    connectionTimer = setInterval(checkConnection, 5 * 60 * 1000);
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") startConnectionMonitor();
+    else if (connectionTimer) { clearInterval(connectionTimer); connectionTimer = null; }
+  });
+  startConnectionMonitor();
 })();
