@@ -5,7 +5,6 @@ on:
   push:
     branches: [main]
     paths:
-      - "huggingface/chat-space/**"
       - "huggingface/speech-space/**"
       - "huggingface/voice-space/**"
       - ".github/workflows/deploy-teslafield-ai-engines.yml"
@@ -31,7 +30,8 @@ jobs:
           python -m py_compile huggingface/voice-space/app.py
 
   deploy-chat:
-    name: Deploy Chat Engine
+    name: Deploy Chat Engine (manual only)
+    if: github.event_name == 'workflow_dispatch'
     needs: validate
     runs-on: ubuntu-latest
     steps:
@@ -49,6 +49,7 @@ jobs:
 
   deploy-speech:
     name: Deploy Speech Engine
+    if: github.event_name == 'workflow_dispatch' || contains(join(github.event.head_commit.modified, ','), 'huggingface/speech-space/') || contains(join(github.event.head_commit.added, ','), 'huggingface/speech-space/') || contains(join(github.event.head_commit.removed, ','), 'huggingface/speech-space/')
     needs: validate
     runs-on: ubuntu-latest
     steps:
@@ -66,6 +67,7 @@ jobs:
 
   deploy-voice:
     name: Deploy Voice Engine
+    if: github.event_name == 'workflow_dispatch' || contains(join(github.event.head_commit.modified, ','), 'huggingface/voice-space/') || contains(join(github.event.head_commit.added, ','), 'huggingface/voice-space/') || contains(join(github.event.head_commit.removed, ','), 'huggingface/voice-space/')
     needs: validate
     runs-on: ubuntu-latest
     steps:
