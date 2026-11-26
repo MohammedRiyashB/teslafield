@@ -1012,6 +1012,12 @@
         stream.getTracks().forEach((track) => track.stop());
         mediaRecorder = null;
         mediaRecorderStream = null;
+        chunks = chunks || [];
+        if (recorder.cancelled) {
+          chunks = [];
+          resetMicButton();
+          return;
+        }
         const audioBlob = new Blob(chunks, { type: recorder.mimeType || mimeType || "audio/webm" });
         chunks = [];
         resetMicButton();
@@ -1030,10 +1036,15 @@
       recorder.start(250);
       const button = $("micButton");
       button.classList.add("recording");
-      button.setAttribute("aria-label", "Stop recording");
-      button.title = "Stop recording";
+      button.setAttribute("aria-label", "Finish voice recording");
+      button.title = "Finish voice recording";
+      $("composer").classList.add("voice-recording");
+      const cancelButton = $("plusButton");
+      cancelButton.classList.add("cancel-recording");
+      cancelButton.setAttribute("aria-label", "Cancel voice recording");
+      cancelButton.title = "Cancel voice recording";
       recordingTimer = setTimeout(() => stopVoiceRecording(), 45000);
-      toast("Listening… tap the microphone again when finished.");
+      toast("Listening… tap the waveform to finish, or × to cancel.");
     } catch (error) {
       if (mediaRecorderStream) mediaRecorderStream.getTracks().forEach((track) => track.stop());
       mediaRecorder = null;
@@ -1046,6 +1057,17 @@
     }
   }
 
+  function resetVoiceModeUI() {
+    const composer = $("composer");
+    const cancelButton = $("plusButton");
+    if (composer) composer.classList.remove("voice-recording");
+    if (cancelButton) {
+      cancelButton.classList.remove("cancel-recording");
+      cancelButton.setAttribute("aria-label", "Add files and more");
+      cancelButton.title = "Add files";
+    }
+  }
+
   function resetMicButton() {
     const button = $("micButton");
     if (!button) return;
@@ -1053,12 +1075,28 @@
     button.disabled = false;
     button.setAttribute("aria-label", "Record voice message");
     button.title = "Record voice message";
+    resetVoiceModeUI();
+  }
+
+  function cancelVoiceRecording() {
+    clearTimeout(recordingTimer);
+    const recorder = mediaRecorder;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.cancelled = true;
+      recorder.stop();
+    }
+    if (mediaRecorderStream) mediaRecorderStream.getTracks().forEach((track) => track.stop());
+    mediaRecorder = null;
+    mediaRecorderStream = null;
+    resetMicButton();
+    toast("Voice recording cancelled.");
   }
 
   function stopVoiceRecording() {
     clearTimeout(recordingTimer);
     if (mediaRecorder && mediaRecorder.state !== "inactive") {
       mediaRecorder.stop();
+      resetVoiceModeUI();
       const button = $("micButton");
       button.classList.remove("recording");
       button.classList.add("transcribing");
@@ -1481,6 +1519,10 @@
   $("accountDelete").onclick = deleteAccountAndLocalData;
   $("accountButton").onclick = () => toggleMenu("accountMenu", "accountButton");
   $("plusButton").onclick = () => {
+    if ($("plusButton").classList.contains("cancel-recording")) {
+      cancelVoiceRecording();
+      return;
+    }
     closeMenus();
     $("fileInput").click();
   };
