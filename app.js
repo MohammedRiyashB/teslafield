@@ -976,20 +976,6 @@
     renderAttachments();
     if (selectedFiles.length) toast("Files checked and kept on this device. They have not been uploaded.");
   };
-  $("voiceButton").onclick = () => {
-    if (mediaRecorder && mediaRecorder.state === "recording") stopRecording();
-    else startRecording("dictation");
-  };
-  $("voiceModeButton").onclick = () => {
-    if (voiceModeEnabled) {
-      voiceModeEnabled = false;
-      stopRecording();
-      toast("Voice conversation stopped.");
-    } else {
-      voiceModeEnabled = true;
-      startRecording("conversation");
-    }
-  };
   $("shareChat").onclick = () => {
     const chat = activeChat();
     if (!chat) { toast("Start a conversation first."); return; }
@@ -1012,6 +998,34 @@
       }
     }
   });
+
+
+  // Rotate a large set of welcome ideas continuously on the signed-out start screen.
+  const exploreIdeas = [
+    "What would you like to explore?","Turn a big idea into a real plan.","What can we create together today?","Discover something you have never learned.","Make your next great idea happen.","What are you curious about right now?","Build something remarkable from scratch.","Find a smarter way to solve a problem.","Imagine it. Explore it. Create it.","What would you love to understand?",
+    "Learn a new skill, one step at a time.","Let's make your ideas clearer.","What challenge can we solve today?","Explore the future of technology.","Create a plan for your next project.","Find inspiration for something original.","Make complex topics feel simple.","What could you invent today?","Let's turn questions into answers.","Discover a new perspective.",
+    "Write something worth sharing.","Build a better workflow.","What do you want to bring to life?","Explore science, space and discovery.","Find the words for your big idea.","Let's brainstorm something fresh.","Make your next decision with clarity.","What would you like to design?","Understand the world in a new way.","Start with a question. Go anywhere.",
+    "Create a story people remember.","Explore a new business idea.","Let's make learning exciting.","What can you improve today?","Plan a journey into the unknown.","Turn creativity into progress.","Find a solution that fits.","What would you like to master?","Explore code and build something useful.","Make a difficult task feel easy.",
+    "Let's shape your next breakthrough.","What is one thing you want to change?","Discover ideas beyond the ordinary.","Create something uniquely yours.","Explore a topic that fascinates you.","Let's map out your next move.","What can you make more efficient?","Find a fresh angle on an old problem.","Learn by asking better questions.","Bring a creative vision to life.",
+    "What would you like to research?","Let's make your goals actionable.","Explore design, art and imagination.","Build confidence with clear explanations.","What new opportunity can you find?","Create a smarter daily routine.","Let's solve it together.","Discover how things really work.","What idea deserves your attention?","Make progress on something important.",
+    "Explore the power of AI.","Write, refine and communicate clearly.","What would you like to launch?","Let's find your next inspiration.","Turn information into understanding.","Create a step-by-step roadmap.","What can you discover in five minutes?","Explore a world of possibilities.","Let's make your vision practical.","Find a better way forward.",
+    "What would you like to experiment with?","Design your next big concept.","Let's unlock a new perspective.","Make your next presentation shine.","Explore history and untold stories.","What skill should we practise today?","Build a project from the first idea.","Let's make something meaningful.","Find clarity in a complicated topic.","What would you like to transform?",
+    "Explore new ways to think.","Create a clear plan for tomorrow.","Let's make your work simpler.","What question have you always had?","Discover tools for your next project.","Turn curiosity into knowledge.","What could your next chapter look like?","Let's develop an original concept.","Explore possibilities, then take action.","Make your ideas easier to explain.",
+    "What would you like to achieve this week?","Let's create something useful.","Find the insight hidden in the details.","Explore a new creative direction.","What problem should we tackle first?","Make your next idea unforgettable.","Let's learn something surprising.","Build, write, plan and discover.","Where will your curiosity take you?","Your next great idea starts here."
+  ];
+  const exploreHeading = welcome.querySelector("h1");
+  let exploreIndex = 0;
+  if (exploreHeading) {
+    window.setInterval(() => {
+      if (!document.body.classList.contains("guest-mode")) return;
+      exploreHeading.classList.add("explore-fade");
+      window.setTimeout(() => {
+        exploreIndex = (exploreIndex + 1) % exploreIdeas.length;
+        exploreHeading.textContent = exploreIdeas[exploreIndex];
+        exploreHeading.classList.remove("explore-fade");
+      }, 260);
+    }, 3400);
+  }
 
   setGuestLayout(true);
   initializeFirebaseAuth();
