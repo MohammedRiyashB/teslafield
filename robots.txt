@@ -1,0 +1,12 @@
+# TESLAFIELD — Robots Exclusion Protocol
+# Public website: https://teslafieldai.web.app/
+
+User-agent: *
+Allow: /
+
+# Do not expose private or operational endpoints to crawlers.
+Disallow: /api/
+Disallow: /auth/
+Disallow: /login/
+Disallow: /signup/
+
