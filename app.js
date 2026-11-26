@@ -299,7 +299,7 @@
       var response = await fetch(API_BASE_URL + "/api/v1/image/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt, aspectRatio: aspectRatio })
+        body: JSON.stringify({ prompt: prompt, aspectRatio: aspectRatio, model: (document.getElementById("modelRoute") || {}).value || "black-forest-labs/flux.1-schnell" })
       });
       var data = await response.json().catch(function () { return {}; });
       if (!response.ok) {
