@@ -520,7 +520,7 @@
   }
   async function checkConnection() {
     try {
-      const response = await fetch(API + "/api/v1/status", { signal: AbortSignal.timeout(7000) });
+      const response = await fetch(API + "/api/v1/status", { signal: AbortSignal.timeout(15000) });
       if (!response.ok) throw new Error("offline");
       const data = await response.json().catch(() => ({}));
       $("connectionStatus").classList.add("online");
