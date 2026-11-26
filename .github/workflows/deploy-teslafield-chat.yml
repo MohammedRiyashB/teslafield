@@ -1,4 +1,4 @@
-name: Deploy TESLAFIELD Chat Engine (Qwen3-0.6B)
+name: Deploy Teslafield Chat Engine (Qwen3-0.6B)
 
 on:
   push:
@@ -17,23 +17,32 @@ concurrency:
 
 jobs:
   deploy-chat:
-    name: Validate and restore Qwen3-0.6B Chat Space
+    name: Validate and deploy Teslafield Qwen3-0.6B
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout TESLAFIELD
+      - name: Checkout Teslafield
         uses: actions/checkout@v4
 
-      - name: Validate stable Chat Engine
+      - name: Validate stable Chat Engine and Docker README
+        shell: bash
         run: |
+          set -euo pipefail
           python -m py_compile huggingface/chat-space/app.py
+          test -s huggingface/chat-space/README.md
           test -s huggingface/chat-space/Dockerfile
           test -s huggingface/chat-space/requirements.txt
           grep -q 'MODEL_ID = "Qwen/Qwen3-0.6B"' huggingface/chat-space/app.py
           grep -q 'TextIteratorStreamer' huggingface/chat-space/app.py
-          grep -q 'sdk: docker' huggingface/chat-space/README.md
           ! grep -q 'llama_cpp' huggingface/chat-space/app.py
           ! grep -qi 'llama-cpp-python' huggingface/chat-space/requirements.txt
-          grep -q '^title: Teslafield Chat Engine
+          grep -q '^title: Teslafield Chat Engine$' huggingface/chat-space/README.md
+          grep -q '^emoji: ' huggingface/chat-space/README.md
+          grep -q '^colorFrom: blue$' huggingface/chat-space/README.md
+          grep -q '^colorTo: indigo$' huggingface/chat-space/README.md
+          grep -q '^sdk: docker$' huggingface/chat-space/README.md
+          grep -q '^app_port: 7860$' huggingface/chat-space/README.md
+          echo "Stable Qwen3-0.6B source and Docker Space configuration validated."
+
       - name: Deploy only the Chat Space
         uses: huggingface/hub-sync@v0.3.0
         with:
@@ -44,245 +53,18 @@ jobs:
           space_sdk: docker
           subdirectory: huggingface/chat-space
 
-      - name: Verify Hugging Face Space configuration and restored model
+      - name: Verify published Space README and model source
+        shell: bash
         run: |
           set -euo pipefail
           BASE="https://huggingface.co/spaces/Earthaioa/EARTH_OS_V10_DOCKER/resolve/main"
           curl --fail --silent --show-error --retry 5 --retry-delay 3 "$BASE/README.md" -o /tmp/space-readme.md
           head -n 1 /tmp/space-readme.md | grep -qx -- '---'
-          grep -q '^title: Teslafield Chat Engine huggingface/chat-space/README.md
-          grep -q '^emoji: ' huggingface/chat-space/README.md
-          grep -q '^colorFrom: blue
-      - name: Deploy only the Chat Space
-        uses: huggingface/hub-sync@v0.3.0
-        with:
-          github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: Earthaioa/EARTH_OS_V10_DOCKER
-          hf_token: ${{ secrets.HF_TOKEN }}
-          repo_type: space
-          space_sdk: docker
-          subdirectory: huggingface/chat-space
- huggingface/chat-space/README.md
-          grep -q '^colorTo: indigo
-      - name: Deploy only the Chat Space
-        uses: huggingface/hub-sync@v0.3.0
-        with:
-          github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: Earthaioa/EARTH_OS_V10_DOCKER
-          hf_token: ${{ secrets.HF_TOKEN }}
-          repo_type: space
-          space_sdk: docker
-          subdirectory: huggingface/chat-space
- huggingface/chat-space/README.md
-          grep -q '^sdk: docker
-      - name: Deploy only the Chat Space
-        uses: huggingface/hub-sync@v0.3.0
-        with:
-          github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: Earthaioa/EARTH_OS_V10_DOCKER
-          hf_token: ${{ secrets.HF_TOKEN }}
-          repo_type: space
-          space_sdk: docker
-          subdirectory: huggingface/chat-space
- huggingface/chat-space/README.md
-          grep -q '^app_port: 7860
-      - name: Deploy only the Chat Space
-        uses: huggingface/hub-sync@v0.3.0
-        with:
-          github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: Earthaioa/EARTH_OS_V10_DOCKER
-          hf_token: ${{ secrets.HF_TOKEN }}
-          repo_type: space
-          space_sdk: docker
-          subdirectory: huggingface/chat-space
- huggingface/chat-space/README.md
-          echo "Stable Qwen3-0.6B Chat Engine and Docker README validation passed."
-
-      - name: Deploy only the Chat Space
-        uses: huggingface/hub-sync@v0.3.0
-        with:
-          github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: Earthaioa/EARTH_OS_V10_DOCKER
-          hf_token: ${{ secrets.HF_TOKEN }}
-          repo_type: space
-          space_sdk: docker
-          subdirectory: huggingface/chat-space
- /tmp/space-readme.md
-          grep -q '^sdk: docker huggingface/chat-space/README.md
-          grep -q '^emoji: ' huggingface/chat-space/README.md
-          grep -q '^colorFrom: blue
-      - name: Deploy only the Chat Space
-        uses: huggingface/hub-sync@v0.3.0
-        with:
-          github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: Earthaioa/EARTH_OS_V10_DOCKER
-          hf_token: ${{ secrets.HF_TOKEN }}
-          repo_type: space
-          space_sdk: docker
-          subdirectory: huggingface/chat-space
- huggingface/chat-space/README.md
-          grep -q '^colorTo: indigo
-      - name: Deploy only the Chat Space
-        uses: huggingface/hub-sync@v0.3.0
-        with:
-          github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: Earthaioa/EARTH_OS_V10_DOCKER
-          hf_token: ${{ secrets.HF_TOKEN }}
-          repo_type: space
-          space_sdk: docker
-          subdirectory: huggingface/chat-space
- huggingface/chat-space/README.md
-          grep -q '^sdk: docker
-      - name: Deploy only the Chat Space
-        uses: huggingface/hub-sync@v0.3.0
-        with:
-          github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: Earthaioa/EARTH_OS_V10_DOCKER
-          hf_token: ${{ secrets.HF_TOKEN }}
-          repo_type: space
-          space_sdk: docker
-          subdirectory: huggingface/chat-space
- huggingface/chat-space/README.md
-          grep -q '^app_port: 7860
-      - name: Deploy only the Chat Space
-        uses: huggingface/hub-sync@v0.3.0
-        with:
-          github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: Earthaioa/EARTH_OS_V10_DOCKER
-          hf_token: ${{ secrets.HF_TOKEN }}
-          repo_type: space
-          space_sdk: docker
-          subdirectory: huggingface/chat-space
- huggingface/chat-space/README.md
-          echo "Stable Qwen3-0.6B Chat Engine and Docker README validation passed."
-
-      - name: Deploy only the Chat Space
-        uses: huggingface/hub-sync@v0.3.0
-        with:
-          github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: Earthaioa/EARTH_OS_V10_DOCKER
-          hf_token: ${{ secrets.HF_TOKEN }}
-          repo_type: space
-          space_sdk: docker
-          subdirectory: huggingface/chat-space
- /tmp/space-readme.md
-          grep -q '^app_port: 7860 huggingface/chat-space/README.md
-          grep -q '^emoji: ' huggingface/chat-space/README.md
-          grep -q '^colorFrom: blue
-      - name: Deploy only the Chat Space
-        uses: huggingface/hub-sync@v0.3.0
-        with:
-          github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: Earthaioa/EARTH_OS_V10_DOCKER
-          hf_token: ${{ secrets.HF_TOKEN }}
-          repo_type: space
-          space_sdk: docker
-          subdirectory: huggingface/chat-space
- huggingface/chat-space/README.md
-          grep -q '^colorTo: indigo
-      - name: Deploy only the Chat Space
-        uses: huggingface/hub-sync@v0.3.0
-        with:
-          github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: Earthaioa/EARTH_OS_V10_DOCKER
-          hf_token: ${{ secrets.HF_TOKEN }}
-          repo_type: space
-          space_sdk: docker
-          subdirectory: huggingface/chat-space
- huggingface/chat-space/README.md
-          grep -q '^sdk: docker
-      - name: Deploy only the Chat Space
-        uses: huggingface/hub-sync@v0.3.0
-        with:
-          github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: Earthaioa/EARTH_OS_V10_DOCKER
-          hf_token: ${{ secrets.HF_TOKEN }}
-          repo_type: space
-          space_sdk: docker
-          subdirectory: huggingface/chat-space
- huggingface/chat-space/README.md
-          grep -q '^app_port: 7860
-      - name: Deploy only the Chat Space
-        uses: huggingface/hub-sync@v0.3.0
-        with:
-          github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: Earthaioa/EARTH_OS_V10_DOCKER
-          hf_token: ${{ secrets.HF_TOKEN }}
-          repo_type: space
-          space_sdk: docker
-          subdirectory: huggingface/chat-space
- huggingface/chat-space/README.md
-          echo "Stable Qwen3-0.6B Chat Engine and Docker README validation passed."
-
-      - name: Deploy only the Chat Space
-        uses: huggingface/hub-sync@v0.3.0
-        with:
-          github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: Earthaioa/EARTH_OS_V10_DOCKER
-          hf_token: ${{ secrets.HF_TOKEN }}
-          repo_type: space
-          space_sdk: docker
-          subdirectory: huggingface/chat-space
- /tmp/space-readme.md
+          grep -q '^title: Teslafield Chat Engine$' /tmp/space-readme.md
+          grep -q '^sdk: docker$' /tmp/space-readme.md
+          grep -q '^app_port: 7860$' /tmp/space-readme.md
           curl --fail --silent --show-error --retry 5 --retry-delay 3 "$BASE/app.py" -o /tmp/space-app.py
           grep -q 'MODEL_ID = "Qwen/Qwen3-0.6B"' /tmp/space-app.py
           curl --fail --silent --show-error "$BASE/requirements.txt" -o /tmp/space-requirements.txt
           ! grep -qi 'llama-cpp-python' /tmp/space-requirements.txt
-          echo "Hugging Face README config and Qwen3-0.6B source verified."
- huggingface/chat-space/README.md
-          grep -q '^emoji: ' huggingface/chat-space/README.md
-          grep -q '^colorFrom: blue
-      - name: Deploy only the Chat Space
-        uses: huggingface/hub-sync@v0.3.0
-        with:
-          github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: Earthaioa/EARTH_OS_V10_DOCKER
-          hf_token: ${{ secrets.HF_TOKEN }}
-          repo_type: space
-          space_sdk: docker
-          subdirectory: huggingface/chat-space
- huggingface/chat-space/README.md
-          grep -q '^colorTo: indigo
-      - name: Deploy only the Chat Space
-        uses: huggingface/hub-sync@v0.3.0
-        with:
-          github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: Earthaioa/EARTH_OS_V10_DOCKER
-          hf_token: ${{ secrets.HF_TOKEN }}
-          repo_type: space
-          space_sdk: docker
-          subdirectory: huggingface/chat-space
- huggingface/chat-space/README.md
-          grep -q '^sdk: docker
-      - name: Deploy only the Chat Space
-        uses: huggingface/hub-sync@v0.3.0
-        with:
-          github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: Earthaioa/EARTH_OS_V10_DOCKER
-          hf_token: ${{ secrets.HF_TOKEN }}
-          repo_type: space
-          space_sdk: docker
-          subdirectory: huggingface/chat-space
- huggingface/chat-space/README.md
-          grep -q '^app_port: 7860
-      - name: Deploy only the Chat Space
-        uses: huggingface/hub-sync@v0.3.0
-        with:
-          github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: Earthaioa/EARTH_OS_V10_DOCKER
-          hf_token: ${{ secrets.HF_TOKEN }}
-          repo_type: space
-          space_sdk: docker
-          subdirectory: huggingface/chat-space
- huggingface/chat-space/README.md
-          echo "Stable Qwen3-0.6B Chat Engine and Docker README validation passed."
-
-      - name: Deploy only the Chat Space
-        uses: huggingface/hub-sync@v0.3.0
-        with:
-          github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: Earthaioa/EARTH_OS_V10_DOCKER
-          hf_token: ${{ secrets.HF_TOKEN }}
-          repo_type: space
-          space_sdk: docker
-          subdirectory: huggingface/chat-space
+          echo "Published Hugging Face README config and Qwen3-0.6B source verified."
