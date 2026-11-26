@@ -1653,11 +1653,9 @@ html[data-motion="reduced"] *,html[data-motion="reduced"] *:before,html[data-mot
 }
 .install-experience-banner.is-visible{opacity:1;visibility:visible;pointer-events:auto;transform:translate(-50%,0)}
 .install-experience-banner[hidden]{display:none}
-.install-experience-mark{
-  width:27px;height:27px;display:grid;place-items:center;flex:none;
-  border:1px solid rgba(255,255,255,.24);border-radius:9px;
-  background:linear-gradient(145deg,#24283b,#11131b);color:#fff;
-  font-size:15px;font-weight:800;letter-spacing:-.08em;
+.install-experience-logo{
+  width:29px;height:29px;display:block;flex:none;object-fit:contain;
+  border-radius:8px;background:transparent;
 }
 .install-experience-copy{color:#f4f5fb;font-size:12px;font-weight:650;letter-spacing:.005em;white-space:nowrap}
 .install-experience-download{
@@ -1675,7 +1673,7 @@ html[data-motion="reduced"] *,html[data-motion="reduced"] *:before,html[data-mot
 .install-experience-banner button:focus-visible{outline:2px solid #aab2ff;outline-offset:3px}
 @media(max-width:420px){
   .install-experience-banner{gap:7px;min-height:49px;padding:7px 7px 7px 9px;border-radius:14px}
-  .install-experience-mark{width:24px;height:24px;border-radius:8px;font-size:13px}
+  .install-experience-logo{width:26px;height:26px;border-radius:7px}
   .install-experience-copy{font-size:10.5px}
   .install-experience-download{min-height:33px;padding:0 10px;border-radius:9px;font-size:10px}
   .install-experience-close{width:25px;height:29px;font-size:20px}
