@@ -9,41 +9,38 @@ on:
       - "huggingface/video-space/**"
       - ".github/workflows/deploy-huggingface-spaces.yml"
 
+permissions:
+  contents: read
+
 jobs:
-  deploy:
+  deploy-image:
+    name: Deploy Image Studio
     runs-on: ubuntu-latest
     steps:
       - name: Checkout TESLAFIELD
         uses: actions/checkout@v4
+      - name: Sync Image Space
+        uses: huggingface/hub-sync@v0.3.0
+        with:
+          github_repo_id: ${{ github.repository }}
+          huggingface_repo_id: Earthaioa/teslafield-image
+          hf_token: ${{ secrets.HF_TOKEN }}
+          repo_type: space
+          space_sdk: gradio
+          subdirectory: huggingface/image-space
 
-      - name: Install Hugging Face Hub
-        run: python -m pip install --upgrade huggingface_hub
-
-      - name: Upload Image and Video Spaces
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          python - <<'PY'
-          import os
-          from huggingface_hub import HfApi
-
-          token = os.environ.get("HF_TOKEN")
-          if not token:
-              raise SystemExit("Missing HF_TOKEN GitHub Actions secret.")
-
-          api = HfApi(token=token)
-          uploads = [
-              ("huggingface/image-space", "Earthaioa/teslafield-image"),
-              ("huggingface/video-space", "Earthaioa/teslafield-video"),
-          ]
-
-          for folder, repo_id in uploads:
-              print(f"Uploading {folder} -> {repo_id}")
-              api.upload_folder(
-                  folder_path=folder,
-                  repo_id=repo_id,
-                  repo_type="space",
-                  commit_message="Deploy TESLAFIELD Space application",
-              )
-              print(f"Uploaded {repo_id}")
-          PY
+  deploy-video:
+    name: Deploy Video Studio
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout TESLAFIELD
+        uses: actions/checkout@v4
+      - name: Sync Video Space
+        uses: huggingface/hub-sync@v0.3.0
+        with:
+          github_repo_id: ${{ github.repository }}
+          huggingface_repo_id: Earthaioa/teslafield-video
+          hf_token: ${{ secrets.HF_TOKEN }}
+          repo_type: space
+          space_sdk: gradio
+          subdirectory: huggingface/video-space
