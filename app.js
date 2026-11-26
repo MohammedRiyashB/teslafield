@@ -438,7 +438,6 @@
       if (voiceModeEnabled) {
         try { await speakWithSpace(reply); }
         catch (voiceError) { toast(voiceError.message || "Voice playback failed."); }
-        if (voiceModeEnabled) startRecording("conversation");
       }
     } catch (error) {
       const typing = $("typingIndicator");
