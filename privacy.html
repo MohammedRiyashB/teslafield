@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#000000">
+  <title>Privacy Policy — TESLAFIELD</title>
+  <link rel="icon" type="image/png" href="./teslafieldai-logo.png">
+  <link rel="stylesheet" href="./styles.css?v=20261126-20">
+</head>
+<body class="legal-page">
+  <main class="legal-shell">
+    <a class="legal-brand" href="./"><img src="./teslafieldai-logo.png" alt=""> TESLAFIELD</a>
+    <p class="legal-eyebrow">TESLAFIELD · LEGAL</p>
+    <h1>Privacy Policy</h1>
+    <p class="legal-updated">Effective November 26, 2026</p>
+    <p>This policy describes what TESLAFIELD currently handles in the website and connected chat experience. It is intended to explain the actual product behaviour, not to promise that third-party providers follow the same practices.</p>
+
+    <h2>1. Information used for sign-in</h2>
+    <p>When you sign in with Google, Firebase Authentication verifies your identity. TESLAFIELD uses your Firebase user ID to keep locally saved conversation history separated between accounts in the same browser. TESLAFIELD does not need your Google password.</p>
+
+    <h2>2. Conversation history</h2>
+    <p>Current chat history is saved in your browser's local storage under an account-specific key. It is not currently synced to a TESLAFIELD cloud chat database. Anyone with access to your unlocked browser profile may be able to access that browser storage. It is not encrypted separately by TESLAFIELD.</p>
+    <p>You can delete an individual conversation or clear the saved history from the sidebar. Clearing browser data may also remove locally stored conversations.</p>
+
+    <h2>3. AI processing by external providers</h2>
+    <p>When you send a chat message, TESLAFIELD sends the recent conversation context needed for the response to its backend over HTTPS. The backend forwards the request to the configured Hugging Face chat Space for model processing.</p>
+    <p>If you use speech transcription, the recorded audio is sent to the configured external speech provider after microphone permission and processing consent. If you use read-aloud voice, the text to be spoken is sent to the configured external voice provider.</p>
+    <p>These providers may process or retain requests according to their own terms, privacy notices and infrastructure settings. TESLAFIELD cannot promise deletion from a provider's systems merely by deleting a conversation in your browser. Avoid sending passwords, payment card details or other highly sensitive information.</p>
+
+    <h2>4. Files and microphone</h2>
+    <p>File selection currently performs browser-side file type, size and signature checks. Selected files remain on your device; file analysis and file upload through the TESLAFIELD chat composer are not currently enabled.</p>
+    <p>Microphone access is requested only when you choose a voice feature. Your browser asks for microphone permission. A separate TESLAFIELD confirmation explains that audio is sent to an external transcription service for processing.</p>
+
+    <h2>5. Security logs</h2>
+    <p>TESLAFIELD's application security audit messages are designed not to record prompt text, conversation bodies, audio, file names, passwords or authentication tokens. They may record the event type, API route, timestamp and a shortened hash derived from the Firebase user ID. Hosting providers may also maintain infrastructure and network logs under their own policies.</p>
+
+    <h2>6. Essential storage and cookie choices</h2>
+    <p>TESLAFIELD uses essential browser storage for sign-in state, security-related functionality, appearance preferences, locally saved conversations and your consent choices. Essential storage cannot be disabled without affecting core functionality.</p>
+    <p>Optional performance analytics and advertising/targeting trackers are not currently enabled by TESLAFIELD. The cookie-choice dialog lets you save a preference for these categories. Accepting optional categories does not cause optional trackers to load while they are not installed.</p>
+    <p>You can reopen the consent choices at any time using “Your privacy choices” on the first-visit screen.</p>
+
+    <h2>7. Account deletion</h2>
+    <p>The account deletion control requests deletion of your Firebase Authentication account and removes that account's locally saved conversation history from the current browser. It does not delete data held by Google, Hugging Face, or other external providers, and it does not remove browser copies or backups from other devices.</p>
+
+    <h2>8. Data minimisation</h2>
+    <p>TESLAFIELD aims to collect only information needed to authenticate requests, operate the interface and protect the API. We do not currently operate advertising or analytics trackers on the website.</p>
+
+    <h2>9. Updates</h2>
+    <p>This policy may be updated when TESLAFIELD features or providers change. Check the effective date above for the current version.</p>
+
+    <p class="legal-back"><a href="./">← Back to TESLAFIELD</a> · <a href="./terms.html">Terms of Use</a></p>
+  </main>
+</body>
+</html>
