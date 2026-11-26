@@ -43,6 +43,7 @@
   let currentUser = null;
   let authReady = false;
   let pendingGuestPrompt = "";
+  let guestConversationStarted = false;
   let resolveAuthReady;
   const authReadyPromise = new Promise((resolve) => { resolveAuthReady = resolve; });
 
@@ -74,7 +75,10 @@
   function setGuestLayout(guest) {
     document.body.classList.toggle("guest-mode", !!guest);
     if (guest) {
-      if (composerArea.parentElement !== welcome) {
+      if (guestConversationStarted) {
+        const mainPanel = document.querySelector(".main-panel");
+        if (composerArea.parentElement !== mainPanel) mainPanel.appendChild(composerArea);
+      } else if (composerArea.parentElement !== welcome) {
         const starterGrid = welcome.querySelector(".starter-grid");
         welcome.insertBefore(composerArea, starterGrid || null);
       }
@@ -228,7 +232,6 @@
       savePendingGuestPrompt(promptText);
       promptInput.value = promptText;
     }
-    openSignupPrompt();
     if (!authClient) toast("Google sign-in is not initialized on this site yet.");
     return false;
   }
@@ -532,6 +535,9 @@
   }
   function newChat() {
     if (generating) stopGeneration();
+    guestConversationStarted = false;
+    clearPendingGuestPrompt();
+    messageList.innerHTML = "";
     activeId = null;
     messageList.innerHTML = "";
     welcome.hidden = false;
@@ -752,9 +758,37 @@
       if (voiceModeEnabled && !mediaRecorder) startRecording("conversation");
     }
   }
+  function showGuestContinueCard() {
+    const card = document.createElement("section");
+    card.className = "guest-continue-card";
+    card.innerHTML = '<div class="guest-continue-kicker">TESLAFIELD AI</div><h2>Want to continue?</h2><p>Sign in or create a free account to continue your conversation with TESLAFIELD.</p><div class="guest-continue-actions"><button type="button" class="guest-continue-primary" id="guestContinueSignup">Sign up for free</button><button type="button" class="guest-continue-secondary" id="guestContinueLogin">Log in</button></div><div class="guest-continue-footnote">Your message is ready. Continue securely with your Google account.</div>';
+    messageList.appendChild(card);
+    $("guestContinueSignup").onclick = accountEntry;
+    $("guestContinueLogin").onclick = accountEntry;
+    scrollBottom();
+  }
+
   async function sendMessage(value) {
     const text = safeText(value === undefined ? promptInput.value : value).trim();
     if (!text || generating) return;
+    if (!currentUser) {
+      savePendingGuestPrompt(text);
+      guestConversationStarted = true;
+      welcome.hidden = true;
+      setGuestLayout(true);
+      messageList.innerHTML = "";
+      const row = document.createElement("article");
+      row.className = "message-row user guest-pending-message";
+      const body = document.createElement("div");
+      body.className = "message-content";
+      body.textContent = text;
+      row.appendChild(body);
+      messageList.appendChild(row);
+      showGuestContinueCard();
+      promptInput.value = "";
+      promptInput.style.height = "auto";
+      return;
+    }
     if (!(await requireAuthentication(text))) return;
     if (selectedFiles.length) {
       toast("File reading is not connected yet. Remove attachments and send text only.");
@@ -1030,12 +1064,15 @@
   if (exploreHeading) {
     window.setInterval(() => {
       if (!document.body.classList.contains("guest-mode")) return;
-      exploreHeading.classList.add("explore-fade");
+      exploreHeading.classList.remove("glass-form-in");
+      exploreHeading.classList.add("glass-shatter-out");
       window.setTimeout(() => {
         exploreIndex = (exploreIndex + 1) % exploreIdeas.length;
         exploreHeading.textContent = exploreIdeas[exploreIndex];
-        exploreHeading.classList.remove("explore-fade");
-      }, 260);
+        exploreHeading.classList.remove("glass-shatter-out");
+        exploreHeading.classList.add("glass-form-in");
+        window.setTimeout(() => exploreHeading.classList.remove("glass-form-in"), 520);
+      }, 430);
     }, 3400);
   }
 
