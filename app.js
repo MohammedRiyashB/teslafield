@@ -130,8 +130,15 @@
       }, 220);
     };
 
-    const showBannerWhenDue = () => {
-      if (isTeslafieldInstalled()) return;
+    const showBannerWhenDue = (chat) => {
+      if (!currentUser || !chat || activeChat() !== chat || isTeslafieldInstalled()) return;
+      let completedExchanges = 0;
+      for (let index = 0; index < chat.messages.length - 1; index += 1) {
+        if (chat.messages[index].role === "user" && chat.messages[index + 1].role === "assistant" && String(chat.messages[index + 1].content || "").trim()) {
+          completedExchanges += 1;
+        }
+      }
+      if (completedExchanges < 2) return;
       let lastShown = 0;
       try { lastShown = Number(localStorage.getItem(installBannerStorageKey)) || 0; } catch (error) {}
       if (lastShown && Date.now() - lastShown < installBannerCooldown) return;
@@ -183,7 +190,6 @@
       }
     });
 
-    window.setTimeout(showBannerWhenDue, 850);
     if ("serviceWorker" in navigator) {
       const registerServiceWorker = () => navigator.serviceWorker.register("/sw.js").catch(() => {});
       if (document.readyState === "complete") registerServiceWorker();
@@ -1085,6 +1091,7 @@
       chat.updated = Date.now();
       saveStore();
       if (streamBody) streamBody.classList.remove("is-revealing");
+      showBannerWhenDue(chat);
     } catch (error) {
       if (assistantMessage && replyText.trim()) {
         assistantMessage.content = replyText;
