@@ -11,6 +11,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@gradio/client": "^1.15.0"
+    "@gradio/client": "^1.15.0",
+    "firebase-admin": "^13.5.0"
   }
 }
