@@ -117,7 +117,7 @@ function validateAudioPayload(base64, mimeType) {
     (normalizedType === "audio/mp4" && bytes.length > 12 && bytes.subarray(4, 8).toString("ascii") === "ftyp") ||
     ((normalizedType === "audio/wav" || normalizedType === "audio/x-wav") && starts("RIFF") && bytes.subarray(8, 12).toString("ascii") === "WAVE") ||
     (normalizedType === "audio/ogg" && starts("OggS")) ||
-    (normalizedType === "audio/mpeg" && (starts("ID3") || (bytes.length > 1 && bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0));
+    (normalizedType === "audio/mpeg" && (starts("ID3") || (bytes.length > 1 && bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0)));
   if (!signatureValid) throw new Error("AUDIO_TYPE_INVALID");
   return bytes;
 }
