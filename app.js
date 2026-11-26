@@ -140,14 +140,11 @@
   function renderMessage(message, index, chat) {
     const row = document.createElement("article");
     row.className = "message-row " + message.role;
-    const avatar = document.createElement("div");
-    avatar.className = "message-avatar";
-    if (message.role === "assistant") avatar.innerHTML = '<img src="./teslafieldai-logo.png?v=20261126-14" alt="TESLAFIELD">';
     const body = document.createElement("div");
     body.className = "message-content";
     body.innerHTML = renderMarkdown(message.content);
     if (message.role === "user") row.append(body);
-    else row.append(avatar, body);
+    else row.append(body);
     messageList.appendChild(row);
 
     const actions = document.createElement("div");
@@ -309,7 +306,7 @@
     const row = document.createElement("div");
     row.id = "typingIndicator";
     row.className = "message-row assistant";
-    row.innerHTML = '<div class="message-avatar"><img src="./teslafieldai-logo.png?v=20261126-14" alt="TESLAFIELD"></div><div class="typing-dots"><i></i><i></i><i></i></div>';
+    row.innerHTML = '<div class="typing-dots"><i></i><i></i><i></i></div>';
     messageList.appendChild(row);
     scrollBottom();
   }
@@ -630,8 +627,9 @@
     }
   };
   $("appearanceButton").onclick = toggleTheme;
-  $("accountAppearance").onclick = toggleTheme;
-  $("accountClear").onclick = () => { closeMenus(); $("clearHistory").click(); };
+  const accountEntry = () => { closeMenus(); toast("Google sign-in is not connected yet."); };
+  $("accountSignUp").onclick = accountEntry;
+  $("accountLogIn").onclick = accountEntry;
   $("accountButton").onclick = () => toggleMenu("accountMenu", "accountButton");
   $("plusButton").onclick = () => toggleMenu("plusMenu", "plusButton");
   $("uploadFileAction").onclick = () => { closeMenus(); $("fileInput").click(); };
