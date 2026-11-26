@@ -175,9 +175,18 @@ async function generateWithHuggingFaceVideo(prompt) {
   return "data:video/mp4;base64," + bytes.toString("base64");
 }
 
-const CHAT_SPACE_URL = process.env.HF_CHAT_SPACE_URL || "https://earthaioa-earth-os-v10-docker.hf.space";
+const CHAT_SPACE_URL = (process.env.HF_CHAT_SPACE_URL || "https://earthaioa-earth-os-v10-docker.hf.space").replace(/\\/+$/, "");
 const SPEECH_SPACE_ID = process.env.HF_SPEECH_SPACE_ID || "Earthaioa/OpenWhisper-Small";
 const VOICE_SPACE_ID = process.env.HF_VOICE_SPACE_ID || "Earthaioa/Earthaioa-Kokoro-TTS";
+const SPEECH_SPACE_URL = (process.env.HF_SPEECH_SPACE_URL || "https://earthaioa-openwhisper-small.hf.space").replace(/\\/+$/, "");
+const VOICE_SPACE_URL = (process.env.HF_VOICE_SPACE_URL || "https://earthaioa-earthaioa-kokoro-tts.hf.space").replace(/\\/+$/, "");
+
+async function endpointReady(baseUrl, path) {
+  try {
+    const response = await fetch(baseUrl + path, { signal: AbortSignal.timeout(6000) });
+    return response.ok;
+  } catch { return false; }
+}
 
 async function transcribeWithSpace(audioBase64, mimeType, language) {
   const { Client, handle_file } = require("@gradio/client");
@@ -204,7 +213,7 @@ async function synthesizeWithSpace(text, language, voice) {
   const file = result.data && result.data[0];
   const fileUrl = typeof file === "string" ? file : file && (file.url || file.path);
   if (!fileUrl) throw new Error("VOICE_EMPTY_RESULT");
-  const target = fileUrl.startsWith("http") ? fileUrl : new URL(fileUrl, "https://earthaioa-earthaioa-kokoro-tts.hf.space").toString();
+  const target = fileUrl.startsWith("http") ? fileUrl : new URL(fileUrl, VOICE_SPACE_URL).toString();
   const response = await fetch(target, { signal: AbortSignal.timeout(60000) });
   if (!response.ok) throw new Error("VOICE_DOWNLOAD_FAILED");
   const bytes = Buffer.from(await response.arrayBuffer());
@@ -293,6 +302,11 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "GET" && url.pathname === "/api/v1/status") {
     const provider = getImageProvider();
+    const [chatReady, speechReady, voiceReady] = await Promise.all([
+      endpointReady(CHAT_SPACE_URL, "/health"),
+      endpointReady(SPEECH_SPACE_URL, "/config"),
+      endpointReady(VOICE_SPACE_URL, "/config")
+    ]);
     sendJson(res, 200, {
       service: SERVICE_NAME,
       apiVersion: API_VERSION,
@@ -302,12 +316,17 @@ const server = http.createServer(async (req, res) => {
         imageGeneration: Boolean(provider),
         imageProvider: provider ? provider.name : null,
         videoGeneration: Boolean(process.env.HF_VIDEO_SPACE_URL || process.env.POLLINATIONS_API_KEY),
-        audioGeneration: Boolean(process.env.HF_VOICE_SPACE_ID || true),
-        speechToText: true,
-        voiceGeneration: true,
+        audioGeneration: voiceReady,
+        speechToText: speechReady,
+        voiceGeneration: voiceReady,
         authentication: false,
         database: false,
-        textChat: Boolean(CHAT_SPACE_URL)
+        textChat: chatReady
+      },
+      engines: {
+        chat: chatReady ? "online" : "sleeping-or-unavailable",
+        speech: speechReady ? "online" : "sleeping-or-unavailable",
+        voice: voiceReady ? "online" : "sleeping-or-unavailable"
       }
     });
     return;
