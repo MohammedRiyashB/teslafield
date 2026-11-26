@@ -1381,3 +1381,31 @@ body.guest-mode:not(.guest-conversation-mode) .guest-footer{
   transform:none!important;text-align:center!important;
   white-space:nowrap!important;display:block!important;
 }
+
+
+/* Conversation action bar: anchored to each message, independent of response length. */
+.message-row{display:block!important;margin:25px 0 28px!important}
+.message-stack{min-width:0;width:100%;display:flex;flex-direction:column;align-items:flex-start}
+.message-stack.assistant-stack{width:100%;max-width:100%}
+.message-stack.user-stack{width:fit-content;max-width:min(86%,680px);margin-left:auto;align-items:flex-end}
+.message-row .message-content{box-sizing:border-box;min-width:0;max-width:100%!important;width:auto}
+.message-row.assistant .message-content{width:100%;padding:0 0 2px!important}
+.message-row.user .message-content{width:fit-content;max-width:100%!important}
+.message-actions{position:static!important;display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:4px;width:100%;margin:5px 0 0!important;padding:0!important}
+.message-stack.user-stack .message-actions{justify-content:flex-end}
+.message-actions button{flex:0 0 auto;min-height:32px;height:32px;padding:0 8px;border-radius:8px;font-size:11px;white-space:nowrap}
+.message-actions button.selected{color:var(--text);background:var(--surface-2)}
+.message-actions button:focus-visible{outline:2px solid var(--muted);outline-offset:2px}
+.message-actions svg{width:15px;height:15px;flex:none}
+@media(max-width:760px){
+  .message-list{width:calc(100% - 26px)}
+  .message-row{margin:20px 0 25px!important}
+  .message-stack.user-stack{max-width:90%}
+  .message-actions{gap:2px}
+  .message-actions button{min-height:34px;height:34px;padding:0 7px;font-size:10px}
+  .message-actions button span{display:inline}
+}
+@media(max-width:360px){
+  .message-actions button{padding:0 5px;font-size:9px;gap:3px}
+  .message-actions svg{width:14px;height:14px}
+}
