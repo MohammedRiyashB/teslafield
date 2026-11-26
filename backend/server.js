@@ -1,5 +1,6 @@
 const http = require("node:http");
 const crypto = require("node:crypto");
+const { handleOAuthMcp } = require("./oauth-mcp");
 
 const PORT = Number(process.env.PORT || 10000);
 const SERVICE_NAME = "teslafield-api";
@@ -459,7 +460,7 @@ const server = http.createServer(async (req, res) => {
     res.setHeader("Vary", "Origin");
   }
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, MCP-Protocol-Version, Mcp-Session-Id, Last-Event-ID");
   res.setHeader("Access-Control-Max-Age", "600");
 
   if (req.method === "OPTIONS") {
@@ -470,6 +471,12 @@ const server = http.createServer(async (req, res) => {
 
   const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
   if (!allowRate(req, res, "global")) return;
+  if (await handleOAuthMcp(req, res, {
+    verifyFirebaseIdToken,
+    chatSpaceUrl: CHAT_SPACE_URL,
+    allowRate,
+    audit
+  })) return;
   if (req.method === "POST" && protectedApiRoutes.has(url.pathname)) {
     if (!allowRate(req, res, protectedApiRoutes.get(url.pathname))) return;
     if (!/^application\/json(?:;|$)/i.test(req.headers["content-type"] || "")) {
