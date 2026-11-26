@@ -695,7 +695,7 @@ const server = http.createServer(async (req, res) => {
       const reply = data.response;
       if (typeof reply !== "string" || !reply.trim()) return sendJson(res, 502, { error: "EMPTY_CHAT_RESPONSE", message: "The Chat Space returned no text." });
       audit("chat.completed", req.authUser && req.authUser.uid, url.pathname);
-      return sendJson(res, 200, { ok: true, model: data.model || "Qwen3-1.7B-Q4_K_M", reply });
+      return sendJson(res, 200, { ok: true, model: data.model || "Qwen/Qwen3-0.6B", reply });
     } catch (error) {
       if (error.message === "BODY_TOO_LARGE") return sendJson(res, 413, { error: "REQUEST_TOO_LARGE" });
       if (error.message === "INVALID_JSON") return sendJson(res, 400, { error: "INVALID_JSON" });
