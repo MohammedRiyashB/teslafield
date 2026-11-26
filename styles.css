@@ -293,3 +293,5 @@ a{color:inherit}
   .composer-area{padding-top:3px}
   .composer-disclaimer{display:none}
 }
+
+.sidebar-collapsed .desktop-menu{display:grid}
