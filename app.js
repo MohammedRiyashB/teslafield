@@ -23,6 +23,41 @@
   var modalRoot = document.getElementById("modalRoot");
   var fileInput = document.getElementById("fileInput");
 
+  var API_BASE_URL = "https://teslafield-api.onrender.com";
+
+  function checkBackendConnection() {
+    var actions = document.querySelector(".topbar-actions");
+    if (!actions) return;
+
+    var status = document.getElementById("backendConnectionStatus");
+    if (!status) {
+      status = document.createElement("span");
+      status.id = "backendConnectionStatus";
+      status.setAttribute("role", "status");
+      status.textContent = "Checking API…";
+      status.style.cssText = "display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid var(--line,rgba(255,255,255,.14));border-radius:999px;color:var(--muted,#aab0bb);font-size:11px;white-space:nowrap";
+      actions.insertBefore(status, actions.firstChild);
+    }
+
+    fetch(API_BASE_URL + "/api/v1/status", { method: "GET", mode: "cors" })
+      .then(function (response) {
+        if (!response.ok) throw new Error("API returned " + response.status);
+        return response.json();
+      })
+      .then(function (data) {
+        status.textContent = data && data.service === "teslafield-api" ? "● API connected" : "● API responded";
+        status.style.color = "#9fe3ad";
+        status.style.borderColor = "rgba(110,210,140,.35)";
+        status.title = "TESLAFIELD backend is reachable. AI generation integrations are not connected yet.";
+      })
+      .catch(function () {
+        status.textContent = "● API unavailable";
+        status.style.color = "#f0bd85";
+        status.style.borderColor = "rgba(240,189,133,.35)";
+        status.title = "Could not reach the TESLAFIELD backend. Check Render service status and CORS settings.";
+      });
+  }
+
   function esc(value) {
     return String(value == null ? "" : value).replace(/[&<>"']/g, function (char) {
       return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char];
