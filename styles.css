@@ -640,3 +640,35 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 .dark .history-search:focus-within{background:#080808;border-color:#343434;box-shadow:0 0 0 3px rgba(255,255,255,.04)}
 .dark .side-action.active{box-shadow:inset 2px 0 0 #777}
 .dark .sidebar-scrim{background:rgba(0,0,0,.68)}
+
+
+/* Focus fix: keep the composer and chat search from drawing a second
+   overlay/ring around the field while typing, especially on mobile browsers. */
+.composer:focus-within{
+  border-color:var(--border);
+  box-shadow:none!important;
+}
+.history-search:focus-within{
+  border-color:var(--border);
+  box-shadow:none!important;
+}
+.composer textarea:focus,
+.history-search input:focus{
+  outline:none!important;
+  box-shadow:none!important;
+}
+.history-search input[type="search"]{
+  -webkit-appearance:none;
+  appearance:none;
+  border:0;
+  border-radius:0;
+  background:transparent;
+}
+.history-search input[type="search"]::-webkit-search-decoration,
+.history-search input[type="search"]::-webkit-search-cancel-button,
+.history-search input[type="search"]::-webkit-search-results-button,
+.history-search input[type="search"]::-webkit-search-results-decoration{
+  -webkit-appearance:none;
+  appearance:none;
+  display:none;
+}
