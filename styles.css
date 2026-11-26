@@ -1696,3 +1696,8 @@ html[data-motion="reduced"] *,html[data-motion="reduced"] *:before,html[data-mot
 .mic-button:disabled{cursor:wait}
 @keyframes mic-pulse{0%,100%{box-shadow:0 0 0 0 #d83d4b40}50%{box-shadow:0 0 0 6px #d83d4b00}}
 @media(prefers-reduced-motion:reduce){.mic-button.recording{animation:none}}
+
+
+/* Balanced spacing between microphone and send controls. */
+.composer-actions{gap:10px}
+@media(max-width:380px){.composer-actions{gap:8px}}
