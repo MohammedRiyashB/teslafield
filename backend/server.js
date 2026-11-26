@@ -183,7 +183,7 @@ const SPEECH_SPACE_URL = trimTrailingSlashes(process.env.HF_SPEECH_SPACE_URL || 
 const VOICE_SPACE_URL = trimTrailingSlashes(process.env.HF_VOICE_SPACE_URL || "https://earthaioa-earthaioa-kokoro-tts.hf.space");
 async function endpointReady(baseUrl, path) {
   try {
-    const response = await fetch(baseUrl + path, { signal: AbortSignal.timeout(6000) });
+    const response = await fetch(baseUrl + path, { signal: AbortSignal.timeout(12000) });
     return response.ok;
   } catch { return false; }
 }
@@ -300,7 +300,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  if (req.method === "GET" && url.pathname === "/api/v1/status") {
+  if (req.method === "GET" && (url.pathname === "/api/v1/status" || url.pathname === "/api/v1/warmup")) {
     const provider = getImageProvider();
     const [chatReady, speechReady, voiceReady] = await Promise.all([
       endpointReady(CHAT_SPACE_URL, "/health"),
@@ -311,6 +311,8 @@ const server = http.createServer(async (req, res) => {
       service: SERVICE_NAME,
       apiVersion: API_VERSION,
       mode: "assistant-chat",
+      warmup: url.pathname === "/api/v1/warmup",
+      checkedAt: new Date().toISOString(),
       engine: "TESLAFIELD Chat API",
       integrations: {
         imageGeneration: Boolean(provider),
