@@ -60,7 +60,7 @@
       up:'<path d="M7 10v10H4V10h3Zm3 10h6.2a2 2 0 0 0 1.9-1.4l2-6A2 2 0 0 0 17.2 10H13l.7-3.1A2.4 2.4 0 0 0 11.4 4L7 10v10h3Z"/>',
       down:'<path d="M7 14V4H4v10h3Zm3-10h6.2a2 2 0 0 1 1.9 1.4l2 6A2 2 0 0 1 17.2 14H13l.7 3.1a2.4 2.4 0 0 1-2.3 2.9L7 14V4h3Z"/>',
       sound:'<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15 9a5 5 0 0 1 0 6M18 6a9 9 0 0 1 0 12"/>',
-      share:'<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.7 6.6-4.4M8.7 13.3l6.6 4.4"/>','
+      share:'<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.7 6.6-4.4M8.7 13.3l6.6 4.4"/>',
     };
     return '<svg viewBox="0 0 24 24" aria-hidden="true">' + (paths[name] || "") + '</svg>';
   };
