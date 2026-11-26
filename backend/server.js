@@ -471,7 +471,7 @@ const server = http.createServer(async (req, res) => {
   if (!allowRate(req, res, "global")) return;
   if (req.method === "POST" && protectedApiRoutes.has(url.pathname)) {
     if (!allowRate(req, res, protectedApiRoutes.get(url.pathname))) return;
-    if (!/^application\\/json(?:;|$)/i.test(req.headers["content-type"] || "")) {
+    if (!/^application\/json(?:;|$)/i.test(req.headers["content-type"] || "")) {
       sendJson(res, 415, { error: "UNSUPPORTED_MEDIA_TYPE" });
       return;
     }
