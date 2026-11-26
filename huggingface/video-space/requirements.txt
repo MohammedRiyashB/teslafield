@@ -1,10 +1,10 @@
 gradio==5.49.1
-spaces
+spaces==0.52.1
 torch
-transformers
+transformers==4.57.1
 accelerate
 safetensors
 ftfy
 imageio
 imageio-ffmpeg
-git+https://github.com/huggingface/diffusers.git
+diffusers==0.35.2
