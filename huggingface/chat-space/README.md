@@ -1,19 +1,18 @@
 ---
-title: TESLAFIELD Chat Engine
+title: Teslafield Chat Engine
 emoji: 💬
 colorFrom: blue
 colorTo: indigo
 sdk: docker
 app_port: 7860
 pinned: false
-models:
-  - Qwen/Qwen3-0.6B
 ---
 
-# TESLAFIELD Chat Engine
+# Teslafield Chat Engine
 
-Restored stable CPU inference with `Qwen/Qwen3-0.6B` using Transformers and PyTorch. Non-thinking mode is enabled for lower latency. Exposes FastAPI `/chat`, `/stream`, `/health`, and `/info` endpoints.
+Stable CPU inference powered by `Qwen/Qwen3-0.6B` using Transformers and PyTorch.
+Non-thinking mode is enabled for lower latency. The API exposes `/chat`, `/stream`,
+`/health`, and `/info` endpoints.
 
-This is the original TESLAFIELD Chat Engine runtime (v1.0.0). The llama.cpp / GGUF upgrade is not used.
-
-No paid inference API or external model provider is used.
+This Space uses the original Teslafield Chat Engine runtime.
+No llama.cpp build, GGUF download, or paid inference API is required.
