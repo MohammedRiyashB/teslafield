@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b0d12">
+  <meta name="description" content="TESLAFIELD Studio — an original AI creative production workspace for image, video, audio and cinematic workflows.">
+  <title>TESLAFIELD Studio — Creative production, reimagined</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div class="sidebar-scrim" id="sidebarScrim"></div>
+    <aside class="sidebar" id="sidebar">
+      <a class="brand-lockup" href="#" data-view="home" aria-label="TESLAFIELD home">
+        <span class="brand-symbol"><span></span><span></span><span></span></span>
+        <span class="brand-word">TESLAFIELD<span class="brand-ai">AI</span></span>
+      </a>
+
+      <button class="workspace-switcher" type="button" data-action="workspace">
+        <span class="workspace-avatar">T</span>
+        <span class="workspace-copy"><strong>Personal workspace</strong><small>Free studio</small></span>
+        <span class="chevron">⌄</span>
+      </button>
+
+      <nav class="side-nav" aria-label="Main navigation">
+        <div class="nav-caption">WORKSPACE</div>
+        <button class="nav-link active" data-view="home"><span class="nav-icon">⌂</span><span>Overview</span></button>
+        <button class="nav-link" data-view="director"><span class="nav-icon">✳</span><span>AI Director</span><span class="nav-new">NEW</span></button>
+
+        <div class="nav-caption nav-caption-spaced">CREATE</div>
+        <button class="nav-link" data-view="video"><span class="nav-icon">▶</span><span>Video studio</span></button>
+        <button class="nav-link" data-view="image"><span class="nav-icon">▧</span><span>Image studio</span></button>
+        <button class="nav-link" data-view="cinema"><span class="nav-icon">◉</span><span>Cinema director</span></button>
+        <button class="nav-link" data-view="ads"><span class="nav-icon">◈</span><span>Ad studio</span></button>
+        <button class="nav-link" data-view="audio"><span class="nav-icon">♫</span><span>Audio studio</span></button>
+        <button class="nav-link" data-view="editor"><span class="nav-icon">▤</span><span>Motion editor</span></button>
+
+        <div class="nav-caption nav-caption-spaced">YOUR LIBRARY</div>
+        <button class="nav-link" data-view="characters"><span class="nav-icon">◎</span><span>Characters & assets</span></button>
+        <button class="nav-link" data-view="canvas"><span class="nav-icon">⌘</span><span>Creative canvas</span></button>
+        <button class="nav-link" data-view="library"><span class="nav-icon">▦</span><span>Generations</span></button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="credits-card">
+          <div class="credits-top"><span class="credits-spark">✦</span><span>YOUR WORKSPACE</span><span class="demo-pill">DEMO</span></div>
+          <strong>0 <small>credits</small></strong>
+          <p>AI generation is not connected yet. Your studio prototype is ready to explore.</p>
+          <button type="button" class="credits-button" data-action="credits">Explore plans <span>↗</span></button>
+        </div>
+        <button class="nav-link nav-settings" data-action="settings"><span class="nav-icon">⚙</span><span>Settings</span></button>
+        <div class="profile-row">
+          <div class="profile-avatar">R</div>
+          <div class="profile-copy"><strong>Riyash</strong><small>Creator account</small></div>
+          <button class="icon-button profile-menu" data-action="profile" aria-label="Profile menu">•••</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-shell">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="icon-button menu-button" id="menuButton" aria-label="Open navigation">☰</button>
+          <div class="topbar-breadcrumb"><span>TESLAFIELD</span><i>/</i><strong id="breadcrumbCurrent">Overview</strong></div>
+        </div>
+        <div class="topbar-actions">
+          <label class="global-search"><span>⌕</span><input id="globalSearch" type="search" placeholder="Search projects, assets..." aria-label="Search projects and assets"><kbd>⌘ K</kbd></label>
+          <button class="icon-button topbar-icon" data-action="notifications" aria-label="Notifications">♧<span class="notification-dot"></span></button>
+          <button class="topbar-upgrade" data-action="credits">Upgrade <span>↗</span></button>
+        </div>
+      </header>
+      <div class="page-root" id="pageRoot" tabindex="-1"></div>
+      <footer class="app-footer"><span>TESLAFIELD STUDIO <b>•</b> CREATIVE WORKSPACE PREVIEW</span><span>Built for the next frame.</span></footer>
+    </main>
+  </div>
+  <div class="toast-region" id="toastRegion" aria-live="polite"></div>
+  <div class="modal-root" id="modalRoot"></div>
+  <input type="file" id="fileInput" accept="image/*,video/*,audio/*" hidden>
+  <script src="./app.js" defer></script>
+</body>
+</html>
