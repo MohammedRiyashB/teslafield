@@ -43,7 +43,7 @@ jobs:
           node --check app.js
           node --check backend/server.js
           node --check sw.js
-          python -m py_compile chat-engine/app.py
+          python -m py_compile huggingface/chat-space/app.py
           node - <<'NODE'
           const fs = require('node:fs');
           const assert = require('node:assert/strict');
@@ -68,9 +68,11 @@ jobs:
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-icon-512.png' && icon.sizes === '512x512'));
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-pwa-icon.svg'));
           assert.ok(fs.readFileSync('sw.js', 'utf8').includes('teslafield-pwa-shell-v2'));
-          const chatEngine = fs.readFileSync('chat-engine/app.py', 'utf8');
-          assert.ok(chatEngine.includes('response_style: Literal'));
+          const chatEngine = fs.readFileSync('huggingface/chat-space/app.py', 'utf8');
+          assert.ok(chatEngine.includes('MODEL_ID = "Qwen/Qwen3-0.6B"'));
+          assert.ok(chatEngine.includes('TextIteratorStreamer'));
           assert.ok(chatEngine.includes('StreamingResponse'));
+          assert.ok(!chatEngine.includes('llama_cpp'));
           assert.ok(backend.includes('CHAT_SPACE_URL + "/stream"'));
           assert.ok(backend.includes('["/api/v1/chat/stream", "chat"]'));
           assert.match(html, /<div class="composer-toolbar">\s*<div class="composer-tools">[\s\S]*?<span class="composer-hint">Ask anything<\/span>\s*<\/div>\s*<div class="composer-actions">[\s\S]*?<button class="send-button"/);
