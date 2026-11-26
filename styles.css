@@ -1701,3 +1701,8 @@ html[data-motion="reduced"] *,html[data-motion="reduced"] *:before,html[data-mot
 /* Balanced spacing between microphone and send controls. */
 .composer-actions{gap:10px}
 @media(max-width:380px){.composer-actions{gap:8px}}
+
+/* Final composer control spacing: override later zero-gap rules. */
+.composer-actions{column-gap:16px!important;gap:16px!important}
+body.guest-mode .composer-actions{column-gap:16px!important;gap:16px!important}
+@media(max-width:380px){.composer-actions,body.guest-mode .composer-actions{column-gap:14px!important;gap:14px!important}}
