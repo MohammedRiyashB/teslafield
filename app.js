@@ -127,7 +127,7 @@
     var promptLabel = isImage ? "Describe the image" : "Describe the video";
     var sample = isImage ? "A sculptural glass perfume bottle on black stone, soft directional light, premium editorial product photography..." : "A lone explorer walks through a vast salt desert at blue hour. Fine dust drifts across the frame as the camera slowly pushes forward...";
     var modes = isImage ? '<button class="selected" data-choice-group="mode">Text to image</button>' : '<button class="selected" data-choice-group="mode">Text to video</button>';
-    var durationControl = isImage ? "" : '<div class="control-section"><div class="control-label">Duration <small>Clip length</small></div><div class="segmented"><button class="selected" data-choice-group="duration">5 sec</button><button data-choice-group="duration">8 sec</button><button data-choice-group="duration">10 sec</button></div></div>';
+    var durationControl = isImage ? "" : '<div class="control-section"><div class="control-label">Duration <small>Free ZeroGPU starter profile</small></div><div class="segmented"><button class="selected" data-choice-group="duration">2 sec</button></div></div>';
     var directionControl = isImage ? '<div class="control-section"><div class="control-label">Composition</div><div class="chip-row"><button class="choice-chip selected" data-choice="editorial close-up">Editorial close-up</button><button class="choice-chip" data-choice="wide frame">Wide frame</button><button class="choice-chip" data-choice="top-down">Top-down</button><button class="choice-chip" data-choice="symmetrical">Symmetrical</button><button class="choice-chip" data-choice="macro">Macro detail</button></div></div>' : '<div class="control-section"><div class="control-label">Camera movement</div><div class="chip-row"><button class="choice-chip selected" data-choice="slow push">Slow push</button><button class="choice-chip" data-choice="orbit">Orbit</button><button class="choice-chip" data-choice="tracking">Tracking</button><button class="choice-chip" data-choice="crane">Crane</button><button class="choice-chip" data-choice="static">Static</button></div></div>';
     return heading(viewLabel, title, intro, '<button class="btn btn-quiet" data-view="library">My generations</button><button class="btn btn-primary" data-action="new-project">＋ New project</button>') +
       '<div class="studio-layout"><section class="studio-main">' +
@@ -139,12 +139,12 @@
       '<div class="control-section"><div class="control-label">Visual direction</div><div class="chip-row"><button class="choice-chip selected" data-choice="cinematic">Cinematic</button><button class="choice-chip" data-choice="editorial">Editorial</button><button class="choice-chip" data-choice="photoreal">Photoreal</button><button class="choice-chip" data-choice="dreamlike">Dreamlike</button><button class="choice-chip" data-choice="minimal">Minimal</button></div></div>' +
       '</div></section>' +
       '<aside class="studio-controls"><div class="panel-title-row"><h3>Output controls</h3><span>MODEL SETTINGS</span></div>' +
-      '<div class="control-section"><div class="control-label">AI model <small>Provider pricing and limits may apply</small></div><select class="select-field" id="modelRoute">'+ (isImage ? '<option value="black-forest-labs/flux.1-schnell">FLUX.1 Schnell</option><option value="black-forest-labs/flux.1.1-pro">FLUX 1.1 Pro</option>' : '<option value="bytedance/seedance-2.0-mini">Seedance 2.0 Mini</option><option value="bytedance/seedance-2.0-fast">Seedance 2.0 Fast</option><option value="google/veo-3.1-fast">Veo 3.1 Fast</option><option value="alibaba/wan-2.2-fast">Wan 2.2 Fast</option><option value="x-ai/grok-imagine-video-1.5-lite">Grok Imagine Video Lite</option>') + '</select></div>' +
+      '<div class="control-section"><div class="control-label">AI model <small>Provider pricing and limits may apply</small></div><select class="select-field" id="modelRoute">'+ (isImage ? '<option value="black-forest-labs/FLUX.1-schnell">FLUX.1 Schnell · ZeroGPU</option>' : '<option value="Wan-AI/Wan2.2-TI2V-5B-Diffusers">Wan 2.2 TI2V 5B · ZeroGPU</option>') + '</select></div>' +
       '<div class="control-section"><div class="control-label">Aspect ratio</div><div class="segmented" id="ratioOptions"><button class="selected" data-ratio="16:9">16:9</button><button data-ratio="9:16">9:16</button><button data-ratio="1:1">1:1</button></div></div>' +
       durationControl +
       directionControl +
       '<div class="control-section"><div class="control-label">Quality</div><select class="select-field"><option>Preview · 720p</option><option>1080p · Planned</option><option>4K · Planned</option></select></div>' +
-      '<button class="generate-button" data-action="' + (isImage ? "generate-image" : "generate-video") + '">✦  ' + (isImage ? "Generate image" : "Generate video") + '</button><div class="demo-disclaimer"><span>ⓘ</span><span>' + (isImage ? "Real image generation uses the connected provider. A valid API key and available model budget are required." : "Real MP4 generation uses the selected video model. A valid API key and sufficient provider budget are required.") + '</span></div>' +
+      '<button class="generate-button" data-action="' + (isImage ? "generate-image" : "generate-video") + '">✦  ' + (isImage ? "Generate image" : "Generate video") + '</button><div class="demo-disclaimer"><span>ⓘ</span><span>' + (isImage ? "Real image generation uses the connected provider. A valid API key and available model budget are required." : "Wan 2.2 runs on eligible Hugging Face ZeroGPU quota. The initial free profile creates a short 2-second clip; queue and daily limits apply.") + '</span></div>' +
       '</aside></div>' + (isImage ? '<div id="imageResult" aria-live="polite"></div>' : '<div id="videoResult" aria-live="polite"></div>');
   }
 
@@ -339,7 +339,7 @@
     var modelNode = document.getElementById("modelRoute");
     var model = modelNode ? modelNode.value : "bytedance/seedance-2.0-mini";
     var durationNode = document.querySelector('[data-choice-group="duration"].selected');
-    var duration = durationNode ? Number(durationNode.textContent.replace(/[^0-9]/g, "")) : 5;
+    var duration = durationNode ? Number(durationNode.textContent.replace(/[^0-9]/g, "")) : 2;
     if (!prompt) {
       toast("Describe the video you want to create first.", "!");
       if (promptField) promptField.focus();
