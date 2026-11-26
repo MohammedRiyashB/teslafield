@@ -238,6 +238,7 @@
 
   function handleAction(action, element) {
     if (action === "upload") {
+      fileInput.value = "";
       fileInput.click();
     } else if (action === "generate-video") createConcept("VIDEO");
     else if (action === "generate-image") createConcept("IMAGE");
@@ -311,6 +312,7 @@
     var nav = event.target.closest("[data-view]");
     if (nav) {
       event.preventDefault();
+      closeModal();
       openView(nav.getAttribute("data-view"));
       return;
     }
