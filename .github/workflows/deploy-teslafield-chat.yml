@@ -1,0 +1,45 @@
+name: Deploy TESLAFIELD Chat Engine (Qwen3-0.6B)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "huggingface/chat-space/**"
+      - ".github/workflows/deploy-teslafield-chat.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: teslafield-chat-engine-stable
+  cancel-in-progress: false
+
+jobs:
+  deploy-chat:
+    name: Validate and restore Qwen3-0.6B Chat Space
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout TESLAFIELD
+        uses: actions/checkout@v4
+
+      - name: Validate stable Chat Engine
+        run: |
+          python -m py_compile huggingface/chat-space/app.py
+          test -s huggingface/chat-space/Dockerfile
+          test -s huggingface/chat-space/requirements.txt
+          grep -q 'MODEL_ID = "Qwen/Qwen3-0.6B"' huggingface/chat-space/app.py
+          grep -q 'TextIteratorStreamer' huggingface/chat-space/app.py
+          grep -q 'sdk: docker' huggingface/chat-space/README.md
+          ! grep -q 'llama_cpp' huggingface/chat-space/app.py
+          echo "Stable Qwen3-0.6B Chat Engine validation passed."
+
+      - name: Deploy only the Chat Space
+        uses: huggingface/hub-sync@v0.3.0
+        with:
+          github_repo_id: ${{ github.repository }}
+          huggingface_repo_id: Earthaioa/EARTH_OS_V10_DOCKER
+          hf_token: ${{ secrets.HF_TOKEN }}
+          repo_type: space
+          space_sdk: docker
+          subdirectory: huggingface/chat-space
