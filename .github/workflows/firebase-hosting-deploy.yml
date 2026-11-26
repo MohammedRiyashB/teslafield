@@ -7,6 +7,7 @@ on:
       - "index.html"
       - "styles.css"
       - "app.js"
+      - "backend/**"
       - "theme-init.js"
       - "assets/**"
       - "teslafieldai-logo.png"
@@ -34,6 +35,33 @@ jobs:
         run: |
           node --check app.js
           node --check backend/server.js
+
+      - name: Backend security smoke tests
+        run: |
+          set -euo pipefail
+          PORT=18765 CORS_ORIGIN="https://teslafieldai.web.app" FIREBASE_PROJECT_ID="teslafieldai" node backend/server.js >/tmp/teslafield-api.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18765/health >/dev/null; then ready=1; break; fi
+            sleep 1
+          done
+          test "$ready" = "1"
+          curl --fail --silent http://127.0.0.1:18765/health | grep -q '"ok":true'
+          curl --silent --show-error -D /tmp/teslafield-cors-allowed.headers -o /dev/null -H "Origin: https://teslafieldai.web.app" http://127.0.0.1:18765/health
+          grep -qi '^access-control-allow-origin: https://teslafieldai.web.app' /tmp/teslafield-cors-allowed.headers
+          denied="$(curl --silent --output /dev/null --write-out '%{http_code}' -H "Origin: https://attacker.invalid" http://127.0.0.1:18765/health)"
+          test "$denied" = "403"
+          unauthorized="$(curl --silent --output /dev/null --write-out '%{http_code}' -H "Content-Type: application/json" --data '{"messages":[{"role":"user","content":"test"}]}' http://127.0.0.1:18765/api/v1/chat/completions)"
+          test "$unauthorized" = "401"
+          for attempt in $(seq 2 20); do
+            status="$(curl --silent --output /dev/null --write-out '%{http_code}' -H "Content-Type: application/json" --data '{"messages":[{"role":"user","content":"test"}]}' http://127.0.0.1:18765/api/v1/chat/completions)"
+            test "$status" = "401"
+          done
+          limited="$(curl --silent --output /dev/null --write-out '%{http_code}' -H "Content-Type: application/json" --data '{"messages":[{"role":"user","content":"test"}]}' http://127.0.0.1:18765/api/v1/chat/completions)"
+          test "$limited" = "429"
+          echo "Backend security checks passed: health, strict CORS, auth required and rate limiting."
 
       - name: Prepare Firebase Hosting files
         run: |
