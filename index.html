@@ -31,47 +31,29 @@
       <button class="side-action active" id="newChat">
         <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>New chat</span><kbd>Ctrl K</kbd>
       </button>
-      <button class="side-action" id="searchChats">
-        <svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4 4"/></svg><span>Search chats</span><kbd>Ctrl F</kbd>
-      </button>
-      <a class="side-action" href="https://huggingface.co/spaces/Earthaioa/teslafield-image" target="_blank" rel="noopener">
-        <svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="3"/><circle cx="8.5" cy="8.5" r="1.2"/><path d="m4 17 5-5 3.3 3 2.7-3 5.5 5"/></svg><span>Create image</span><span class="side-arrow">↗</span>
-      </a>
-      <a class="side-action" href="https://huggingface.co/spaces/Earthaioa/teslafield-video" target="_blank" rel="noopener">
-        <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="3"/><path d="m10 9 5 3-5 3z"/></svg><span>Create video</span><span class="side-arrow">↗</span>
-      </a>
     </div>
 
     <div class="history-area">
       <div class="section-heading"><span>YOUR CHATS</span><button class="text-button" id="clearHistory">Clear</button></div>
-      <label class="history-search" id="historySearchWrap">
-        <svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4 4"/></svg>
-        <input id="historySearch" type="search" placeholder="Search conversations" autocomplete="off" aria-label="Search conversations">
-        <button class="search-clear" id="clearSearch" type="button" aria-label="Clear search" hidden>×</button>
-      </label>
       <div class="history-list" id="historyList"></div>
       <p class="history-empty" id="historyEmpty">Your conversations will appear here.</p>
     </div>
 
     <div class="sidebar-footer">
-      <button class="side-action" id="appearanceButton">
-        <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z"/><path d="M12 3v18"/></svg>
-        <span>Appearance</span><span class="side-meta" id="themeLabel">System</span>
-      </button>
-      <button class="side-action" id="sidebarPrivacyChoices" type="button">
-        <svg viewBox="0 0 24 24"><path d="M12 3 19 6v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3Z"/><path d="M9 12h6"/></svg>
-        <span>Your privacy choices</span>
-      </button>
       <div class="account-wrap">
         <button class="account-button" id="accountButton" aria-expanded="false">
-          <span class="account-copy"><strong>TESLAFIELD</strong><small>Personal workspace</small></span>
+          <span class="account-avatar" id="accountAvatar"><span id="accountAvatarFallback">T</span><img id="accountAvatarImage" alt="" hidden></span>
+          <span class="account-copy"><strong id="accountDisplayName">TESLAFIELD</strong><small id="accountDisplayEmail">Sign in to your account</small></span>
           <svg class="account-more" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg>
         </button>
         <div class="account-menu" id="accountMenu" hidden>
           <div class="account-menu-title">Your account</div>
-          <p class="account-menu-status" id="accountStatus">Sign in to access TESLAFIELD securely.</p>
+          <p class="account-menu-status" id="accountStatus">Sign in with Google to access TESLAFIELD.</p>
           <button id="accountSignUp">Sign up with Google</button>
           <button id="accountLogIn">Log in with Google</button>
+          <button id="appearanceButton" type="button"><span>Appearance</span><span class="side-meta" id="themeLabel">Dark</span></button>
+          <button id="privacyChoices" type="button">Your privacy choices</button>
+          <div class="account-menu-divider"></div>
           <button id="accountSignOut" hidden>Sign out</button>
           <button id="accountDelete" class="danger" hidden>Delete account &amp; local data</button>
         </div>
@@ -96,9 +78,7 @@
       <div class="topbar-right">
         <button class="top-auth-button top-auth-secondary" id="topLogIn" type="button">Log in</button>
         <button class="top-auth-button top-auth-primary" id="topSignUp" type="button">Sign up</button>
-        <button class="icon-button share-button" id="shareChat" aria-label="Share conversation" title="Share conversation">
-          <svg viewBox="0 0 24 24"><path d="M12 16V4m-5 5 5-5 5 5"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>
-        </button>
+>
       </div>
     </header>
 
@@ -139,11 +119,7 @@
                 <button class="composer-icon plus-button" id="plusButton" type="button" aria-label="Add files and more" aria-expanded="false" title="Add files">
                   <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
                 </button>
-                <div class="tool-menu" id="plusMenu" hidden>
-                  <button type="button" id="uploadFileAction"><svg viewBox="0 0 24 24"><path d="M12 16V4m-5 5 5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg><span>Upload from device</span></button>
-                  <a href="https://huggingface.co/spaces/Earthaioa/teslafield-image" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.3"/><path d="m4 17 5-5 3 3 3-4 5 6"/></svg><span>Create an image</span></a>
-                  <a href="https://huggingface.co/spaces/Earthaioa/teslafield-video" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m10 9 5 3-5 3z"/></svg><span>Create a video</span></a>
-                </div>
+              </div>
               </div>
               <span class="composer-divider"></span>
               <span class="composer-hint">Ask anything</span>
@@ -158,8 +134,7 @@
         </form>
       </div>
       <p class="composer-disclaimer">TESLAFIELD can make mistakes. Check important information.</p>
-      <p class="privacy-disclosure">Chats stay in this browser. Messages and audio are sent to external AI services for processing.</p>
-      <p class="guest-legal">By messaging TESLAFIELD, you agree to our <a href="./terms">Terms</a> and <a href="./privacy">Privacy Policy</a>. <button id="privacyChoices" type="button">Your privacy choices</button></p>
+      <p class="guest-legal">By messaging TESLAFIELD, you agree to our <a href="./terms">Terms</a> and <a href="./privacy">Privacy Policy</a>.</p>
     </div>
   </main>
   <footer class="guest-footer" aria-label="TESLAFIELD company information">TESLAFIELD © 2026 BMR INC. All rights reserved.</footer>
@@ -167,6 +142,11 @@
 
 <input id="fileInput" type="file" hidden multiple accept=".png,.jpg,.jpeg,.webp,.pdf,.txt,.csv,.docx,image/png,image/jpeg,image/webp,application/pdf,text/plain,text/csv,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
 <div class="toast-message" id="toastMessage" role="status" aria-live="polite"></div>
+<main class="shared-message-page" id="sharedMessagePage" hidden>
+  <header class="shared-message-header"><a href="/" class="shared-message-brand"><img src="./teslafieldai-logo.png?v=20261126-33" alt=""> TESLAFIELD <span>AI</span></a><a class="shared-open-app" href="/">Try TESLAFIELD</a></header>
+  <section class="shared-message-card"><div class="shared-eyebrow">SHARED AI RESPONSE</div><h1 id="sharedMessageTitle">A response shared from TESLAFIELD</h1><article class="shared-message-content" id="sharedMessageContent"></article><div class="shared-message-footer"><span>Shared with TESLAFIELD AI</span><button id="copySharedMessage" type="button">Copy response</button></div></section>
+  <footer class="shared-message-bottom">TESLAFIELD © 2026 BMR INC. All rights reserved.</footer>
+</main>
 
 <div class="signup-prompt-backdrop" id="signupPromptModal" hidden>
   <section class="signup-prompt" role="dialog" aria-modal="true" aria-labelledby="signupPromptTitle">
