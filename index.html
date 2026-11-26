@@ -4,15 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#000000">
-  <script>try{document.documentElement.classList.toggle("dark",(localStorage.getItem("teslafield.appearance.v2")||"dark")==="dark")}catch(e){document.documentElement.classList.add("dark")}</script>
+  <script src="./theme-init.js?v=20261126-16"></script>
   <meta name="description" content="TESLAFIELD — an AI workspace for ideas, answers and creation.">
   <title>TESLAFIELD</title>
-  <link rel="icon" type="image/png" href="./teslafieldai-logo.png?v=20261126-15">
-  <link rel="apple-touch-icon" href="./teslafieldai-logo.png?v=20261126-15">
+  <link rel="icon" type="image/png" href="./teslafieldai-logo.png?v=20261126-16">
+  <link rel="apple-touch-icon" href="./teslafieldai-logo.png?v=20261126-16">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Manrope:wght@500;600;650;700;750;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20261126-15">
+  <link rel="stylesheet" href="./styles.css?v=20261126-16">
 </head>
 <body>
 <div class="app-shell" id="appShell">
@@ -20,7 +20,7 @@
   <aside class="sidebar" id="sidebar" aria-label="Main navigation">
     <div class="sidebar-header">
       <a class="brand" href="./" aria-label="TESLAFIELD home">
-        <img class="brand-mark" src="./teslafieldai-logo.png?v=20261126-15" alt=""><span class="brand-word">TESLAFIELD</span>
+        <img class="brand-mark" src="./teslafieldai-logo.png?v=20261126-16" alt=""><span class="brand-word">TESLAFIELD</span>
       </a>
       <button class="icon-button sidebar-collapse" id="sidebarCollapse" aria-label="Collapse sidebar" title="Collapse sidebar">
         <svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="3"/><path d="M9 4v16"/></svg>
@@ -68,8 +68,11 @@
         </button>
         <div class="account-menu" id="accountMenu" hidden>
           <div class="account-menu-title">Your account</div>
-          <button id="accountSignUp">Sign up</button>
-          <button id="accountLogIn">Log in</button>
+          <p class="account-menu-status" id="accountStatus">Sign in to access TESLAFIELD securely.</p>
+          <button id="accountSignUp">Sign up with Google</button>
+          <button id="accountLogIn">Log in with Google</button>
+          <button id="accountSignOut" hidden>Sign out</button>
+          <button id="accountDelete" class="danger" hidden>Delete account &amp; local data</button>
         </div>
       </div>
     </div>
@@ -155,12 +158,16 @@
         </form>
       </div>
       <p class="composer-disclaimer">TESLAFIELD can make mistakes. Check important information.</p>
+      <p class="privacy-disclosure">Chats stay in this browser. Messages and audio are sent to external AI services for processing.</p>
     </div>
   </main>
 </div>
 
-<input id="fileInput" type="file" hidden multiple accept="image/*,.pdf,.txt,.doc,.docx,.csv">
+<input id="fileInput" type="file" hidden multiple accept=".png,.jpg,.jpeg,.webp,.pdf,.txt,.csv,.docx,image/png,image/jpeg,image/webp,application/pdf,text/plain,text/csv,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
 <div class="toast-message" id="toastMessage" role="status" aria-live="polite"></div>
-<script src="./app.js?v=20261126-15" defer></script>
+<script defer src="/__/firebase/8.10.1/firebase-app.js"></script>
+<script defer src="/__/firebase/8.10.1/firebase-auth.js"></script>
+<script defer src="/__/firebase/init.js"></script>
+<script src="./app.js?v=20261126-16" defer></script>
 </body>
 </html>
