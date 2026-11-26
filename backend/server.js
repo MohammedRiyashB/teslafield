@@ -145,6 +145,7 @@ async function authenticateFirebase(req, res) {
 
 const protectedApiRoutes = new Map([
   ["/api/v1/chat/completions", "chat"],
+  ["/api/v1/chat/stream", "chat"],
   ["/api/v1/speech/transcribe", "speech"],
   ["/api/v1/voice/synthesize", "voice"],
   ["/api/v1/image/generate", "image"],
@@ -700,6 +701,94 @@ const server = http.createServer(async (req, res) => {
       if (error.message === "INVALID_JSON") return sendJson(res, 400, { error: "INVALID_JSON" });
       return sendJson(res, 504, { error: "CHAT_REQUEST_FAILED", message: "The Chat Space timed out or is still loading. Please retry in a moment." });
     }
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/v1/chat/stream") {
+    const upstreamController = new AbortController();
+    const timeout = setTimeout(() => upstreamController.abort(), 240000);
+    const onClientClose = () => { if (!res.writableEnded) upstreamController.abort(); };
+    res.once("close", onClientClose);
+    try {
+      const input = await readJson(req, 48 * 1024);
+      const messages = Array.isArray(input.messages) ? input.messages : [];
+      if (!messages.length || messages.length > 30) {
+        sendJson(res, 400, { error: "INVALID_MESSAGES", message: "Send between 1 and 30 chat messages." });
+        return;
+      }
+      if (messages.some((m) => !m || !["user", "assistant"].includes(m.role) || typeof m.content !== "string" || m.content.length > 12000)) {
+        sendJson(res, 400, { error: "INVALID_MESSAGE_CONTENT", message: "Messages must contain valid text and be 12,000 characters or fewer." });
+        return;
+      }
+      const safeMessages = messages.map((m) => ({ role: m.role, content: m.content.trim() })).filter((m) => m.content);
+      if (!safeMessages.length) {
+        sendJson(res, 400, { error: "MESSAGE_REQUIRED", message: "Enter a message first." });
+        return;
+      }
+      if (safeMessages.reduce((total, message) => total + message.content.length, 0) > 36000) {
+        sendJson(res, 413, { error: "CHAT_CONTEXT_TOO_LARGE", message: "Reduce the conversation length and try again." });
+        return;
+      }
+      const responseStyle = ["concise", "balanced", "detailed"].includes(input.response_style) ? input.response_style : "balanced";
+      const upstream = await fetch(CHAT_SPACE_URL + "/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "text/plain" },
+        body: JSON.stringify({ messages: safeMessages, max_new_tokens: 384, response_style: responseStyle }),
+        signal: upstreamController.signal
+      });
+      if (!upstream.ok) {
+        const detail = await upstream.text().catch(() => "");
+        sendJson(res, upstream.status === 429 ? 429 : 502, {
+          error: "CHAT_STREAM_PROVIDER_ERROR",
+          message: detail.slice(0, 500) || "The TESLAFIELD Chat Space is waking up or loading its model."
+        });
+        return;
+      }
+      if (!upstream.body) {
+        sendJson(res, 502, { error: "CHAT_STREAM_EMPTY", message: "The Chat Space did not open a response stream." });
+        return;
+      }
+      res.writeHead(200, {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        "X-Content-Type-Options": "nosniff",
+        "X-Accel-Buffering": "no"
+      });
+      const reader = upstream.body.getReader();
+      try {
+        while (true) {
+          const part = await reader.read();
+          if (part.done || res.destroyed) break;
+          if (part.value && part.value.length) {
+            const canContinue = res.write(Buffer.from(part.value));
+            if (!canContinue && !res.destroyed) {
+              await new Promise((resolve) => {
+                const finish = () => { res.off("drain", finish); res.off("close", finish); resolve(); };
+                res.once("drain", finish);
+                res.once("close", finish);
+              });
+            }
+          }
+        }
+      } finally {
+        try { reader.releaseLock(); } catch (error) {}
+      }
+      if (!res.destroyed) {
+        audit("chat.stream_completed", req.authUser && req.authUser.uid, url.pathname);
+        res.end();
+      }
+    } catch (error) {
+      if (!res.headersSent && !res.destroyed) {
+        if (error.message === "BODY_TOO_LARGE") sendJson(res, 413, { error: "REQUEST_TOO_LARGE" });
+        else if (error.message === "INVALID_JSON") sendJson(res, 400, { error: "INVALID_JSON" });
+        else sendJson(res, 504, { error: "CHAT_STREAM_FAILED", message: "The Chat Space timed out or is still loading. Please retry." });
+      } else if (!res.destroyed && !res.writableEnded) {
+        res.end();
+      }
+    } finally {
+      clearTimeout(timeout);
+      res.off("close", onClientClose);
+    }
+    return;
   }
 
   if (req.method === "POST" && url.pathname === "/api/v1/speech/transcribe") {

@@ -78,6 +78,7 @@
   let authReady = false;
   let pendingGuestPrompt = "";
   let guestConversationStarted = false;
+  let userPreferences = { responseStyle: "balanced", textSize: "standard", reduceMotion: false };
   let resolveAuthReady;
   const authReadyPromise = new Promise((resolve) => { resolveAuthReady = resolve; });
 
@@ -462,6 +463,16 @@
     value = value.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
     return value;
   }
+  function renderMarkdownTable(rows) {
+    const cells = (line) => line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
+    const header = cells(rows[0]);
+    const body = rows.slice(1).map(cells);
+    const headHtml = "<thead><tr>" + header.map((cell) => "<th>" + inlineMarkup(cell) + "</th>").join("") + "</tr></thead>";
+    const bodyHtml = body.length
+      ? "<tbody>" + body.map((row) => "<tr>" + header.map((_, index) => "<td>" + inlineMarkup(row[index] || "") + "</td>").join("") + "</tr>").join("") + "</tbody>"
+      : "";
+    return "<div class=\"table-scroll\"><table class=\"response-table\">" + headHtml + bodyHtml + "</table></div>";
+  }
   function renderMarkdown(source) {
     const chunks = safeText(source).split(/\x60\x60\x60/);
     return chunks.map((chunk, index) => {
@@ -471,41 +482,39 @@
         return "<pre><code>" + escapeHtml(lines.join("\n").trim()) + "</code></pre>";
       }
       const lines = chunk.split("\n");
-      let html = "", paragraph = [], list = "";
+      let html = "", paragraph = [], list = "", tableRows = null;
       const flushParagraph = () => {
-        if (paragraph.length) {
-          html += "<p>" + paragraph.map(inlineMarkup).join("<br>") + "</p>";
-          paragraph = [];
-        }
+        if (paragraph.length) { html += "<p>" + paragraph.map(inlineMarkup).join("<br>") + "</p>"; paragraph = []; }
       };
-      const closeList = () => {
-        if (list) { html += list === "ul" ? "</ul>" : "</ol>"; list = ""; }
-      };
-      lines.forEach((line) => {
+      const closeList = () => { if (list) { html += list === "ul" ? "</ul>" : "</ol>"; list = ""; } };
+      const flushTable = () => { if (tableRows && tableRows.length) html += renderMarkdownTable(tableRows); tableRows = null; };
+      const isTableRule = (line) => /^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?$/.test(line.trim());
+      lines.forEach((line, lineIndex) => {
         const value = line.trim();
+        if (tableRows) {
+          if (isTableRule(value)) return;
+          if (value.startsWith("|")) { tableRows.push(value); return; }
+          flushTable();
+        }
+        if (value.startsWith("|") && lineIndex + 1 < lines.length && isTableRule(lines[lineIndex + 1])) {
+          flushParagraph(); closeList(); tableRows = [value]; return;
+        }
         if (!value) { flushParagraph(); closeList(); return; }
         const heading = value.match(/^(#{1,3})\s+(.+)$/);
-        if (heading) {
-          flushParagraph(); closeList();
-          const level = Math.min(heading[1].length + 1, 4);
-          html += "<h" + level + ">" + inlineMarkup(heading[2]) + "</h" + level + ">";
-          return;
-        }
+        if (heading) { flushParagraph(); closeList(); const level = Math.min(heading[1].length + 1, 4); html += "<h" + level + ">" + inlineMarkup(heading[2]) + "</h" + level + ">"; return; }
         if (/^---+$/.test(value)) { flushParagraph(); closeList(); html += "<hr>"; return; }
         const bullet = value.match(/^[-*]\s+(.+)$/);
         const numbered = value.match(/^\d+[.)]\s+(.+)$/);
         if (bullet || numbered) {
-          flushParagraph();
-          const next = bullet ? "ul" : "ol";
+          flushParagraph(); const next = bullet ? "ul" : "ol";
           if (list !== next) { closeList(); list = next; html += next === "ul" ? "<ul>" : "<ol>"; }
-          html += "<li>" + inlineMarkup((bullet || numbered)[1]) + "</li>";
-          return;
+          html += "<li>" + inlineMarkup((bullet || numbered)[1]) + "</li>"; return;
         }
         const quote = value.match(/^>\s?(.*)$/);
         if (quote) { flushParagraph(); closeList(); html += "<blockquote>" + inlineMarkup(quote[1]) + "</blockquote>"; return; }
         closeList(); paragraph.push(value);
       });
-      flushParagraph(); closeList();
+      flushParagraph(); closeList(); flushTable();
       return html;
     }).join("");
   }
@@ -521,6 +530,15 @@
       field.remove();
     }
   }
+  function getFollowupPrompts(chat, index) {
+    const previousUser = chat.messages.slice(0, index).reverse().find((item) => item.role === "user");
+    const context = (previousUser && previousUser.content || "").toLowerCase();
+    if (/code|javascript|python|html|css|bug|error|function|api/.test(context)) return ["Explain the solution step by step", "Show a practical working example", "Find edge cases and improve it"];
+    if (/email|letter|proposal|caption|post|write|draft|rewrite/.test(context)) return ["Make it more professional", "Create a shorter version", "Adapt it for my audience"];
+    if (/[\u0B80-\u0BFF]/.test(context)) return ["இதை படிப்படியாக விளக்கு", "ஒரு நடைமுறை உதாரணம் கொடு", "இதை இன்னும் சுருக்கமாக சொல்"];
+    return ["Give me a step-by-step plan", "Show a practical example", "Explain this more simply"];
+  }
+
   function renderMessage(message, index, chat) {
     const row = document.createElement("article");
     row.className = "message-row " + message.role;
@@ -582,6 +600,18 @@
       actions.append(copy, edit);
     }
     stack.appendChild(actions);
+    if (message.role === "assistant" && index === chat.messages.length - 1 && message.content.trim()) {
+      const suggestions = document.createElement("div");
+      suggestions.className = "followup-suggestions";
+      suggestions.setAttribute("aria-label", "Suggested follow-up prompts");
+      getFollowupPrompts(chat, index).forEach((prompt) => {
+        const chip = document.createElement("button");
+        chip.type = "button"; chip.className = "followup-chip"; chip.textContent = prompt;
+        chip.onclick = () => { promptInput.value = prompt; promptInput.focus(); promptInput.dispatchEvent(new Event("input")); };
+        suggestions.appendChild(chip);
+      });
+      stack.appendChild(suggestions);
+    }
     row.appendChild(stack);
     messageList.appendChild(row);
   }
@@ -695,10 +725,15 @@
   function renderHistory() {
     const list = $("historyList");
     list.innerHTML = "";
-    const visible = chats;
-    const groups = ["Today", "Yesterday", "Previous 7 days", "Previous 30 days", "Older"];
+    const query = ($("historySearch") && $("historySearch").value || "").trim().toLowerCase();
+    const visible = chats.filter((chat) => !query ||
+      (chat.title || "").toLowerCase().includes(query) ||
+      chat.messages.some((message) => String(message.content || "").toLowerCase().includes(query)));
+    const groups = ["Pinned", "Today", "Yesterday", "Previous 7 days", "Previous 30 days", "Older"];
     groups.forEach((groupName) => {
-      const items = visible.filter((chat) => dateGroup(chat.updated || chat.created) === groupName);
+      const items = visible.filter((chat) => groupName === "Pinned"
+        ? !!chat.pinned
+        : !chat.pinned && dateGroup(chat.updated || chat.created) === groupName);
       if (!items.length) return;
       const group = document.createElement("div");
       group.className = "history-group";
@@ -708,7 +743,7 @@
       group.appendChild(label);
       items.sort((a, b) => (b.updated || b.created || 0) - (a.updated || a.created || 0)).forEach((chat) => {
         const row = document.createElement("div");
-        row.className = "history-row" + (chat.id === activeId ? " active" : "");
+        row.className = "history-row" + (chat.id === activeId ? " active" : "") + (chat.pinned ? " pinned" : "");
         const open = document.createElement("button");
         open.type = "button"; open.className = "history-title";
         open.textContent = chat.title || "New chat";
@@ -735,14 +770,17 @@
             if (activeId === chat.id) { activeId = null; messageList.innerHTML = ""; welcome.hidden = false; }
             saveStore(); renderHistory();
           };
-          menu.append(rename, remove); row.appendChild(menu);
+          const pin = document.createElement("button");
+          pin.type = "button"; pin.textContent = chat.pinned ? "Unpin conversation" : "Pin conversation";
+          pin.onclick = () => { chat.pinned = !chat.pinned; saveStore(); renderHistory(); };
+          menu.append(pin, rename, remove); row.appendChild(menu);
         };
         row.append(open, more); group.appendChild(row);
       });
       list.appendChild(group);
     });
     $("historyEmpty").hidden = visible.length > 0;
-    $("historyEmpty").textContent = "Your conversations will appear here.";
+    $("historyEmpty").textContent = query ? "No matching conversations." : "Your conversations will appear here.";
   }
   function openChat(id) {
     if (generating) stopGeneration();
@@ -788,8 +826,8 @@
     row.id = "typingIndicator";
     row.className = "message-row assistant typing-row";
     row.setAttribute("role", "status");
-    row.setAttribute("aria-label", "TESLAFIELD is thinking");
-    row.innerHTML = '<div class="typing-status"><span class="typing-dots"><i></i><i></i><i></i></span><span>Thinking</span></div>';
+    row.setAttribute("aria-label", "TESLAFIELD is preparing a response");
+    row.innerHTML = '<div class="typing-status"><span class="typing-dots"><i></i><i></i><i></i></span><span>Preparing response…</span></div>';
     messageList.appendChild(row);
     scrollBottom();
     return row;
@@ -878,93 +916,106 @@
     const requestSignal = requestController.signal;
     controller = requestController;
     const typingIndicator = showTyping();
+    let assistantMessage = null;
+    let replyText = "";
+    let streamBody = null;
+    const setStatus = (value) => {
+      const label = typingIndicator.querySelector(".typing-status span:last-child");
+      if (label) label.textContent = value;
+    };
     setGenerating(true);
     try {
       await waitForApiReady(90000, requestSignal);
       if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
       const token = await getAuthToken();
       if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
+      setStatus("Connecting to the model…");
       const chatRequest = {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-        body: JSON.stringify({ messages: chat.messages.slice(-30) }),
+        body: JSON.stringify({ messages: chat.messages.slice(-30), response_style: userPreferences.responseStyle }),
         signal: requestSignal
       };
       let response;
-      for (let attempt = 0; attempt < 3; attempt++) {
+      for (let attempt = 0; attempt < 3; attempt += 1) {
         if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
-        try {
-          response = await fetch(API + "/api/v1/chat/completions", chatRequest);
-          const retryable = [502, 503, 504].includes(response.status);
-          if (response.ok || !retryable || attempt === 2) break;
-          if (response.body) await response.body.cancel().catch(() => {});
-        } catch (networkError) {
-          if (networkError.name === "AbortError" || attempt === 2) throw networkError;
-        }
+        response = await fetch(API + "/api/v1/chat/stream", chatRequest);
+        if (response.ok || ![502, 503, 504].includes(response.status) || attempt === 2) break;
+        if (response.body) await response.body.cancel().catch(() => {});
         await new Promise((resolve, reject) => {
-          const abort = () => {
-            clearTimeout(timer);
-            reject(new DOMException("Request cancelled", "AbortError"));
-          };
-          const timer = setTimeout(() => {
-            requestSignal.removeEventListener("abort", abort);
-            resolve();
-          }, attempt === 0 ? 1800 : 4500);
+          let timer;
+          const abort = () => { clearTimeout(timer); reject(new DOMException("Request cancelled", "AbortError")); };
+          timer = setTimeout(() => { requestSignal.removeEventListener("abort", abort); resolve(); }, attempt === 0 ? 1800 : 4500);
           requestSignal.addEventListener("abort", abort, { once: true });
           if (requestSignal.aborted) abort();
         });
       }
       if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
       if (!response) throw new Error("TESLAFIELD could not reach the chat service. Please retry.");
-      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || data.error || "AI request failed (" + response.status + ").");
+      }
+      if (response.body && response.body.getReader) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
+          const part = await reader.read();
+          if (part.done) break;
+          const piece = decoder.decode(part.value, { stream: true });
+          if (!piece) continue;
+          replyText += piece;
+          if (!assistantMessage) {
+            assistantMessage = { role: "assistant", content: "" };
+            chat.messages.push(assistantMessage);
+            streamBody = document.createElement("div");
+            streamBody.className = "message-content is-revealing";
+            const streamRow = document.createElement("article");
+            streamRow.className = "message-row assistant";
+            const streamStack = document.createElement("div");
+            streamStack.className = "message-stack assistant-stack";
+            streamStack.appendChild(streamBody);
+            streamRow.appendChild(streamStack);
+            messageList.appendChild(streamRow);
+            typingIndicator.remove();
+          }
+          assistantMessage.content = replyText;
+          streamBody.textContent = replyText;
+          scrollBottom();
+        }
+        replyText += decoder.decode();
+      } else {
+        replyText = await response.text();
+      }
       if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
-      typingIndicator.remove();
-      if (!response.ok) throw new Error(data.message || data.error || "AI request failed (" + response.status + ").");
-      const reply = data.reply || (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content);
-      if (typeof reply !== "string" || !reply.trim()) throw new Error("The connected model returned an empty response.");
-      const assistantMessage = { role: "assistant", content: reply };
-      chat.messages.push(assistantMessage);
+      if (!replyText.trim()) throw new Error("The connected model returned an empty response.");
+      if (!assistantMessage) {
+        assistantMessage = { role: "assistant", content: replyText };
+        chat.messages.push(assistantMessage);
+      } else assistantMessage.content = replyText;
       chat.updated = Date.now();
       saveStore();
-      renderConversation();
-      const revealTarget = messageList.querySelector(".message-row.assistant:last-of-type .message-content");
-      const visibleReply = revealTarget ? await revealAssistantText(revealTarget, reply, requestSignal) : reply;
-      if (requestSignal.aborted) {
-        assistantMessage.content = visibleReply;
+      if (streamBody) streamBody.classList.remove("is-revealing");
+    } catch (error) {
+      if (assistantMessage && replyText.trim()) {
+        assistantMessage.content = replyText;
         chat.updated = Date.now();
         saveStore();
-        if (revealTarget) revealTarget.textContent = visibleReply;
-        return;
-      }
-      if (revealTarget) {
-        revealTarget.innerHTML = renderMarkdown(reply);
-        revealTarget.querySelectorAll("pre").forEach((pre) => {
-          const code = pre.querySelector("code");
-          if (!code) return;
-          const copyCode = document.createElement("button");
-          copyCode.type = "button";
-          copyCode.className = "code-copy-button";
-          copyCode.innerHTML = icon("copy") + "<span>Copy code</span>";
-          copyCode.setAttribute("aria-label", "Copy code block");
-          copyCode.onclick = () => copyText(code.textContent || "");
-          pre.appendChild(copyCode);
-        });
-      }
-    } catch (error) {
-      typingIndicator.remove();
-      if (error.name !== "AbortError" && !requestSignal.aborted) {
+      } else if (error.name !== "AbortError" && !requestSignal.aborted) {
         const message = error.message || "The AI service could not complete this request.";
         chat.messages.push({ role: "assistant", content: "**TESLAFIELD service notice**\n\n" + message + "\n\nYour prompt is saved in this conversation. You can retry after the service is connected." });
         chat.updated = Date.now();
         saveStore();
-        renderConversation();
         toast(message);
       }
     } finally {
+      typingIndicator.remove();
       if (controller === requestController) {
         controller = null;
         setGenerating(false);
-        renderHistory();
+        if (activeChat() === chat) renderConversation();
+        else renderHistory();
       }
     }
   }
@@ -1152,6 +1203,48 @@
     applyTheme(root.classList.contains("dark") ? "light" : "dark");
     closeMenus();
   }
+  function readPersonalization() {
+    try {
+      const saved = JSON.parse(localStorage.getItem("teslafield.preferences.v1") || "null");
+      if (saved && typeof saved === "object") {
+        userPreferences = {
+          responseStyle: ["concise", "balanced", "detailed"].includes(saved.responseStyle) ? saved.responseStyle : "balanced",
+          textSize: ["small", "standard", "large"].includes(saved.textSize) ? saved.textSize : "standard",
+          reduceMotion: saved.reduceMotion === true
+        };
+      }
+    } catch (error) {}
+    applyPersonalization();
+  }
+  function applyPersonalization() {
+    root.dataset.chatSize = userPreferences.textSize;
+    root.dataset.motion = userPreferences.reduceMotion ? "reduced" : "full";
+  }
+  function openPersonalize() {
+    closeMenus();
+    $("preferenceResponseStyle").value = userPreferences.responseStyle;
+    $("preferenceTextSize").value = userPreferences.textSize;
+    $("preferenceReduceMotion").checked = userPreferences.reduceMotion;
+    $("personalizeModal").hidden = false;
+    document.body.classList.add("modal-open");
+    window.setTimeout(() => $("preferenceResponseStyle").focus(), 40);
+  }
+  function closePersonalize() {
+    $("personalizeModal").hidden = true;
+    if ($("signupPromptModal").hidden && $("cookieSettingsBackdrop").hidden) document.body.classList.remove("modal-open");
+  }
+  function savePersonalize() {
+    userPreferences = {
+      responseStyle: $("preferenceResponseStyle").value,
+      textSize: $("preferenceTextSize").value,
+      reduceMotion: $("preferenceReduceMotion").checked
+    };
+    try { localStorage.setItem("teslafield.preferences.v1", JSON.stringify(userPreferences)); }
+    catch (error) { toast("Your preferences could not be saved in this browser."); }
+    applyPersonalization();
+    closePersonalize();
+    toast("Your TESLAFIELD preferences are saved.");
+  }
 
   $("newChat").onclick = newChat;
   $("connectEntryButton").onclick = openConnectPage;
@@ -1196,6 +1289,13 @@
     }
   };
   $("appearanceButton").onclick = toggleTheme;
+  $("personalizeButton").onclick = openPersonalize;
+  $("closePersonalize").onclick = closePersonalize;
+  $("closePersonalizeSecondary").onclick = closePersonalize;
+  $("savePersonalize").onclick = savePersonalize;
+  $("personalizeModal").addEventListener("click", (event) => { if (event.target === $("personalizeModal")) closePersonalize(); });
+  $("historySearch").oninput = renderHistory;
+  $("historySearchClear").onclick = () => { $("historySearch").value = ""; renderHistory(); $("historySearch").focus(); };
   $("accountSignUp").onclick = accountEntry;
   $("accountLogIn").onclick = accountEntry;
   $("topSignUp").onclick = accountEntry;
@@ -1256,6 +1356,7 @@
     if ((event.ctrlKey || event.metaKey) && key === "k") { event.preventDefault(); newChat(); }
     if (event.key === "Escape") {
       if (!$("connectPage").hidden) { closeConnectPage(false); return; }
+      if (!$("personalizeModal").hidden) { closePersonalize(); return; }
       closeMenus();
       closeSidebar();
       if (!$("signupPromptModal").hidden) closeSignupPrompt();
@@ -1268,7 +1369,18 @@
 
 
   // Rotate a large set of welcome ideas continuously on the signed-out start screen.
+  const welcomeHour = new Date().getHours();
+  const welcomeTimeGreeting = welcomeHour < 12 ? "Good morning" : welcomeHour < 17 ? "Good afternoon" : "Good evening";
+  let returningVisitor = false;
+  try {
+    returningVisitor = Boolean(localStorage.getItem("teslafield.welcome.visit.v1"));
+    localStorage.setItem("teslafield.welcome.visit.v1", String(Date.now()));
+  } catch (error) {}
+  const dynamicWelcomeLine = returningVisitor
+    ? welcomeTimeGreeting + ". Welcome back. What shall we explore today?"
+    : welcomeTimeGreeting + ". A fresh space for your next idea starts here.";
   const exploreIdeas = [
+    dynamicWelcomeLine,
     "What would you like to explore?","Turn a big idea into a real plan.","What can we create together today?","Discover something you have never learned.","Make your next great idea happen.","What are you curious about right now?","Build something remarkable from scratch.","Find a smarter way to solve a problem.","Imagine it. Explore it. Create it.","What would you love to understand?",
     "Learn a new skill, one step at a time.","Let's make your ideas clearer.","What challenge can we solve today?","Explore the future of technology.","Create a plan for your next project.","Find inspiration for something original.","Make complex topics feel simple.","What could you invent today?","Let's turn questions into answers.","Discover a new perspective.",
     "Write something worth sharing.","Build a better workflow.","What do you want to bring to life?","Explore science, space and discovery.","Find the words for your big idea.","Let's brainstorm something fresh.","Make your next decision with clarity.","What would you like to design?","Understand the world in a new way.","Start with a question. Go anywhere.",
@@ -1283,6 +1395,7 @@
   const exploreHeading = welcome.querySelector("h1");
   let exploreIndex = 0;
   if (exploreHeading) {
+    exploreHeading.textContent = dynamicWelcomeLine;
     window.setInterval(() => {
       if (!document.body.classList.contains("guest-mode")) return;
       exploreHeading.classList.remove("glass-form-in");
@@ -1311,6 +1424,7 @@
     applyTheme(theme);
   } catch (error) { applyTheme("dark"); }
   renderHistory();
+  readPersonalization();
   let connectionTimer = null;
   function startConnectionMonitor() {
     if (connectionTimer) clearInterval(connectionTimer);

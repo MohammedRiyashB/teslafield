@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#000000">
-  <script src="/theme-init.js?v=20261126-43"></script>
+  <script src="/theme-init.js?v=20261126-44"></script>
   <meta name="description" content="TESLAFIELD — an AI workspace for ideas, answers and creation.">
   <title>TESLAFIELD</title>
-  <link rel="icon" type="image/png" href="/teslafieldai-logo.png?v=20261126-43">
-  <link rel="apple-touch-icon" href="/teslafieldai-logo.png?v=20261126-43">
-  <link rel="stylesheet" href="/styles.css?v=20261126-43">
+  <link rel="icon" type="image/png" href="/teslafieldai-logo.png?v=20261126-44">
+  <link rel="apple-touch-icon" href="/teslafieldai-logo.png?v=20261126-44">
+  <link rel="stylesheet" href="/styles.css?v=20261126-44">
 </head>
 <body>
 <div class="app-shell" id="appShell">
@@ -17,7 +17,7 @@
   <aside class="sidebar" id="sidebar" aria-label="Main navigation">
     <div class="sidebar-header">
       <a class="brand" href="/" aria-label="TESLAFIELD home">
-        <img class="brand-mark" src="/teslafieldai-logo.png?v=20261126-43" alt=""><span class="brand-word">TESLAFIELD</span>
+        <img class="brand-mark" src="/teslafieldai-logo.png?v=20261126-44" alt=""><span class="brand-word">TESLAFIELD</span>
       </a>
       <button type="button" class="icon-button sidebar-collapse" id="sidebarCollapse" aria-label="Collapse sidebar" title="Collapse sidebar">
         <svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="3"/><path d="M9 4v16"/></svg>
@@ -35,6 +35,11 @@
 
     <div class="history-area">
       <div class="section-heading"><span>YOUR CHATS</span><button type="button" class="text-button" id="clearHistory">Clear</button></div>
+      <div class="history-search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path></svg>
+        <input id="historySearch" type="search" placeholder="Search chats" autocomplete="off" aria-label="Search conversations">
+        <button class="search-clear" id="historySearchClear" type="button" aria-label="Clear chat search">×</button>
+      </div>
       <div class="history-list" id="historyList"></div>
       <p class="history-empty" id="historyEmpty">Your conversations will appear here.</p>
     </div>
@@ -52,6 +57,7 @@
           <button type="button" id="accountSignUp">Sign up with Google</button>
           <button type="button" id="accountLogIn">Log in with Google</button>
           <button id="appearanceButton" type="button"><span>Appearance</span><span class="side-meta" id="themeLabel">Dark</span></button>
+          <button id="personalizeButton" type="button">Personalize chat</button>
           <button id="privacyChoices" type="button">Your privacy choices</button>
           <div class="account-menu-divider"></div>
           <button type="button" id="accountSignOut" hidden>Sign out</button>
@@ -65,7 +71,7 @@
     <header class="topbar">
       <div class="topbar-left">
         <a class="guest-brand" id="guestBrand" href="/" aria-label="TESLAFIELD home">
-          <img src="/teslafieldai-logo.png?v=20261126-43" alt="TESLAFIELD">
+          <img src="/teslafieldai-logo.png?v=20261126-44" alt="TESLAFIELD">
         </a>
         <button type="button" class="icon-button mobile-menu" id="mobileMenu" aria-label="Open sidebar">
           <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -162,7 +168,7 @@
 <input id="fileInput" type="file" hidden multiple accept=".png,.jpg,.jpeg,.webp,.pdf,.txt,.csv,.docx,image/png,image/jpeg,image/webp,application/pdf,text/plain,text/csv,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
 <div class="toast-message" id="toastMessage" role="status" aria-live="polite"></div>
 <main class="shared-message-page" id="sharedMessagePage" hidden>
-  <header class="shared-message-header"><a href="/" class="shared-message-brand"><img src="/teslafieldai-logo.png?v=20261126-43" alt=""> TESLAFIELD <span>AI</span></a><a class="shared-open-app" href="/">Try TESLAFIELD</a></header>
+  <header class="shared-message-header"><a href="/" class="shared-message-brand"><img src="/teslafieldai-logo.png?v=20261126-44" alt=""> TESLAFIELD <span>AI</span></a><a class="shared-open-app" href="/">Try TESLAFIELD</a></header>
   <section class="shared-message-card"><div class="shared-eyebrow">SHARED AI RESPONSE</div><h1 id="sharedMessageTitle">A response shared from TESLAFIELD</h1><article class="shared-message-content" id="sharedMessageContent"></article><div class="shared-message-footer"><span>Shared with TESLAFIELD AI</span><button id="copySharedMessage" type="button">Copy response</button></div></section>
   <footer class="shared-message-bottom">TESLAFIELD © 2026 BMR INC. All rights reserved.</footer>
 </main>
@@ -170,7 +176,7 @@
 <div class="signup-prompt-backdrop" id="signupPromptModal" hidden>
   <section class="signup-prompt" role="dialog" aria-modal="true" aria-labelledby="signupPromptTitle">
     <button class="modal-close" id="closeSignupPrompt" type="button" aria-label="Close">×</button>
-    <div class="signup-prompt-mark"><img src="/teslafieldai-logo.png?v=20261126-43" alt=""></div>
+    <div class="signup-prompt-mark"><img src="/teslafieldai-logo.png?v=20261126-44" alt=""></div>
     <p class="signup-eyebrow">YOUR TESLAFIELD EXPERIENCE</p>
     <h2 id="signupPromptTitle">Continue your conversation</h2>
     <p class="signup-prompt-copy">Sign up for free to continue seamlessly with TESLAFIELD. Keep your conversation in your account on this browser and pick up where you left off.</p>
@@ -222,9 +228,35 @@
     </div>
   </section>
 </div>
+
+<div class="personalize-backdrop" id="personalizeModal" hidden>
+  <section class="personalize-modal" role="dialog" aria-modal="true" aria-labelledby="personalizeTitle">
+    <button class="modal-close" id="closePersonalize" type="button" aria-label="Close preferences">×</button>
+    <p class="signup-eyebrow">YOUR EXPERIENCE</p>
+    <h2 id="personalizeTitle">Personalize TESLAFIELD</h2>
+    <p class="personalize-intro">Choose how replies and the chat interface feel on this device.</p>
+    <label class="preference-field" for="preferenceResponseStyle">
+      <span><strong>Response style</strong><small>Choose the amount of detail in AI replies.</small></span>
+      <select id="preferenceResponseStyle"><option value="concise">Concise</option><option value="balanced">Balanced</option><option value="detailed">Detailed</option></select>
+    </label>
+    <label class="preference-field" for="preferenceTextSize">
+      <span><strong>Chat text size</strong><small>Adjust the readability of conversation text.</small></span>
+      <select id="preferenceTextSize"><option value="small">Small</option><option value="standard">Standard</option><option value="large">Large</option></select>
+    </label>
+    <label class="preference-motion" for="preferenceReduceMotion">
+      <span><strong>Reduce animations</strong><small>Prefer calmer transitions and movement.</small></span>
+      <input id="preferenceReduceMotion" type="checkbox">
+    </label>
+    <div class="personalize-actions">
+      <button class="cookie-button cookie-quiet" id="closePersonalizeSecondary" type="button">Cancel</button>
+      <button class="cookie-button cookie-primary" id="savePersonalize" type="button">Save preferences</button>
+    </div>
+  </section>
+</div>
+
 <script defer src="/__/firebase/8.10.1/firebase-app.js"></script>
 <script defer src="/__/firebase/8.10.1/firebase-auth.js"></script>
 <script defer src="/__/firebase/init.js"></script>
-<script src="/app.js?v=20261126-43" defer></script>
+<script src="/app.js?v=20261126-44" defer></script>
 </body>
 </html>

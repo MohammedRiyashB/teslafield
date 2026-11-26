@@ -7,7 +7,7 @@ from fastapi.responses import StreamingResponse
 from huggingface_hub import hf_hub_download
 from llama_cpp import Llama
 from pydantic import BaseModel, Field
-from typing import Any
+from typing import Any, Literal
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("TESLAFIELD.Chat")
@@ -31,6 +31,7 @@ class ChatRequest(BaseModel):
     message: str | None = None
     messages: list[dict[str, Any]] | None = None
     max_new_tokens: int = Field(default=256, ge=16, le=768)
+    response_style: Literal["concise", "balanced", "detailed"] = "balanced"
 
 
 def load_model():
@@ -59,7 +60,13 @@ def load_model():
 
 
 def prepare_messages(request: ChatRequest):
-    clean = [{"role": "system", "content": SYSTEM_PROMPT}]
+    style_guidance = {
+        "concise": "Keep answers brief and direct. Prefer the essential points and avoid unnecessary repetition.",
+        "balanced": "Give a clear, useful answer with enough explanation and practical detail.",
+        "detailed": "Give a thorough, well-structured answer with examples and step-by-step explanation when useful.",
+    }
+    style = style_guidance.get(request.response_style, style_guidance["balanced"])
+    clean = [{"role": "system", "content": SYSTEM_PROMPT + " " + style}]
     if request.messages:
         for item in request.messages[-16:]:
             role = item.get("role")
