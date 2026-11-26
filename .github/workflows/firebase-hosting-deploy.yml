@@ -173,7 +173,7 @@ jobs:
           curl --fail --silent --show-error http://127.0.0.1:18765/.well-known/oauth-authorization-server | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const x=JSON.parse(s);if(!x.code_challenge_methods_supported.includes('S256')||!x.client_id_metadata_document_supported||x.token_endpoint_auth_methods_supported[0]!=='none')process.exit(1)})"
           mcp_unauthorized="$(curl --silent --show-error -D /tmp/teslafield-mcp.headers -o /tmp/teslafield-mcp.json --write-out '%{http_code}' -X POST -H "Accept: application/json, text/event-stream" -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25"}}' http://127.0.0.1:18765/mcp)"
           test "$mcp_unauthorized" = "401"
-          grep -qi 'resource_metadata=https://teslafield-api.onrender.com/.well-known/oauth-protected-resource' /tmp/teslafield-mcp.headers
+          grep -Eqi 'resource_metadata="?https://teslafield-api.onrender.com/\.well-known/oauth-protected-resource"?' /tmp/teslafield-mcp.headers
           echo "MCP and OAuth discovery checks passed: resource metadata, issuer metadata, PKCE and protected MCP endpoint."
 
       - name: Prepare Firebase Hosting files
