@@ -1370,3 +1370,14 @@ body.guest-mode:not(.guest-conversation-mode) .guest-footer{
   transform:translateX(-50%)!important;text-align:center!important;
   justify-content:center!important;align-items:center!important;
 }
+
+
+/* Final override: center the one-line guest footer using fixed left/right bounds. */
+body.guest-mode:not(.guest-conversation-mode) .guest-footer{
+  position:fixed!important;left:0!important;right:0!important;
+  bottom:calc(10px + env(safe-area-inset-bottom))!important;
+  width:max-content!important;max-width:calc(100vw - 24px)!important;
+  margin-left:auto!important;margin-right:auto!important;
+  transform:none!important;text-align:center!important;
+  white-space:nowrap!important;display:block!important;
+}
