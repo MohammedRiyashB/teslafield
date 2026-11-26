@@ -88,9 +88,11 @@
           if (generating) stopGeneration();
           chats = [];
           activeId = null;
-          if (currentUser) loadStore();
+          if (currentUser) {
+            loadStore();
+            activeId = chats.length ? chats[0].id : null;
+          }
           messageList.innerHTML = "";
-          welcome.hidden = true === false;
           renderConversation();
         } else {
           updateAccountUI();
@@ -158,7 +160,7 @@
   async function deleteAccountAndLocalData() {
     if (!currentUser) return;
     const uid = currentUser.uid;
-    if (!window.confirm("Permanently delete this TESLAFIELD sign-in account and its locally saved chats on this device? This cannot be undone.")) return;
+    if (!window.confirm("Permanently delete this TESLAFIELD sign-in account and its locally saved chats on this device? This cannot be undone. This does not erase records that external AI providers may retain under their own policies.")) return;
     try {
       await currentUser.delete();
       localStorage.removeItem("teslafield.conversations.v4." + uid);
