@@ -52,6 +52,13 @@ function getImageProvider() {
   const selfHostedModel = (process.env.SELF_HOSTED_IMAGE_MODEL || "").trim();
 
   const providers = {
+    huggingface: {
+      id: "huggingface",
+      name: "TESLAFIELD Hugging Face ZeroGPU Space",
+      type: "huggingface-space",
+      configured: Boolean(process.env.HF_IMAGE_SPACE_URL),
+      requiresApiKey: false
+    },
     pollinations: {
       id: "pollinations",
       name: "Pollinations",
@@ -69,8 +76,10 @@ function getImageProvider() {
   };
 
   if (requested === "self-hosted" && providers.selfHosted.configured) return providers.selfHosted;
+  if (requested === "huggingface" && providers.huggingface.configured) return providers.huggingface;
   if (requested === "pollinations" && providers.pollinations.configured) return providers.pollinations;
   if (!requested && providers.selfHosted.configured) return providers.selfHosted;
+  if (!requested && providers.huggingface.configured) return providers.huggingface;
   if (!requested && providers.pollinations.configured) return providers.pollinations;
   return null;
 }
@@ -78,6 +87,14 @@ function getImageProvider() {
 function getProviderCatalog() {
   const selected = getImageProvider();
   return [
+    {
+      id: "huggingface",
+      name: "TESLAFIELD Hugging Face ZeroGPU Space",
+      type: "huggingface-space",
+      configured: Boolean(process.env.HF_IMAGE_SPACE_URL),
+      selected: Boolean(selected && selected.id === "huggingface"),
+      note: "Your own Gradio Space. Free ZeroGPU quota and model access conditions apply."
+    },
     {
       id: "pollinations",
       name: "Pollinations",
@@ -95,6 +112,21 @@ function getProviderCatalog() {
       note: "Connect an endpoint you control. This requires an accessible inference server and compute; it is not hosted by Render."
     }
   ];
+}
+
+async function generateWithHuggingFaceImage(input) {
+  const { Client } = require("@gradio/client");
+  const spaceUrl = process.env.HF_IMAGE_SPACE_URL;
+  const client = await Client.connect(spaceUrl, process.env.HF_TOKEN ? { hf_token: process.env.HF_TOKEN } : {});
+  const result = await client.predict("/generate_image", [input.prompt, input.aspectRatio, -1]);
+  const file = result.data && result.data[0];
+  const fileUrl = typeof file === "string" ? file : file && (file.url || file.path);
+  if (!fileUrl) throw new Error("HUGGINGFACE_IMAGE_EMPTY_RESULT");
+  const response = await fetch(fileUrl, { signal: AbortSignal.timeout(120000) });
+  if (!response.ok) throw new Error("HUGGINGFACE_IMAGE_DOWNLOAD_FAILED");
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (!bytes.length || bytes.length > 15 * 1024 * 1024) throw new Error("HUGGINGFACE_IMAGE_SIZE_INVALID");
+  return { image: "data:image/png;base64," + bytes.toString("base64"), provider: "Hugging Face ZeroGPU", model: "black-forest-labs/FLUX.1-schnell" };
 }
 
 async function generateWithPollinations(input) {
@@ -127,6 +159,20 @@ async function generateWithPollinations(input) {
     provider: "Pollinations",
     model: "black-forest-labs/flux.1-schnell"
   };
+}
+
+async function generateWithHuggingFaceVideo(prompt) {
+  const { Client } = require("@gradio/client");
+  const client = await Client.connect(process.env.HF_VIDEO_SPACE_URL, process.env.HF_TOKEN ? { hf_token: process.env.HF_TOKEN } : {});
+  const result = await client.predict("/generate_video", [prompt, -1]);
+  const file = result.data && result.data[0];
+  const fileUrl = typeof file === "string" ? file : file && (file.url || file.path);
+  if (!fileUrl) throw new Error("HUGGINGFACE_VIDEO_EMPTY_RESULT");
+  const response = await fetch(fileUrl, { signal: AbortSignal.timeout(300000) });
+  if (!response.ok) throw new Error("HUGGINGFACE_VIDEO_DOWNLOAD_FAILED");
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (!bytes.length || bytes.length > 20 * 1024 * 1024) throw new Error("HUGGINGFACE_VIDEO_SIZE_INVALID");
+  return "data:video/mp4;base64," + bytes.toString("base64");
 }
 
 async function generateWithSelfHosted(input) {
@@ -167,6 +213,7 @@ async function generateWithSelfHosted(input) {
 }
 
 async function generateImage(input, provider) {
+  if (provider.id === "huggingface") return generateWithHuggingFaceImage(input);
   if (provider.id === "pollinations") return generateWithPollinations(input);
   if (provider.id === "self-hosted") return generateWithSelfHosted(input);
   throw new Error("IMAGE_PROVIDER_UNSUPPORTED");
@@ -217,7 +264,7 @@ const server = http.createServer(async (req, res) => {
       integrations: {
         imageGeneration: Boolean(provider),
         imageProvider: provider ? provider.name : null,
-        videoGeneration: Boolean(process.env.POLLINATIONS_API_KEY),
+        videoGeneration: Boolean(process.env.HF_VIDEO_SPACE_URL || process.env.POLLINATIONS_API_KEY),
         audioGeneration: false,
         authentication: false,
         database: false
@@ -242,7 +289,7 @@ const server = http.createServer(async (req, res) => {
       version: API_VERSION,
       capabilities: [
         { id: "image.generate", status: getImageProvider() ? "available" : "provider-required", method: "POST", endpoint: "/api/v1/image/generate" },
-        { id: "video.generate", status: process.env.POLLINATIONS_API_KEY ? "available" : "provider-required", method: "POST", endpoint: "/api/v1/video/generate" },
+        { id: "video.generate", status: process.env.HF_VIDEO_SPACE_URL || process.env.POLLINATIONS_API_KEY ? "available" : "provider-required", method: "POST", endpoint: "/api/v1/video/generate" },
         { id: "audio.generate", status: "planned" },
         { id: "creative.plan", status: "prototype" },
         { id: "provider.routing", status: "active" },
@@ -286,6 +333,8 @@ const server = http.createServer(async (req, res) => {
     } catch (error) {
       if (error.message === "BODY_TOO_LARGE") return sendJson(res, 413, { error: "REQUEST_TOO_LARGE" });
       if (error.message === "INVALID_JSON") return sendJson(res, 400, { error: "INVALID_JSON" });
+      if (error.message === "HUGGINGFACE_IMAGE_EMPTY_RESULT" || error.message === "HUGGINGFACE_IMAGE_DOWNLOAD_FAILED") return sendJson(res, 502, { error: error.message, message: "The Hugging Face Space did not return a downloadable image." });
+      if (error.message === "HUGGINGFACE_IMAGE_SIZE_INVALID") return sendJson(res, 502, { error: error.message, message: "The generated image exceeded the response size limit." });
       if (error.message === "IMAGE_PROVIDER_EMPTY_RESULT") return sendJson(res, 502, { error: "IMAGE_PROVIDER_EMPTY_RESULT", message: "The provider returned no image." });
       if (error.providerStatus === 401) return sendJson(res, 502, { error: "IMAGE_PROVIDER_AUTH_FAILED", message: "The image provider rejected its credentials. Check the server-side secret." });
       if (error.providerStatus === 402) return sendJson(res, 402, { error: "IMAGE_PROVIDER_BALANCE_REQUIRED", message: "The provider reports that payment or balance is required. No automatic retry was made." });
@@ -311,8 +360,18 @@ const server = http.createServer(async (req, res) => {
       if (prompt.length > 2000) return sendJson(res, 400, { error: "PROMPT_TOO_LONG", message: "Video prompts must be 2,000 characters or fewer." });
       if (!allowedModels.has(model)) return sendJson(res, 400, { error: "INVALID_VIDEO_MODEL", message: "Choose a supported video model." });
       if (![5, 8, 10].includes(duration)) return sendJson(res, 400, { error: "INVALID_DURATION", message: "Choose 5, 8 or 10 seconds." });
+      if (process.env.HF_VIDEO_SPACE_URL) {
+        const video = await generateWithHuggingFaceVideo(prompt);
+        return sendJson(res, 200, {
+          ok: true,
+          provider: "Hugging Face ZeroGPU",
+          model: "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+          duration: 2,
+          video
+        });
+      }
       if (!process.env.POLLINATIONS_API_KEY) {
-        return sendJson(res, 503, { error: "VIDEO_PROVIDER_NOT_CONFIGURED", message: "Video generation needs a Pollinations API key. No generation request was sent." });
+        return sendJson(res, 503, { error: "VIDEO_PROVIDER_NOT_CONFIGURED", message: "Connect your Hugging Face Video Space URL to enable Wan 2.2 generation. No generation request was sent." });
       }
       const target = "https://gen.pollinations.ai/video/" + encodeURIComponent(prompt) +
         "?model=" + encodeURIComponent(model) + "&duration=" + duration;
@@ -339,6 +398,8 @@ const server = http.createServer(async (req, res) => {
     } catch (error) {
       if (error.message === "BODY_TOO_LARGE") return sendJson(res, 413, { error: "REQUEST_TOO_LARGE" });
       if (error.message === "INVALID_JSON") return sendJson(res, 400, { error: "INVALID_JSON" });
+      if (error.message === "HUGGINGFACE_VIDEO_EMPTY_RESULT" || error.message === "HUGGINGFACE_VIDEO_DOWNLOAD_FAILED") return sendJson(res, 502, { error: error.message, message: "The Hugging Face Space did not return a downloadable video." });
+      if (error.message === "HUGGINGFACE_VIDEO_SIZE_INVALID") return sendJson(res, 502, { error: error.message, message: "The generated video exceeded the response size limit." });
       if (error.message === "VIDEO_PROVIDER_INVALID_RESULT") return sendJson(res, 502, { error: "VIDEO_PROVIDER_INVALID_RESULT", message: "The provider did not return an MP4 video." });
       if (error.message === "VIDEO_RESULT_SIZE_INVALID") return sendJson(res, 502, { error: "VIDEO_RESULT_SIZE_INVALID", message: "The video was empty or exceeded the 20 MB response limit." });
       if (error.providerStatus === 401) return sendJson(res, 502, { error: "VIDEO_PROVIDER_AUTH_FAILED", message: "The provider rejected its credentials. Check the server-side secret." });
