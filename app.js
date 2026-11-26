@@ -48,7 +48,7 @@
         status.textContent = data && data.service === "teslafield-api" ? "● API connected" : "● API responded";
         status.style.color = "#9fe3ad";
         status.style.borderColor = "rgba(110,210,140,.35)";
-        status.title = "TESLAFIELD backend is reachable. AI generation integrations are not connected yet.";
+        status.title = "TESLAFIELD API is reachable. Check Image Studio and Video Studio for generation availability.";
       })
       .catch(function () {
         status.textContent = "● API unavailable";
@@ -144,7 +144,7 @@
       durationControl +
       directionControl +
       '<div class="control-section"><div class="control-label">Quality</div><select class="select-field"><option>Preview · 720p</option><option>1080p · Planned</option><option>4K · Planned</option></select></div>' +
-      '<button class="generate-button" data-action="' + (isImage ? "generate-image" : "generate-video") + '">✦  ' + (isImage ? "Generate image" : "Generate video") + '</button><div class="demo-disclaimer"><span>ⓘ</span><span>' + (isImage ? "Real image generation uses the connected provider. A valid API key and available model budget are required." : "Wan 2.2 runs on eligible Hugging Face ZeroGPU quota. The initial free profile creates a short 2-second clip; queue and daily limits apply.") + '</span></div>' +
+      '<button class="generate-button" data-action="' + (isImage ? "generate-image" : "generate-video") + '">✦  ' + (isImage ? "Generate image" : "Generate video") + '</button><div class="demo-disclaimer"><span>ⓘ</span><span>' + (isImage ? "Real FLUX image generation runs through the TESLAFIELD Hugging Face Space when deployment is complete. Free ZeroGPU quota and model access apply." : "Wan 2.2 runs on eligible Hugging Face ZeroGPU quota. The initial free profile creates a short 2-second clip; queue and daily limits apply.") + '</span></div>' +
       '</aside></div>' + (isImage ? '<div id="imageResult" aria-live="polite"></div>' : '<div id="videoResult" aria-live="polite"></div>');
   }
 
@@ -299,7 +299,7 @@
       var response = await fetch(API_BASE_URL + "/api/v1/image/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt, aspectRatio: aspectRatio, model: (document.getElementById("modelRoute") || {}).value || "black-forest-labs/flux.1-schnell" })
+        body: JSON.stringify({ prompt: prompt, aspectRatio: aspectRatio, model: (document.getElementById("modelRoute") || {}).value || "black-forest-labs/FLUX.1-schnell" })
       });
       var data = await response.json().catch(function () { return {}; });
       if (!response.ok) {
