@@ -615,6 +615,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
   }
 }
 :root.dark{
+  color-scheme:dark;
   --page:#000;
   --sidebar:#000;
   --surface:#080808;
