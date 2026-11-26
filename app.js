@@ -139,13 +139,13 @@
       '<div class="control-section"><div class="control-label">Visual direction</div><div class="chip-row"><button class="choice-chip selected" data-choice="cinematic">Cinematic</button><button class="choice-chip" data-choice="editorial">Editorial</button><button class="choice-chip" data-choice="photoreal">Photoreal</button><button class="choice-chip" data-choice="dreamlike">Dreamlike</button><button class="choice-chip" data-choice="minimal">Minimal</button></div></div>' +
       '</div></section>' +
       '<aside class="studio-controls"><div class="panel-title-row"><h3>Output controls</h3><span>DEMO ENGINE</span></div>' +
-      '<div class="control-section"><div class="control-label">Model route <small>Planned integration</small></div><select class="select-field" id="modelRoute"><option>TESLAFIELD Motion Engine · Demo</option><option>Partner model adapter · Not connected</option><option>Local preview · No AI</option></select></div>' +
+      '<div class="control-section"><div class="control-label">Model route <small>Provider connection required</small></div><select class="select-field" id="modelRoute"><option>Pollinations · Flux Schnell</option></select></div>' +
       '<div class="control-section"><div class="control-label">Aspect ratio</div><div class="segmented" id="ratioOptions"><button class="selected" data-ratio="16:9">16:9</button><button data-ratio="9:16">9:16</button><button data-ratio="1:1">1:1</button></div></div>' +
       durationControl +
       directionControl +
       '<div class="control-section"><div class="control-label">Quality</div><select class="select-field"><option>Preview · 720p</option><option>1080p · Planned</option><option>4K · Planned</option></select></div>' +
-      '<button class="generate-button" data-action="' + (isImage ? "generate-image" : "generate-video") + '">✦  Create ' + (isImage ? "image" : "video") + ' concept</button><div class="demo-disclaimer"><span>ⓘ</span><span>This prototype does not call an AI model or spend credits. Connect a generation API and backend before production use.</span></div>' +
-      '</aside></div>';
+      '<button class="generate-button" data-action="' + (isImage ? "generate-image" : "generate-video") + '">✦  ' + (isImage ? "Generate image" : "Create video concept") + '</button><div class="demo-disclaimer"><span>ⓘ</span><span>' + (isImage ? "Image requests are routed securely through TESLAFIELD. Provider key and available balance are required before generation can run." : "Video generation is not connected yet. This button creates no AI video.") + '</span></div>' +
+      '</aside></div>' + (isImage ? '<div id="imageResult" aria-live="polite"></div>' : "");
   }
 
   function renderCinema() {
@@ -203,7 +203,7 @@
       return !searchQuery || (job.title + " " + job.kind).toLowerCase().indexOf(searchQuery.toLowerCase()) >= 0;
     });
     var cards = filtered.map(function (job, index) {
-      return '<div class="asset-card"><div class="asset-image" style="--asset:' + job.thumb + '"><span class="asset-type">' + esc(job.kind.toUpperCase()) + ' · DEMO</span></div><div class="asset-info"><strong>' + esc(job.title) + '</strong><small>Local preview · ' + esc(job.time) + '</small></div></div>';
+      return '<div class="asset-card"><div class="asset-image" style="--asset:' + job.thumb + (job.imageUrl ? ';background-image:url(&quot;' + esc(job.imageUrl) + '&quot;);background-size:cover;background-position:center' : '') + '">' + (job.imageUrl ? '<span class="asset-type">IMAGE · GENERATED</span>' : '<span class="asset-type">' + esc(job.kind.toUpperCase()) + ' · DEMO</span>') + '</div><div class="asset-info"><strong>' + esc(job.title) + '</strong><small>' + (job.imageUrl ? 'Generated image' : 'Local preview') + ' · ' + esc(job.time) + '</small></div></div>';
     }).join("");
     return heading("YOUR CREATIVE LIBRARY", "Generations", "All prototype generation requests are collected here. Real model outputs will appear after the generation backend is connected.", '<button class="btn btn-primary" data-view="video">＋ Create new</button>') +
       '<div class="panel" style="margin-bottom:15px"><div class="panel-title-row"><h3>Library filters</h3><span>' + filtered.length + ' items</span></div><div class="chip-row"><button class="choice-chip selected" data-choice="all">All</button><button class="choice-chip" data-choice="video">Video</button><button class="choice-chip" data-choice="image">Image</button><button class="choice-chip" data-choice="audio">Audio</button></div></div>' +
@@ -272,6 +272,64 @@
     renderCurrentView();
   }
 
+  async function createImage() {
+    var promptField = document.getElementById("creationPrompt");
+    var prompt = promptField ? promptField.value.trim() : "";
+    var result = document.getElementById("imageResult");
+    var button = document.querySelector('[data-action="generate-image"]');
+    var ratioNode = document.querySelector("[data-ratio].selected");
+    var aspectRatio = ratioNode ? ratioNode.getAttribute("data-ratio") : "1:1";
+
+    if (!prompt) {
+      toast("Describe the image you want to create first.", "!");
+      if (promptField) promptField.focus();
+      return;
+    }
+    if (prompt.length > 2000) {
+      toast("Keep the image prompt under 2,000 characters.", "!");
+      return;
+    }
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Preparing image request…";
+    }
+    if (result) result.innerHTML = '<section class="panel" style="margin-top:16px"><p>Checking provider connection. No generation starts unless a provider key is configured.</p></section>';
+
+    try {
+      var response = await fetch(API_BASE_URL + "/api/v1/image/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: prompt, aspectRatio: aspectRatio })
+      });
+      var data = await response.json().catch(function () { return {}; });
+      if (!response.ok) {
+        var message = data && data.message ? data.message : "Image generation is not available yet.";
+        if (result) {
+          result.innerHTML = '<section class="panel" style="margin-top:16px"><div class="panel-title-row"><h3>Image generation is not enabled</h3><span class="badge">SETUP REQUIRED</span></div><p>' + esc(message) + '</p><p class="field-note">Your prompt was not sent to an image model. Add a provider key in Render only after checking its pricing and budget controls.</p></section>';
+        }
+        toast(message, "!");
+        return;
+      }
+      if (!data.image) throw new Error("The image provider returned no image.");
+      var title = prompt.length > 52 ? prompt.slice(0, 49) + "..." : prompt;
+      addJob("IMAGE", title);
+      jobs[0].imageUrl = data.image;
+      if (result) {
+        result.innerHTML = '<section class="panel" style="margin-top:16px"><div class="panel-title-row"><h3>Your generated image</h3><span class="badge badge-green">GENERATED</span></div><img src="' + esc(data.image) + '" alt="TESLAFIELD generated artwork" style="display:block;width:100%;height:auto;max-height:760px;object-fit:contain;border-radius:12px;background:#080a0e"><div class="heading-actions" style="margin-top:12px"><a class="btn btn-primary btn-small" href="' + esc(data.image) + '" download="teslafield-image.png">Download image ↗</a><button class="btn btn-quiet btn-small" data-view="library">Open library</button></div></section>';
+      }
+      toast("Image generated successfully and added to this session's library.", "✓");
+    } catch (error) {
+      var errorMessage = error && error.message ? error.message : "Could not contact the TESLAFIELD image service.";
+      if (result) result.innerHTML = '<section class="panel" style="margin-top:16px"><h3>Connection error</h3><p>' + esc(errorMessage) + '</p></section>';
+      toast(errorMessage, "!");
+    } finally {
+      if (button && document.body.contains(button)) {
+        button.disabled = false;
+        button.textContent = "✦  Generate image";
+      }
+    }
+  }
+
   function planDirector() {
     var brief = document.getElementById("directorBrief") || document.getElementById("sceneBrief");
     var value = brief ? brief.value.trim() : "";
@@ -305,7 +363,7 @@
       fileInput.value = "";
       fileInput.click();
     } else if (action === "generate-video") createConcept("VIDEO");
-    else if (action === "generate-image") createConcept("IMAGE");
+    else if (action === "generate-image") createImage();
     else if (action === "new-project") openModal("Start a new project", '<p>Choose a creative path to start your next project.</p><div class="tool-grid" style="grid-template-columns:repeat(2,1fr)">' + toolCard("▶","Video","Create a motion concept.","video","rgba(141,184,255,.16)") + toolCard("▧","Image","Build a visual direction.","image","rgba(173,155,255,.16)") + '</div>');
     else if (action === "credits") openModal("Plans & generation credits", '<span class="badge badge-green">PROTOTYPE MODE</span><p>TESLAFIELD currently has no paid plans, credit balance or AI provider connected. Before accepting payments, the product needs real generation-cost estimates, billing infrastructure, terms, commercial-use rules and user protections.</p><p><strong>Recommended first step:</strong> launch the creative planning tools, validate demand, then connect one permitted image or video provider with clear per-generation pricing.</p>');
     else if (action === "notifications") openModal("Notifications", '<p>You are all caught up. Generation updates, project invitations and billing notifications will appear here after account services are connected.</p>');
