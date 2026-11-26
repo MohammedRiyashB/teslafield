@@ -76,7 +76,6 @@
   let authClient = null;
   let currentUser = null;
   let authReady = false;
-  let chatWorkspaceActive = false;
   let pendingGuestPrompt = "";
   let guestConversationStarted = false;
   let userPreferences = { responseStyle: "balanced", textSize: "standard", reduceMotion: false };
@@ -353,7 +352,6 @@
     const previousUid = currentUser && currentUser.uid;
     const nextUid = user && user.uid;
     currentUser = user || null;
-    chatWorkspaceActive = !!currentUser;
     authReady = true;
     resolveAuthReady();
     updateAccountUI();
@@ -781,7 +779,8 @@
   function renderConversation() {
     const chat = activeChat();
     messageList.innerHTML = "";
-    welcome.hidden = chatWorkspaceActive || !!(chat && chat.messages.length);
+    // Keep the starter screen visible for a signed-in account with no messages yet.
+    welcome.hidden = !!(chat && chat.messages.length);
     if (chat) chat.messages.forEach((message, index) => renderMessage(message, index, chat));
     scrollBottom();
     renderHistory();
@@ -888,7 +887,6 @@
   function newChat() {
     if (generating) stopGeneration();
     guestConversationStarted = false;
-    chatWorkspaceActive = false;
     setGuestLayout(!currentUser);
     clearPendingGuestPrompt();
     messageList.innerHTML = "";
