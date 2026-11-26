@@ -1,6 +1,5 @@
 const http = require("node:http");
 const crypto = require("node:crypto");
-const admin = require("firebase-admin");
 
 const PORT = Number(process.env.PORT || 10000);
 const SERVICE_NAME = "teslafield-api";
@@ -10,10 +9,69 @@ const allowedOrigins = (process.env.CORS_ORIGIN || "https://teslafieldai.web.app
   .map((value) => value.trim())
   .filter(Boolean);
 const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || "teslafieldai";
-const firebaseAdminApp = admin.apps.length
-  ? admin.app()
-  : admin.initializeApp({ projectId: FIREBASE_PROJECT_ID });
-const firebaseAuth = admin.auth(firebaseAdminApp);
+let firebaseSigningKeys = null;
+let firebaseSigningKeysExpiresAt = 0;
+
+async function getFirebaseSigningKey(kid) {
+  const now = Date.now();
+  if (!firebaseSigningKeys || now >= firebaseSigningKeysExpiresAt) {
+    const response = await fetch("https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com", {
+      headers: { "Accept": "application/json" },
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!response.ok) throw new Error("FIREBASE_SIGNING_KEYS_UNAVAILABLE");
+    const document = await response.json();
+    if (!document || !Array.isArray(document.keys)) throw new Error("FIREBASE_SIGNING_KEYS_INVALID");
+    firebaseSigningKeys = document.keys.filter((key) =>
+      key && key.kty === "RSA" && key.use === "sig" && key.alg === "RS256" && typeof key.kid === "string"
+    );
+    const cacheControl = response.headers.get("cache-control") || "";
+    const maxAgeMatch = cacheControl.match(/max-age=(\\d+)/i);
+    const maxAgeSeconds = maxAgeMatch ? Math.min(21600, Math.max(60, Number(maxAgeMatch[1]))) : 3600;
+    firebaseSigningKeysExpiresAt = now + maxAgeSeconds * 1000;
+  }
+  const key = firebaseSigningKeys.find((candidate) => candidate.kid === kid);
+  if (!key) {
+    firebaseSigningKeys = null;
+    firebaseSigningKeysExpiresAt = 0;
+    throw new Error("FIREBASE_SIGNING_KEY_NOT_FOUND");
+  }
+  return key;
+}
+
+async function verifyFirebaseIdToken(token) {
+  const parts = token.split(".");
+  if (parts.length !== 3 || parts.some((part) => !part)) throw new Error("MALFORMED_FIREBASE_ID_TOKEN");
+  let header;
+  let claims;
+  try {
+    header = JSON.parse(Buffer.from(parts[0], "base64url").toString("utf8"));
+    claims = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+  } catch {
+    throw new Error("MALFORMED_FIREBASE_ID_TOKEN");
+  }
+  if (!header || header.alg !== "RS256" || typeof header.kid !== "string") throw new Error("UNSUPPORTED_FIREBASE_ID_TOKEN");
+  const projectIssuer = "https://securetoken.google.com/" + FIREBASE_PROJECT_ID;
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  if (
+    claims.aud !== FIREBASE_PROJECT_ID ||
+    claims.iss !== projectIssuer ||
+    typeof claims.sub !== "string" || !claims.sub || claims.sub.length > 128 ||
+    !Number.isFinite(claims.exp) || claims.exp <= nowSeconds ||
+    !Number.isFinite(claims.iat) || claims.iat > nowSeconds + 300 ||
+    !Number.isFinite(claims.auth_time) || claims.auth_time > nowSeconds + 300
+  ) {
+    throw new Error("INVALID_FIREBASE_ID_TOKEN_CLAIMS");
+  }
+  const jwk = await getFirebaseSigningKey(header.kid);
+  const publicKey = crypto.createPublicKey({ key: jwk, format: "jwk" });
+  const signingInput = Buffer.from(parts[0] + "." + parts[1]);
+  const signature = Buffer.from(parts[2], "base64url");
+  if (!crypto.verify("RSA-SHA256", signingInput, publicKey, signature)) {
+    throw new Error("INVALID_FIREBASE_ID_TOKEN_SIGNATURE");
+  }
+  return claims;
+}
 
 const RATE_LIMITS = {
   global: { limit: 120, windowMs: 60_000 },
@@ -74,8 +132,9 @@ async function authenticateFirebase(req, res) {
     return null;
   }
   try {
-    const decoded = await firebaseAuth.verifyIdToken(match[1]);
-    if (!decoded || !decoded.uid || decoded.aud !== FIREBASE_PROJECT_ID) throw new Error("INVALID_FIREBASE_ID_TOKEN");
+    const decoded = await verifyFirebaseIdToken(match[1]);
+    if (!decoded || !decoded.sub || decoded.aud !== FIREBASE_PROJECT_ID) throw new Error("INVALID_FIREBASE_ID_TOKEN");
+    decoded.uid = decoded.sub;
     return decoded;
   } catch (error) {
     sendJson(res, 401, { error: "INVALID_AUTH_TOKEN", message: "Your session is invalid or expired. Sign in again." });
