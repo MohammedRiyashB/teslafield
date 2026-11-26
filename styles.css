@@ -1753,3 +1753,6 @@ body.guest-mode .composer-actions{column-gap:16px!important;gap:16px!important}
 @media(max-width:380px){
   .composer.voice-recording .mic-button{width:42px;height:38px}
 }
+
+/* The waveform replaces the red recording pulse while voice mode is active. */
+.composer.voice-recording .mic-button.recording{animation:none!important;box-shadow:none!important}
