@@ -66,6 +66,24 @@
       '<section class="panel tip-card"><div class="tip-mark">✳</div><span class="badge badge-violet">CREATOR NOTE</span><h3>Start with the shot, not the model.</h3><p>Write down the subject, action, environment and camera movement first. A clear creative brief makes every generation workflow easier to direct.</p><button class="btn btn-small btn-quiet" data-view="cinema">Plan a scene ↗</button></section></div>';
   }
 
+  function renderExplore() {
+    var presets = [
+      { category: "CINEMATIC", title: "The last horizon", detail: "A sweeping landscape reveal with a slow camera push.", target: "cinema", prompt: "A lone traveller stands at the edge of a vast mountain range at first light. Wind moves through the grass. Wide establishing frame, slow cinematic push-in, cool atmosphere with warm sunrise highlights.", image: "url(https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1000&q=80)" },
+      { category: "PRODUCT FILM", title: "Object of desire", detail: "Premium studio lighting for a hero product visual.", target: "image", prompt: "A sculptural premium product on a dark reflective surface, controlled studio lighting, elegant reflections, detailed material texture, high-end commercial photography.", image: "url(https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1000&q=80)" },
+      { category: "SCI-FI", title: "Signal from beyond", detail: "A mysterious world with a slow tracking shot.", target: "video", prompt: "A solitary astronaut discovers a glowing signal in a silent alien valley. Atmospheric haze, subtle particles, cinematic science fiction realism, slow tracking camera move.", image: "url(https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=1000&q=80)" },
+      { category: "CAMPAIGN", title: "Made for movement", detail: "A vertical product campaign built around energy and speed.", target: "ads", prompt: "Create a premium energetic product campaign. Focus on a strong opening hook, close-up product details, a clear use moment and a memorable final call to action.", image: "url(https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1000&q=80)" },
+      { category: "EDITORIAL", title: "After the rain", detail: "A fashion-led portrait with reflective city light.", target: "image", prompt: "A cinematic editorial portrait on a rain-soaked city street at blue hour, reflective pavement, soft rim light, natural expression, premium magazine art direction.", image: "url(https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=80)" },
+      { category: "FANTASY", title: "A world of quiet giants", detail: "A large-scale environment ready for story development.", target: "cinema", prompt: "A traveller walks between enormous ancient stone structures covered in moss, distant waterfalls, soft atmospheric fog, epic scale, wide lens and slow crane movement.", image: "url(https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1000&q=80)" }
+    ];
+    var cards = presets.map(function (preset) {
+      return '<article class="preset-card"><div class="preset-visual" style="background-image:linear-gradient(0deg,rgba(5,8,12,.88),rgba(5,8,12,.05) 72%),' + preset.image + '"><span class="preset-category">' + preset.category + '</span><div class="preset-visual-title">' + preset.title + '</div></div><div class="preset-details"><p>' + preset.detail + '</p><button class="btn btn-small btn-quiet" data-action="use-preset" data-target="' + preset.target + '" data-prompt="' + esc(preset.prompt) + '">Use this direction ↗</button></div></article>';
+    }).join("");
+    return heading("FIND YOUR NEXT IDEA", "Explore directions", "Start from a visual idea, then make it your own. Presets are creative starting points, not fixed templates.", '<button class="btn btn-primary" data-view="director">Describe an idea <span>↗</span></button>') +
+      '<div class="director-box"><h3>✧ A starting point, not a limitation</h3><p>Choose a visual direction to prefill a creative brief. Change the subject, reference, camera language and settings before you continue.</p></div>' +
+      '<div class="chip-row" style="margin:0 0 16px"><button class="choice-chip selected" data-choice="all">All directions</button><button class="choice-chip" data-choice="cinematic">Cinematic</button><button class="choice-chip" data-choice="product">Product</button><button class="choice-chip" data-choice="sci-fi">Sci-fi</button><button class="choice-chip" data-choice="editorial">Editorial</button><button class="choice-chip" data-choice="fantasy">Fantasy</button></div>' +
+      '<div class="preset-grid">' + cards + '</div>';
+  }
+
   function renderVideoStudio(kind) {
     var isImage = kind === "image";
     var title = isImage ? "Image studio" : "Video studio";
@@ -158,12 +176,13 @@
   }
 
   function renderCurrentView() {
-    var names = { home: "Overview", video: "Video studio", image: "Image studio", cinema: "Cinema director", ads: "Ad studio", characters: "Characters & assets", canvas: "Creative canvas", audio: "Audio studio", editor: "Motion editor", library: "Generations", director: "AI Director" };
+    var names = { home: "Overview", explore: "Explore presets", video: "Video studio", image: "Image studio", cinema: "Cinema director", ads: "Ad studio", characters: "Characters & assets", canvas: "Creative canvas", audio: "Audio studio", editor: "Motion editor", library: "Generations", director: "AI Director" };
     breadcrumb.textContent = names[currentView] || "Overview";
     document.querySelectorAll(".nav-link[data-view]").forEach(function (node) {
       node.classList.toggle("active", node.getAttribute("data-view") === currentView);
     });
     if (currentView === "home") pageRoot.innerHTML = renderHome();
+    else if (currentView === "explore") pageRoot.innerHTML = renderExplore();
     else if (currentView === "video" || currentView === "image") pageRoot.innerHTML = renderVideoStudio(currentView);
     else if (currentView === "cinema") pageRoot.innerHTML = renderCinema();
     else if (currentView === "ads") pageRoot.innerHTML = renderAds();
@@ -237,7 +256,17 @@
   }
 
   function handleAction(action, element) {
-    if (action === "upload") {
+    if (action === "use-preset") {
+      var presetPrompt = element.getAttribute("data-prompt") || "";
+      var presetTarget = element.getAttribute("data-target") || "video";
+      openView(presetTarget);
+      var destination = document.getElementById("creationPrompt") || document.getElementById("sceneBrief") || document.getElementById("productBrief");
+      if (destination) {
+        destination.value = presetPrompt;
+        destination.focus();
+      }
+      toast("Creative direction loaded. Make it your own before continuing.", "✧");
+    } else if (action === "upload") {
       fileInput.value = "";
       fileInput.click();
     } else if (action === "generate-video") createConcept("VIDEO");
