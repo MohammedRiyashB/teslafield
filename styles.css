@@ -1351,3 +1351,13 @@ body.guest-mode:not(.guest-conversation-mode) .guest-footer .guest-footer-rights
   body.guest-mode:not(.guest-conversation-mode) .guest-footer .guest-footer-company,
   body.guest-mode:not(.guest-conversation-mode) .guest-footer .guest-footer-rights{font-size:9px}
 }
+
+
+/* User-approved exact footer: all company text on one single line. */
+body.guest-mode:not(.guest-conversation-mode) .guest-footer{
+  display:block!important;width:max-content;max-width:calc(100vw - 28px);
+  white-space:nowrap;overflow:hidden;text-overflow:clip;
+  font:500 10px/1.4 system-ui,sans-serif!important;
+  letter-spacing:.02em!important;color:rgba(225,225,225,.56)!important;
+}
+@media(max-width:760px){body.guest-mode:not(.guest-conversation-mode) .guest-footer{font-size:9px!important}}
