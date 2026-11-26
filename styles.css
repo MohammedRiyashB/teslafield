@@ -1458,3 +1458,72 @@ body.guest-mode:not(.guest-conversation-mode) .guest-footer{
  .shared-message-content{font-size:14px}
  .shared-message-footer{align-items:flex-start;flex-direction:column}
 }
+
+
+/* Signed-in empty state: keep the welcome greeting, remove the four starter prompts. */
+body.signed-in .starter-grid{display:none!important}
+body.signed-in .welcome-screen .welcome-subtitle{margin-inline:auto;text-align:center}
+
+/* Single, predictable composer row: plus and hint stay left, send stays right. */
+.composer-toolbar{
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:12px!important;
+  width:100%;
+  min-height:42px;
+}
+.composer-tools{
+  display:flex!important;
+  flex:1 1 auto;
+  align-items:center!important;
+  min-width:0;
+  gap:9px;
+}
+.composer-actions{
+  display:flex!important;
+  flex:0 0 auto;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  margin-left:auto!important;
+  gap:0!important;
+}
+.composer textarea{display:block;width:100%;margin:0;box-sizing:border-box}
+.send-button{display:grid;place-items:center;flex:0 0 40px;margin:0 0 0 auto}
+
+/* Keep each response's action row attached to the response on every viewport. */
+.message-stack{width:100%;min-width:0}
+.message-stack.assistant-stack .message-actions{
+  width:100%;
+  max-width:100%;
+  box-sizing:border-box;
+  flex-wrap:wrap;
+  justify-content:flex-start;
+  margin:6px 0 0!important;
+}
+.message-actions button{cursor:pointer;box-sizing:border-box}
+@media(max-width:520px){
+  .message-stack.assistant-stack .message-actions{
+    flex-wrap:nowrap;
+    gap:4px;
+  }
+  .message-actions button{
+    width:34px;
+    min-width:34px;
+    height:34px;
+    min-height:34px;
+    flex:0 0 34px;
+    justify-content:center;
+    padding:0;
+  }
+  .message-actions button span{display:none!important}
+}
+
+/* Shared response routes must display the share view, and keep the app hidden. */
+.app-shell[hidden],.shared-message-page[hidden]{display:none!important}
+.shared-message-page{box-sizing:border-box;width:100%}
+.shared-message-content ul,.shared-message-content ol{padding-left:24px;margin:10px 0 16px}
+.shared-message-content li{padding:3px 0}
+.shared-message-content hr{height:1px;border:0;background:var(--border);margin:18px 0}
+.shared-message-content a{color:#78aef0;overflow-wrap:anywhere}

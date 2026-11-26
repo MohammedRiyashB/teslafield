@@ -121,6 +121,7 @@
 
   function updateAccountUI() {
     const signedIn = !!currentUser;
+    document.body.classList.toggle("signed-in", signedIn);
     const displayName = signedIn ? (currentUser.displayName || (currentUser.email || "Google user").split("@")[0]) : "TESLAFIELD";
     $("accountDisplayName").textContent = displayName;
     $("accountDisplayEmail").textContent = signedIn ? (currentUser.email || "Google account") : "Sign in to your account";
@@ -138,7 +139,6 @@
     if (signedIn) {
       guestConversationStarted = false;
       document.body.classList.remove("guest-mode", "guest-conversation-mode");
-      welcome.hidden = false;
       const heading = welcome.querySelector("h1");
       const subtitle = welcome.querySelector(".welcome-subtitle");
       if (heading) heading.textContent = "Welcome to TESLAFIELD";
@@ -513,20 +513,24 @@
     try {
       const payload = JSON.stringify({ content: String(content || ""), createdAt: new Date().toISOString() });
       const bytes = new TextEncoder().encode(payload);
-      let encoded;
-      if ("CompressionStream" in window) {
+      let encoded = "j" + base64UrlEncode(bytes);
+      // Use gzip only when both ends of the share flow support it, and only when it shortens the URL.
+      if ("CompressionStream" in window && "DecompressionStream" in window) {
         try {
           const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip"));
           const compressed = new Uint8Array(await new Response(stream).arrayBuffer());
-          encoded = "g" + base64UrlEncode(compressed);
-        } catch (error) { encoded = "j" + base64UrlEncode(bytes); }
-      } else encoded = "j" + base64UrlEncode(bytes);
+          const gzipEncoded = "g" + base64UrlEncode(compressed);
+          if (gzipEncoded.length < encoded.length) encoded = gzipEncoded;
+        } catch (error) {}
+      }
       const id = Array.from(crypto.getRandomValues(new Uint8Array(18)), (v, i) => String(i === 0 ? (v % 9) + 1 : v % 10)).join("");
-      const shareUrl = location.origin + "/share/" + id + "#" + encoded;
-      const shareText = "A response shared from TESLAFIELD AI\n" + shareUrl;
+      // Keep response data in a query parameter; messaging apps often discard URL fragments.
+      const shareUrl = location.origin + "/share/" + id + "?data=" + encodeURIComponent(encoded);
       if (navigator.share) {
-        try { await navigator.share({ title: "TESLAFIELD AI response", text: shareText, url: shareUrl }); return; }
-        catch (error) { if (error && error.name === "AbortError") return; }
+        try {
+          await navigator.share({ title: "TESLAFIELD AI response", text: "A response shared from TESLAFIELD AI", url: shareUrl });
+          return;
+        } catch (error) { if (error && error.name === "AbortError") return; }
       }
       await copyText(shareUrl);
       toast("Share link copied. Send it to anyone.");
@@ -549,25 +553,31 @@
 
   async function openSharedMessagePage() {
     if (!/^\/share\/\d{12,24}\/?$/.test(location.pathname)) return false;
-    document.querySelector(".app-shell").hidden = true;
+    const appShell = document.querySelector(".app-shell");
+    if (appShell) appShell.hidden = true;
     $("sharedMessagePage").hidden = false;
     try {
-      const payload = location.hash.slice(1);
-      if (!payload || !/^[gj]/.test(payload)) throw new Error("Missing share data");
+      const query = new URLSearchParams(location.search);
+      // Prefer the query payload used by current links; retain fragment support for older links.
+      const payload = query.get("data") || location.hash.slice(1);
+      if (!payload || !/^[gj][A-Za-z0-9_-]+$/.test(payload)) throw new Error("Missing or invalid share data");
       let bytes = base64UrlDecode(payload.slice(1));
       if (payload[0] === "g") {
-        if (!("DecompressionStream" in window)) throw new Error("Compression is not supported");
+        if (!("DecompressionStream" in window)) throw new Error("This browser cannot open this compressed share link");
         const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
         bytes = new Uint8Array(await new Response(stream).arrayBuffer());
       }
+      if (bytes.byteLength > 5 * 1024 * 1024) throw new Error("Shared response is too large");
       const data = JSON.parse(new TextDecoder().decode(bytes));
       if (!data || typeof data.content !== "string" || !data.content.trim()) throw new Error("Invalid share data");
       $("sharedMessageContent").innerHTML = renderMarkdown(data.content);
+      $("copySharedMessage").hidden = false;
       $("copySharedMessage").onclick = () => copyText(data.content);
+      $("sharedMessageTitle").textContent = "A response shared from TESLAFIELD";
       document.title = "Shared response | TESLAFIELD AI";
     } catch (error) {
       $("sharedMessageTitle").textContent = "This shared response is unavailable";
-      $("sharedMessageContent").textContent = "The share link may be incomplete or altered. Ask the sender to create a new share link.";
+      $("sharedMessageContent").textContent = "The link is incomplete or its response data was removed. Ask the sender to create a fresh share link.";
       $("copySharedMessage").hidden = true;
     }
     return true;

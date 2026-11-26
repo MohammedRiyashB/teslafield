@@ -37,6 +37,35 @@ jobs:
         run: |
           node --check app.js
           node --check backend/server.js
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const assert = require('node:assert/strict');
+          const html = fs.readFileSync('index.html', 'utf8');
+          assert.match(html, /href="\/styles\.css\?v=/);
+          assert.match(html, /src="\/app\.js\?v=/);
+          assert.match(html, /src="\/theme-init\.js\?v=/);
+          assert.match(html, /<div class="composer-toolbar">\s*<div class="composer-tools">[\s\S]*?<span class="composer-hint">Ask anything<\/span>\s*<\/div>\s*<div class="composer-actions">[\s\S]*?<button class="send-button"/);
+          console.log('Frontend structure checks passed: absolute assets and one aligned composer toolbar.');
+          NODE
+          node - <<'NODE'
+          const assert = require('node:assert/strict');
+          const zlib = require('node:zlib');
+          const sample = { content: '# TESLAFIELD share test\n\nTamil: வணக்கம் — exact response.\n\n- first\n- second' };
+          const json = Buffer.from(JSON.stringify(sample), 'utf8');
+          const payloads = [
+            'j' + json.toString('base64url'),
+            'g' + zlib.gzipSync(json).toString('base64url')
+          ];
+          for (const payload of payloads) {
+            const url = new URL('https://teslafieldai.web.app/share/123456789012345678?data=' + encodeURIComponent(payload));
+            const restoredPayload = url.searchParams.get('data');
+            const bytes = restoredPayload[0] === 'g'
+              ? zlib.gunzipSync(Buffer.from(restoredPayload.slice(1), 'base64url'))
+              : Buffer.from(restoredPayload.slice(1), 'base64url');
+            assert.deepEqual(JSON.parse(bytes.toString('utf8')), sample);
+          }
+          console.log('Share-link round-trip checks passed: UTF-8, query URL, plain and gzip payloads.');
+          NODE
 
       - name: Backend security smoke tests
         run: |
@@ -117,6 +146,12 @@ jobs:
           curl --fail --location --silent --show-error "${BASE}/privacy" -o /tmp/teslafield-privacy.html
           grep -q "Privacy Policy" /tmp/teslafield-privacy.html
           echo "Verified clean /privacy page."
+          curl --fail --silent --show-error "${BASE}/share/123456789012345678?data=jZXhhbXBsZQ" -o /tmp/teslafield-share.html
+          grep -q 'class="shared-message-page"' /tmp/teslafield-share.html
+          grep -q 'href="/styles.css?v=' /tmp/teslafield-share.html
+          grep -q 'src="/app.js?v=' /tmp/teslafield-share.html
+          grep -q 'src="/theme-init.js?v=' /tmp/teslafield-share.html
+          echo "Verified /share route serves the share page with root-relative assets."
           curl --fail --silent --show-error "${BASE}/theme-init.js?v=$VERSION" -o /tmp/teslafield-theme-init.js
           grep -q "appearance.v2" /tmp/teslafield-theme-init.js
           echo "Verified live TESLAFIELD guest UI, consent controls, legal pages, PNG logo, CSS and application JavaScript."
