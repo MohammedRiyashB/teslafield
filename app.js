@@ -334,7 +334,7 @@
     const response = await fetch(API + "/api/v1/voice/synthesize", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: String(text).slice(0, 1500), language: /[\\u0B80-\\u0BFF]/.test(text) ? "Tamil" : "English", voice: "ahana" }),
+      body: JSON.stringify({ text: String(text).slice(0, 1500), language: /[\u0B80-\u0BFF]/.test(text) ? "Tamil" : "English", voice: "ahana" }),
       signal: AbortSignal.timeout(180000)
     });
     const data = await response.json().catch(() => ({}));
@@ -455,6 +455,7 @@
       controller = null;
       setGenerating(false);
       renderHistory();
+      if (voiceModeEnabled && !mediaRecorder) startRecording("conversation");
     }
   }
   async function sendMessage(value) {
