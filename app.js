@@ -13,6 +13,9 @@
   const promptInput = $("promptInput");
   const messageList = $("messageList");
   const welcome = $("welcomeScreen");
+  const composerArea = $("composerArea");
+  const composerHome = document.createComment("TESLAFIELD composer home");
+  composerArea.parentNode.insertBefore(composerHome, composerArea);
   const MAX_HISTORY = 100;
   let chats = [];
   let activeId = null;
@@ -27,6 +30,7 @@
   let authClient = null;
   let currentUser = null;
   let authReady = false;
+  let pendingGuestPrompt = "";
   let resolveAuthReady;
   const authReadyPromise = new Promise((resolve) => { resolveAuthReady = resolve; });
 
@@ -55,8 +59,51 @@
     toastTimer = setTimeout(() => box.classList.remove("visible"), 2800);
   }
 
+  function setGuestLayout(guest) {
+    document.body.classList.toggle("guest-mode", !!guest);
+    if (guest) {
+      if (composerArea.parentElement !== welcome) {
+        const starterGrid = welcome.querySelector(".starter-grid");
+        welcome.insertBefore(composerArea, starterGrid || null);
+      }
+    } else if (composerArea.parentElement !== composerHome.parentNode) {
+      composerHome.parentNode.insertBefore(composerArea, composerHome.nextSibling);
+    }
+  }
+
+  function openSignupPrompt() {
+    $("signupPromptModal").hidden = false;
+    document.body.classList.add("modal-open");
+    window.setTimeout(() => $("signupPromptSignUp").focus(), 40);
+  }
+
+  function closeSignupPrompt() {
+    $("signupPromptModal").hidden = true;
+    if ($("cookieSettingsBackdrop").hidden) document.body.classList.remove("modal-open");
+  }
+
+  function savePendingGuestPrompt(value) {
+    pendingGuestPrompt = String(value || "").trim().slice(0, 12000);
+    try {
+      if (pendingGuestPrompt) sessionStorage.setItem("teslafield.pendingGuestPrompt.v1", pendingGuestPrompt);
+      else sessionStorage.removeItem("teslafield.pendingGuestPrompt.v1");
+    } catch (error) {}
+  }
+
+  function readPendingGuestPrompt() {
+    if (pendingGuestPrompt) return pendingGuestPrompt;
+    try { return sessionStorage.getItem("teslafield.pendingGuestPrompt.v1") || ""; }
+    catch (error) { return ""; }
+  }
+
+  function clearPendingGuestPrompt() {
+    pendingGuestPrompt = "";
+    try { sessionStorage.removeItem("teslafield.pendingGuestPrompt.v1"); } catch (error) {}
+  }
+
   function updateAccountUI() {
     const signedIn = !!currentUser;
+    setGuestLayout(!signedIn);
     $("accountStatus").textContent = signedIn
       ? "Signed in securely. Your chat history stays on this device."
       : "Sign in with Google to use TESLAFIELD securely.";
@@ -64,8 +111,47 @@
     $("accountLogIn").hidden = signedIn;
     $("accountSignOut").hidden = !signedIn;
     $("accountDelete").hidden = !signedIn;
+    $("topSignUp").hidden = signedIn;
+    $("topLogIn").hidden = signedIn;
     const accountSubtitle = document.querySelector(".account-copy small");
     if (accountSubtitle) accountSubtitle.textContent = signedIn ? "Signed-in account" : "Secure sign-in required";
+  }
+
+  function initializeCookieChoices() {
+    const key = "teslafield.cookieConsent.v1";
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(key) || "null"); } catch (error) {}
+    if (!saved || saved.version !== 1 || typeof saved.essential !== "boolean") {
+      $("cookieBanner").hidden = false;
+      return;
+    }
+    $("cookieAnalytics").checked = !!saved.analytics;
+    $("cookieAdvertising").checked = !!saved.advertising;
+  }
+
+  function storeCookieChoices(analytics, advertising) {
+    const value = {
+      version: 1,
+      essential: true,
+      analytics: !!analytics,
+      advertising: !!advertising,
+      savedAt: new Date().toISOString()
+    };
+    try { localStorage.setItem("teslafield.cookieConsent.v1", JSON.stringify(value)); }
+    catch (error) { toast("Your cookie preference could not be saved in this browser."); }
+    $("cookieBanner").hidden = true;
+    $("cookieSettingsBackdrop").hidden = true;
+    document.body.classList.remove("modal-open");
+  }
+
+  function openCookieSettings() {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem("teslafield.cookieConsent.v1") || "null"); } catch (error) {}
+    $("cookieAnalytics").checked = !!(saved && saved.analytics);
+    $("cookieAdvertising").checked = !!(saved && saved.advertising);
+    $("cookieSettingsBackdrop").hidden = false;
+    document.body.classList.add("modal-open");
+    window.setTimeout(() => $("closeCookieSettings").focus(), 40);
   }
 
   function initializeFirebaseAuth() {
@@ -98,6 +184,15 @@
         } else {
           updateAccountUI();
         }
+        if (currentUser) {
+          const pending = readPendingGuestPrompt();
+          closeSignupPrompt();
+          if (pending) {
+            clearPendingGuestPrompt();
+            promptInput.value = pending;
+            window.setTimeout(() => sendMessage(pending), 0);
+          }
+        }
       });
       authClient.getRedirectResult().catch((error) => {
         if (error && error.code !== "auth/no-auth-event") {
@@ -112,14 +207,15 @@
     }
   }
 
-  async function requireAuthentication() {
+  async function requireAuthentication(promptText) {
     await authReadyPromise;
     if (currentUser) return true;
-    $("accountMenu").hidden = false;
-    $("accountButton").setAttribute("aria-expanded", "true");
-    toast(authClient
-      ? "Sign in with Google before using TESLAFIELD."
-      : "Secure sign-in is not available on this page yet. Open TESLAFIELD from its website.");
+    if (promptText) {
+      savePendingGuestPrompt(promptText);
+      promptInput.value = promptText;
+    }
+    openSignupPrompt();
+    if (!authClient) toast("Google sign-in is not initialized on this site yet.");
     return false;
   }
 
@@ -134,6 +230,7 @@
       toast("Firebase Authentication is not initialized on this site.");
       return;
     }
+    closeSignupPrompt();
     const provider = new window.firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: "select_account" });
     closeMenus();
@@ -644,7 +741,7 @@
   async function sendMessage(value) {
     const text = safeText(value === undefined ? promptInput.value : value).trim();
     if (!text || generating) return;
-    if (!(await requireAuthentication())) return;
+    if (!(await requireAuthentication(text))) return;
     if (selectedFiles.length) {
       toast("File reading is not connected yet. Remove attachments and send text only.");
       return;
@@ -824,6 +921,31 @@
   $("appearanceButton").onclick = toggleTheme;
   $("accountSignUp").onclick = accountEntry;
   $("accountLogIn").onclick = accountEntry;
+  $("topSignUp").onclick = accountEntry;
+  $("topLogIn").onclick = accountEntry;
+  $("signupPromptSignUp").onclick = accountEntry;
+  $("signupPromptLogIn").onclick = accountEntry;
+  $("closeSignupPrompt").onclick = closeSignupPrompt;
+  $("signupPromptModal").addEventListener("click", (event) => {
+    if (event.target === $("signupPromptModal")) closeSignupPrompt();
+  });
+  $("cookieRejectAll").onclick = () => storeCookieChoices(false, false);
+  $("cookieAcceptAll").onclick = () => storeCookieChoices(true, true);
+  $("cookieSettingsOpen").onclick = openCookieSettings;
+  $("privacyChoices").onclick = openCookieSettings;
+  $("closeCookieSettings").onclick = () => {
+    $("cookieSettingsBackdrop").hidden = true;
+    if ($("signupPromptModal").hidden) document.body.classList.remove("modal-open");
+  };
+  $("cookieSettingsBackdrop").addEventListener("click", (event) => {
+    if (event.target === $("cookieSettingsBackdrop")) {
+      $("cookieSettingsBackdrop").hidden = true;
+      if ($("signupPromptModal").hidden) document.body.classList.remove("modal-open");
+    }
+  });
+  $("cookieSettingsReject").onclick = () => storeCookieChoices(false, false);
+  $("cookieSettingsAccept").onclick = () => storeCookieChoices(true, true);
+  $("cookieSaveChoices").onclick = () => storeCookieChoices($("cookieAnalytics").checked, $("cookieAdvertising").checked);
   $("accountSignOut").onclick = async () => {
     if (!authClient) return;
     try { await authClient.signOut(); closeMenus(); toast("Signed out. Your chats remain in this browser under your account profile."); }
@@ -877,10 +999,20 @@
     const key = event.key.toLowerCase();
     if ((event.ctrlKey || event.metaKey) && key === "k") { event.preventDefault(); newChat(); }
     if ((event.ctrlKey || event.metaKey) && key === "f") { event.preventDefault(); $("historySearch").focus(); }
-    if (event.key === "Escape") { closeMenus(); closeSidebar(); }
+    if (event.key === "Escape") {
+      closeMenus();
+      closeSidebar();
+      if (!$("signupPromptModal").hidden) closeSignupPrompt();
+      if (!$("cookieSettingsBackdrop").hidden) {
+        $("cookieSettingsBackdrop").hidden = true;
+        if ($("signupPromptModal").hidden) document.body.classList.remove("modal-open");
+      }
+    }
   });
 
+  setGuestLayout(true);
   initializeFirebaseAuth();
+  initializeCookieChoices();
   try {
     const theme = localStorage.getItem("teslafield.appearance.v2") || "dark";
     applyTheme(theme);
