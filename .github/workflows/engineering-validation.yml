@@ -10,6 +10,8 @@ on:
       - "sw.js"
       - "backend/**"
       - "huggingface/chat-space/**"
+      - "huggingface/speech-space/**"
+      - "huggingface/voice-space/**"
       - ".github/workflows/engineering-validation.yml"
   pull_request:
     paths:
@@ -18,6 +20,8 @@ on:
       - "sw.js"
       - "backend/**"
       - "huggingface/chat-space/**"
+      - "huggingface/speech-space/**"
+      - "huggingface/voice-space/**"
       - ".github/workflows/engineering-validation.yml"
   workflow_dispatch:
 
@@ -55,7 +59,8 @@ jobs:
           node --check backend/conversation-store.js
           node --check backend/oauth-mcp.js
           node --check sw.js
-          python -m py_compile huggingface/chat-space/app.py huggingface/chat-space/response_style.py
+          node --check backend/test/live-security-smoke.js
+          python -m py_compile huggingface/chat-space/app.py huggingface/chat-space/response_style.py huggingface/speech-space/app.py huggingface/voice-space/app.py
           PYTHONPATH=huggingface/chat-space python -m unittest discover -s huggingface/chat-space/tests -v
 
       - name: Run backend API regression tests

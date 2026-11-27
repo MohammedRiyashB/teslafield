@@ -63,11 +63,19 @@ Chat completion requests may send an `Idempotency-Key` header. The API scopes th
 
 OAuth authorization requests and single-use authorization codes are held in process memory with short expirations; access tokens are HMAC-signed and resource-scoped. Keep this Render service at one instance for this initial release. Before scaling to multiple instances or using multiple regions, move the short-lived authorization state and one-time code store to shared Redis/Key Value or a database.
 
+The configured Render Free web service supports one instance only and cannot be horizontally scaled. The request rate limiter is therefore deliberately process-local for the current deployment. OAuth pending requests/codes and the idempotency cache are also process-local. Do not change the service to multiple instances until all three stores are moved to shared storage and multi-instance tests pass. A Redis/Key Value store must be explicitly provisioned for this service in the Singapore region; do not point this service at a resource in another region or reuse an unrelated workspace store. The Free tier is suitable for a single-instance hobby deployment, not a production scaling guarantee.
+
+OpenRouter chat requests include `provider.zdr=true`, `provider.data_collection="deny"` and `provider.allow_fallbacks=false`. Paid model IDs remain rejected and the exact selected `:free` model ID is sent. If no eligible provider endpoint exists, the request is expected to fail rather than use an unapproved provider. These flags are endpoint filters, not a promise that OpenRouter's operational metadata is never retained.
+
+The custom chat, speech and voice Hugging Face Spaces are public Spaces. Firebase authentication and API rate limits protect the Teslafield backend routes, not direct requests made to a public Space URL. The current design must therefore be treated as a public inference surface with provider-side quotas; do not assume website login prevents direct Space use. The speech and voice applications now configure Gradio cache cleanup for files older than 10 minutes, and generated voice source files are scheduled for deletion after 10 minutes. Hosting-provider logs and infrastructure copies are outside those application cleanup controls.
+
 Do not add model provider keys, OAuth signing secrets, Firebase service-account keys or user tokens to frontend files or the public repository.
 
 ## Model selection
 
 The browser model selector defaults to the TeslafieldAI Qwen3-0.6B Space. If `OPENROUTER_API_KEY` is configured, the API loads only current OpenRouter text-chat model IDs that explicitly end in `:free`, accept text input/output and report zero prompt/completion pricing. The browser sends only the exact selected model ID; the provider key remains on the server. The API revalidates the selected ID against the live eligible catalogue before each request. Paid IDs are rejected, and the API never uses a router or fallback model. Free provider models can still be rate-limited, unavailable or removed upstream.
+
+Each OpenRouter completion additionally requests Zero Data Retention routing, denies non-transient data collection and disables provider fallback. These preferences can make some otherwise-listed models unavailable at request time; no alternate model is selected automatically.
 
 
 ## Cloud conversation history (Stage 6)

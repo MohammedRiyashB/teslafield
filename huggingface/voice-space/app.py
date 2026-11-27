@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 import tempfile
+import threading
 from functools import lru_cache
 
 import gradio as gr
@@ -38,6 +39,15 @@ def get_tts():
     return Mithi(device="cpu")
 
 
+def remove_temp_file(path):
+    try:
+        os.remove(path)
+    except FileNotFoundError:
+        pass
+    except OSError:
+        logger.warning("Could not remove an expired temporary voice file.")
+
+
 def synthesize(text, language, voice):
     if not text or not text.strip():
         raise gr.Error("Enter the text you want spoken.")
@@ -45,12 +55,19 @@ def synthesize(text, language, voice):
         raise gr.Error("Please keep each request under 1,500 characters.")
     lang_code = LANGUAGES.get(language, "ta")
     tts = get_tts()
+    output_path = None
     try:
         audio = tts.synthesize(text.strip(), lang=lang_code, voice=(voice or "ahana").lower())
-        output_path = tempfile.NamedTemporaryFile(prefix="teslafield-voice-", suffix=".wav", delete=False).name
+        with tempfile.NamedTemporaryFile(prefix="teslafield-voice-", suffix=".wav", delete=False) as output_file:
+            output_path = output_file.name
         tts.save(audio, output_path)
+        cleanup = threading.Timer(600, remove_temp_file, args=(output_path,))
+        cleanup.daemon = True
+        cleanup.start()
         return output_path
     except Exception:
+        if output_path:
+            remove_temp_file(output_path)
         logger.exception("TTS synthesis failed")
         raise gr.Error("Voice generation failed. Please try shorter text or another voice.")
 
@@ -66,6 +83,7 @@ demo = gr.Interface(
     title="TESLAFIELD Voice Engine",
     description="Natural multilingual speech generation with Mithi v2 Flash. Tamil and English are supported. Runs on CPU.",
     examples=None,
+    delete_cache=(60, 600),
 )
 
 demo.queue(default_concurrency_limit=1)

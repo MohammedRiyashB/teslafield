@@ -292,25 +292,32 @@ async function handleConsent(req, res, context) {
   const requestId = typeof input.request_id === "string" ? input.request_id : "";
   const idToken = typeof input.id_token === "string" ? input.id_token : "";
   const pending = pendingAuthorizations.get(requestId);
-  if (!pending || pending.expiresAt <= Date.now()) {
-    pendingAuthorizations.delete(requestId);
-    return sendOAuthError(res, 400, "invalid_request", "This sign-in request expired. Return to ChatGPT and connect again.");
+  if (!pending || pending.expiresAt <= Date.now() || pending.consuming) {
+    if (pending && pending.expiresAt <= Date.now()) pendingAuthorizations.delete(requestId);
+    return sendOAuthError(res, 400, "invalid_request", "This sign-in request is expired or has already been used. Return to ChatGPT and connect again.");
   }
   if (!idToken || idToken.length > 8192) {
     return sendOAuthError(res, 401, "login_required", "Sign in with your TeslafieldAI account first.");
   }
+
+  // Reserve the one-time request before awaiting token verification. Without this
+  // guard, simultaneous consent posts could both pass the pending-state lookup.
+  pending.consuming = true;
   let firebaseUser;
   try {
     firebaseUser = await context.verifyFirebaseIdToken(idToken);
   } catch {
+    pending.consuming = false;
     return sendOAuthError(res, 401, "login_required", "Your TESLAFIELD session is invalid or expired. Sign in again.");
   }
   if (!firebaseUser || typeof firebaseUser.sub !== "string" || !firebaseUser.sub) {
+    pending.consuming = false;
     return sendOAuthError(res, 401, "login_required", "Your TeslafieldAI account could not be verified.");
   }
 
   pruneExpiredEntries(authorizationCodes, Date.now(), "expiresAt");
   if (!hasCapacity(authorizationCodes, MAX_AUTHORIZATION_CODES)) {
+    pending.consuming = false;
     return sendOAuthError(res, 503, "temporarily_unavailable", "The authorization service is temporarily at capacity. Please retry shortly.");
   }
   pendingAuthorizations.delete(requestId);
@@ -343,9 +350,9 @@ async function handleDeny(req, res) {
   }
   const requestId = typeof input.request_id === "string" ? input.request_id : "";
   const pending = pendingAuthorizations.get(requestId);
-  if (!pending || pending.expiresAt <= Date.now()) {
-    pendingAuthorizations.delete(requestId);
-    return sendOAuthError(res, 400, "invalid_request", "This sign-in request expired. Return to ChatGPT and connect again.");
+  if (!pending || pending.expiresAt <= Date.now() || pending.consuming) {
+    if (pending && pending.expiresAt <= Date.now()) pendingAuthorizations.delete(requestId);
+    return sendOAuthError(res, 400, "invalid_request", "This sign-in request is expired or already being completed.");
   }
   pendingAuthorizations.delete(requestId);
   const redirect = redirectWithQuery(pending.redirectUri, {

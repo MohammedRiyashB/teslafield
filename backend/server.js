@@ -837,6 +837,13 @@ const server = http.createServer(async (req, res) => {
               // Send only the user's exact selected model ID. No router or model fallback.
               model: model.id,
               messages: [{ role: "system", content: "You are TeslafieldAI, a helpful, accurate and respectful AI assistant. Be clear about uncertainty and never claim actions you have not performed. Response style: " + ({ concise: "be brief and direct", balanced: "give a clear answer with useful context", detailed: "provide thorough explanations and examples when useful" }[responseStyle] || "give a clear answer with useful context") + "." }, ...safeMessages],
+              // Enforce the strictest provider-side privacy route available.
+              // If no eligible endpoint exists, the request fails rather than falling back.
+              provider: {
+                zdr: true,
+                data_collection: "deny",
+                allow_fallbacks: false
+              },
               max_tokens: 384
             }),
             signal: AbortSignal.timeout(240000)
