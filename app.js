@@ -1150,6 +1150,9 @@
   }
 
   async function requestReply(chat) {
+    const idempotencyKey = window.crypto && typeof window.crypto.randomUUID === "function"
+      ? window.crypto.randomUUID()
+      : makeId() + "-" + Date.now().toString(36);
     const requestController = new AbortController();
     const requestSignal = requestController.signal;
     controller = requestController;
@@ -1162,7 +1165,7 @@
       if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
       const chatRequest = {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token, "Idempotency-Key": idempotencyKey },
         body: JSON.stringify({ messages: chat.messages.slice(-30), response_style: userPreferences.responseStyle }),
         signal: requestSignal
       };
