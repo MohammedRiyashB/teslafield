@@ -1792,6 +1792,13 @@ body.guest-mode .composer-actions{column-gap:16px!important;gap:16px!important}
 .model-option-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:650}
 .model-option-copy small{color:var(--muted);font-size:9px}
 .model-option-check{width:16px;flex:none;color:var(--text);font-size:13px;text-align:center}
+.model-picker-option.is-locked{cursor:pointer}
+.model-picker-option.is-locked:hover{background:var(--surface-2)}
+.model-picker-option.is-locked .model-option-copy strong{color:var(--muted)}
+.model-picker-option.is-locked .model-option-copy small{color:var(--muted)}
+.model-picker-locked-title{margin-top:7px;border-top:1px solid var(--border)}
+.model-picker-locked-note{padding:0 8px 5px;color:var(--muted);font-size:9px;font-weight:700;letter-spacing:.08em}
+.model-option-lock{width:20px;flex:none;text-align:center;font-size:12px;opacity:.78}
 .model-selector-native{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 @media(max-width:480px){
   .model-picker-button{height:36px;max-width:42vw;padding:0 9px;font-size:10px}

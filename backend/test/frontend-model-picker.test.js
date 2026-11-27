@@ -102,12 +102,13 @@ test("model picker displays the official provider logo beside each model and kee
   assert.match(app, /modelBrand\.label \+ " official logo"/);
   assert.match(app, /async function consumeChatStream\(response, onText\)/);
   assert.match(app, /payload\.choices\[0\]\.delta/);
-  assert.match(app, /meta\.textContent = model\.provider === "OpenRouter" \? "FREE · Rate-limited" : "FREE · TeslafieldAI"/);
+  assert.match(app, /meta\.textContent = locked \? "PRO VERSION ONLY" :/);
+  assert.match(app, /"FREE · Rate-limited" : "FREE · TeslafieldAI"/);
   assert.match(app, /FREE · Rate-limited/);
   assert.doesNotMatch(app, /"Free models only\./);
   assert.match(app, /model\.id\.endsWith\(":free"\)/);
   const rowRenderer = app.slice(app.indexOf("function renderModelPicker"), app.indexOf("function openModelPicker"));
-  assert.ok(rowRenderer.indexOf("option.append(logo)") < rowRenderer.indexOf("option.append(copy, check)"), "Round provider logo must appear to the left of the model name");
+  assert.ok(rowRenderer.indexOf("option.appendChild(logo)") < rowRenderer.indexOf("option.appendChild(copy)"), "Round provider logo must appear to the left of the model name");
   for (const id of [
     "google/gemma-4-26b-a4b-it:free",
     "google/gemma-4-31b-it:free",
@@ -150,4 +151,30 @@ test("opening the model picker repaints options and guarantees Teslafield B1 whe
   assert.match(picker, /name\.textContent = "Teslafield B1"/);
   assert.match(picker, /meta\.textContent = "FREE · TeslafieldAI"/);
   assert.match(picker, /loadModelCatalog\(\{ force: true \}\)/);
+});
+
+
+test("picker separates free chat models from display-only Pro locked models", () => {
+  assert.match(app, /const LOCKED_OPENROUTER_MODELS = \[/);
+  assert.match(app, /LOCKED MODELS/);
+  assert.match(app, /FOR PRO VERSION ONLY/);
+  assert.match(app, /option\.className = locked \? "model-picker-option is-locked"/);
+  assert.match(app, /You are not a Pro version account\. This model is locked\./);
+  assert.match(app, /aria-disabled", "true"/);
+  const rowRenderer = app.slice(app.indexOf("function renderModelPicker"), app.indexOf("function openModelPicker"));
+  assert.ok(rowRenderer.indexOf('freeHeading.textContent = "FREE MODELS"') < rowRenderer.indexOf('lockedHeading.textContent = "LOCKED MODELS"'));
+  const lockedHandler = rowRenderer.slice(rowRenderer.indexOf('option.addEventListener("click", () => {\n          toast("You are not a Pro version account.'));
+  assert.ok(lockedHandler.length > 0, "Locked model click must show the Pro-only notice");
+  assert.doesNotMatch(lockedHandler.slice(0, lockedHandler.indexOf("});")), /userPreferences\.model\s*=/, "Locked clicks must never select or route the locked model");
+  for (const id of ["openai/gpt-6.2-astra-20261117", "anthropic/claude-opus-5.5-20260921", "google/gemini-4-neon-20261118"]) {
+    assert.ok(app.includes(id), "The locked catalogue must include leading paid model families");
+  }
+});
+
+test("Pro locked catalogue is UI-only and does not modify chat request routing", () => {
+  assert.match(app, /proLocked: true/);
+  assert.match(app, /toast\("You are not a Pro version account\. This model is locked\."\)/);
+  const reply = app.slice(app.indexOf("async function requestReply(chat)"), app.indexOf("function showGuestContinueCard()"));
+  assert.match(reply, /model: userPreferences\.model/);
+  assert.doesNotMatch(reply, /LOCKED_OPENROUTER_MODELS/);
 });
