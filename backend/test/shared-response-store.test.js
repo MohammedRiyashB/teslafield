@@ -15,23 +15,35 @@ const responseDocument = (content = "Full response") => ({
   }
 });
 
-test("create stores a complete response with an authenticated Firestore write", async () => {
-  let request;
+test("create stores and publicly verifies a complete response after an authenticated Firestore write", async () => {
+  const requests = [];
   const store = createSharedResponseStore({
     projectId: "teslafieldai",
     fetchImpl: async (url, options) => {
-      request = { url, options };
-      return { ok: true, status: 200, json: async () => ({ name: "sharedResponses/" + id }) };
+      requests.push({ url, options });
+      if (options.method === "PATCH") {
+        return { ok: true, status: 200, json: async () => ({ name: "sharedResponses/" + id }) };
+      }
+      return { ok: true, status: 200, json: async () => ({
+        fields: {
+          id: { stringValue: id },
+          content: { stringValue: "Full response" },
+          createdAt: { integerValue: "1760000000000" }
+        }
+      }) };
     }
   });
   const result = await store.create(id, token, "Full response");
   assert.equal(result.id, id);
-  assert.match(request.url, /sharedResponses\//);
-  assert.equal(request.options.method, "PATCH");
-  assert.equal(request.options.headers.Authorization, "Bearer " + token);
-  const body = JSON.parse(request.options.body);
+  assert.equal(requests.length, 2);
+  assert.match(requests[0].url, /sharedResponses\//);
+  assert.equal(requests[0].options.method, "PATCH");
+  assert.equal(requests[0].options.headers.Authorization, "Bearer " + token);
+  const body = JSON.parse(requests[0].options.body);
   assert.equal(body.fields.content.stringValue, "Full response");
   assert.equal(body.fields.ownerUid, undefined);
+  assert.equal(requests[1].options.method, undefined);
+  assert.equal(requests[1].options.headers.Authorization, undefined);
 });
 
 test("get reads a share by ID without requiring authentication", async () => {
@@ -69,4 +81,24 @@ test("get rejects malformed stored documents", async () => {
     fetchImpl: async () => ({ ok: true, status: 200, json: async () => ({ fields: {} }) })
   });
   await assert.rejects(store.get(id), /INVALID_STORED_SHARE/);
+});
+
+test("create does not report success when Firestore returns 404 for the write", async () => {
+  const store = createSharedResponseStore({
+    fetchImpl: async () => ({ ok: false, status: 404, json: async () => ({}) })
+  });
+  await assert.rejects(store.create(id, token, "Full response"), (error) => {
+    assert.equal(error.message, "SHARE_STORAGE_REQUEST_FAILED");
+    assert.equal(error.status, 404);
+    return true;
+  });
+});
+
+test("create does not return a short link when the public read cannot find the saved document", async () => {
+  const store = createSharedResponseStore({
+    fetchImpl: async (_url, options) => options.method === "PATCH"
+      ? { ok: true, status: 200, json: async () => ({ name: "sharedResponses/" + id }) }
+      : { ok: false, status: 404, json: async () => ({}) }
+  });
+  await assert.rejects(store.create(id, token, "Full response"), /SHARE_WRITE_NOT_VERIFIED/);
 });

@@ -34,22 +34,25 @@ function createSharedResponseStore({ projectId, fetchImpl = fetch } = {}) {
     "/databases/(default)/documents";
 
   async function request(path, token, options = {}) {
+    const { allowNotFound = false, ...fetchOptions } = options;
     let response;
     try {
       response = await fetchImpl(root + path, {
-        ...options,
+        ...fetchOptions,
         headers: {
           Accept: "application/json",
           ...(token ? { Authorization: "Bearer " + token } : {}),
-          ...(options.body ? { "Content-Type": "application/json" } : {}),
-          ...(options.headers || {})
+          ...(fetchOptions.body ? { "Content-Type": "application/json" } : {}),
+          ...(fetchOptions.headers || {})
         },
         signal: AbortSignal.timeout(15000)
       });
     } catch {
       throw new Error("SHARE_STORAGE_UNAVAILABLE");
     }
-    if (response.status === 404) return null;
+    // A missing document is normal only for a GET lookup. Treating a write
+    // 404 as success creates a short URL for a document that was never saved.
+    if (response.status === 404 && allowNotFound) return null;
     if (!response.ok) {
       const error = new Error("SHARE_STORAGE_REQUEST_FAILED");
       error.status = response.status;
@@ -76,12 +79,22 @@ function createSharedResponseStore({ projectId, fetchImpl = fetch } = {}) {
       method: "PATCH",
       body: JSON.stringify({ fields })
     });
+
+    // Verify the same unauthenticated read used by people opening a shared
+    // link. Never return a link until Firestore confirms the document exists
+    // and contains the exact response that was submitted.
+    const persisted = await get(id);
+    if (!persisted || persisted.content !== content) {
+      throw new Error("SHARE_WRITE_NOT_VERIFIED");
+    }
     return { id, createdAt };
   }
 
   async function get(id) {
     if (typeof id !== "string" || !SHARE_ID_PATTERN.test(id)) return null;
-    const document = await request("/sharedResponses/" + encodeURIComponent(id));
+    const document = await request("/sharedResponses/" + encodeURIComponent(id), null, {
+      allowNotFound: true
+    });
     if (!document) return null;
     return decodeShare(document);
   }
