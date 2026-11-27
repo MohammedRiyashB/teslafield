@@ -103,6 +103,29 @@ function createConversationStore({ projectId, fetchImpl = fetch } = {}) {
     return "/users/" + encodeURIComponent(uid) + "/conversations";
   }
 
+  function deletedCollectionPath(uid) {
+    return "/users/" + encodeURIComponent(uid) + "/deletedConversations";
+  }
+
+  async function listDeleted(uid, token) {
+    if (!safeId(uid)) throw new Error("INVALID_USER_ID");
+    const payload = await request(deletedCollectionPath(uid) + "?pageSize=" + MAX_CONVERSATIONS, token);
+    return (Array.isArray(payload.documents) ? payload.documents : [])
+      .map((document) => {
+        const fields = Object.fromEntries(Object.entries(document.fields || {}).map(([key, value]) => [key, decodeValue(value)]));
+        return { id: fields.id || document.name.split("/").pop(), deletedAt: Number(fields.deletedAt || 0) };
+      })
+      .filter((item) => safeId(item.id));
+  }
+
+  async function writeTombstone(uid, token, id) {
+    const fields = { id: encodeValue(id), deletedAt: encodeValue(Date.now()) };
+    await request(deletedCollectionPath(uid) + "/" + encodeURIComponent(id), token, {
+      method: "PATCH",
+      body: JSON.stringify({ fields })
+    });
+  }
+
   async function list(uid, token) {
     if (!safeId(uid)) throw new Error("INVALID_USER_ID");
     const payload = await request(collectionPath(uid) + "?pageSize=" + MAX_CONVERSATIONS, token);
@@ -121,16 +144,24 @@ function createConversationStore({ projectId, fetchImpl = fetch } = {}) {
       method: "PATCH",
       body: JSON.stringify({ fields })
     });
+    // A deliberate save of this ID is the only operation that clears its delete marker.
+    await request(deletedCollectionPath(uid) + "/" + encodeURIComponent(conversation.id), token, { method: "DELETE" }).catch((error) => {
+      if (error.status !== 404) throw error;
+    });
     return conversation;
   }
 
   async function remove(uid, token, id) {
     if (!safeId(uid) || !safeId(id)) throw new Error("INVALID_CONVERSATION_ID");
-    await request(collectionPath(uid) + "/" + encodeURIComponent(id), token, { method: "DELETE" });
+    // Write the tombstone first so another device cannot resurrect a stale local copy.
+    await writeTombstone(uid, token, id);
+    await request(collectionPath(uid) + "/" + encodeURIComponent(id), token, { method: "DELETE" }).catch((error) => {
+      if (error.status !== 404) throw error;
+    });
     return true;
   }
 
-  return { list, upsert, remove };
+  return { list, listDeleted, upsert, remove };
 }
 
 module.exports = {
