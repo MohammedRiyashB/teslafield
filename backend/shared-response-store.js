@@ -1,6 +1,6 @@
 "use strict";
 
-const MAX_SHARED_RESPONSE_BYTES = 700 * 1024;
+const MAX_SHARED_RESPONSE_BYTES = 700000;
 const SHARE_ID_PATTERN = /^[a-f0-9]{24}$/;
 
 function encodeString(value) {
