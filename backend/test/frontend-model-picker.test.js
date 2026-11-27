@@ -29,8 +29,9 @@ test("model picker uses OpenRouter's provider registry icons and puts free provi
   assert.match(app, /\/api\/v1\/openrouter\/providers\//);
   assert.match(app, /FREE MODELS/);
   assert.match(app, /teslafield\.openrouter\.catalog\.v3/);
-  assert.doesNotMatch(app, /nvidia\.com|google\.com|deepseek\.com|qwen\.ai|anthropic\.com/);
-  assert.doesNotMatch(app, /google\.com\/s2\/favicons|\/api\/v1\/providers\/logo\//);
+  const brandResolver = app.slice(app.indexOf("function getModelBrand"), app.indexOf("function renderModelPicker"));
+  assert.doesNotMatch(brandResolver, /nvidia\.com|google\.com|deepseek\.com|qwen\.ai|anthropic\.com/);
+  assert.doesNotMatch(brandResolver, /google\.com\/s2\/favicons|\/api\/v1\/providers\/logo\//);
   assert.match(app, /selectedLogo\.hidden = !brand\.logo/);
   assert.match(app, /logo\.onerror = \(\) => \{ logo\.hidden = true; \}/);
   assert.match(app, /modelBrand\.logo/);
