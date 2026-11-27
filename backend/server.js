@@ -563,6 +563,7 @@ const server = http.createServer(async (req, res) => {
       available: true
     }];
     let catalogAvailable = true;
+    let catalogError = openRouterCatalog.configured ? null : "OPENROUTER_API_KEY_MISSING";
     if (openRouterCatalog.configured) {
       try {
         const remoteModels = await openRouterCatalog.listModels();
@@ -571,6 +572,8 @@ const server = http.createServer(async (req, res) => {
         }
       } catch (error) {
         catalogAvailable = false;
+        catalogError = typeof error.code === "string" ? error.code : "OPENROUTER_CATALOG_REQUEST_FAILED";
+        console.warn(JSON.stringify({ type: "openrouter_catalog_error", code: catalogError }));
       }
     }
     sendJson(res, 200, {
@@ -578,6 +581,8 @@ const server = http.createServer(async (req, res) => {
       defaultModel: "teslafield",
       openRouterConfigured: openRouterCatalog.configured,
       catalogAvailable,
+      catalogError,
+      openRouterModelCount: models.filter((model) => model.provider === "OpenRouter").length,
       models
     });
     return;
