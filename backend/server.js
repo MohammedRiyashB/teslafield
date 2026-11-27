@@ -608,6 +608,7 @@ const server = http.createServer(async (req, res) => {
       catalogAvailable,
       catalogError,
       openRouterModelCount: models.filter((model) => model.provider === "OpenRouter").length,
+      openRouterCatalogDiagnostics: openRouterCatalog.getDiagnostics(),
       models
     });
     return;
