@@ -49,7 +49,6 @@ jobs:
 
   deploy-speech:
     name: Deploy Speech Engine
-    if: github.event_name == 'workflow_dispatch' || contains(join(github.event.head_commit.modified, ','), 'huggingface/speech-space/') || contains(join(github.event.head_commit.added, ','), 'huggingface/speech-space/') || contains(join(github.event.head_commit.removed, ','), 'huggingface/speech-space/')
     needs: validate
     runs-on: ubuntu-latest
     steps:
@@ -67,7 +66,6 @@ jobs:
 
   deploy-voice:
     name: Deploy Voice Engine
-    if: github.event_name == 'workflow_dispatch' || contains(join(github.event.head_commit.modified, ','), 'huggingface/voice-space/') || contains(join(github.event.head_commit.added, ','), 'huggingface/voice-space/') || contains(join(github.event.head_commit.removed, ','), 'huggingface/voice-space/')
     needs: validate
     runs-on: ubuntu-latest
     steps:

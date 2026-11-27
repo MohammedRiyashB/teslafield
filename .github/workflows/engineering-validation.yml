@@ -12,7 +12,7 @@ on:
       - "huggingface/chat-space/**"
       - "huggingface/speech-space/**"
       - "huggingface/voice-space/**"
-      - ".github/workflows/engineering-validation.yml"
+      - ".github/workflows/**"
   pull_request:
     paths:
       - "app.js"
