@@ -1480,7 +1480,7 @@
     const preferred = userPreferences.model || "teslafield";
     select.replaceChildren();
     const groups = [
-      { label: "FREE MODELS", models: availableModels.filter((model) => model.free) },
+      { label: "FREE / $0 MODELS", models: availableModels.filter((model) => model.free) },
       { label: "PAID MODELS · OPENROUTER", models: availableModels.filter((model) => !model.free) }
     ];
     groups.forEach((group) => {
@@ -1491,7 +1491,7 @@
         const option = document.createElement("option");
         option.value = model.id;
         const formatPrice = (value) => Number(value || 0).toFixed(6).replace(/\.?0+$/, "");
-        const price = model.free ? "Free" :
+        const price = model.free ? (model.provider === "OpenRouter" && model.id !== "openrouter/free" && model.freeTier !== true ? "$0 model price · account conditions may apply" : "Free") :
           "$" + formatPrice(model.promptPerMillion) + " USD in / $" + formatPrice(model.completionPerMillion) + " USD out per 1M tokens";
         option.textContent = model.name + " · " + price;
         optgroup.appendChild(option);
@@ -1509,7 +1509,7 @@
     if (hint) {
       const routerReady = availableModels.some((model) => model.provider === "OpenRouter");
       hint.textContent = routerReady
-        ? "When selected, your chat messages are sent to OpenRouter. Paid models use your OpenRouter account; prices are shown per 1M tokens."
+        ? "When selected, messages are sent to OpenRouter. Paid models use your account. Some $0 models may still require account credits; :free variants are free but rate-limited. Prices are shown per 1M tokens."
         : "TeslafieldAI Free is active. More choices require a server-side OpenRouter key.";
     }
   }
@@ -1540,7 +1540,7 @@
     try { localStorage.setItem("teslafield.preferences.v1", JSON.stringify(userPreferences)); } catch (error) {}
     const model = availableModels.find((item) => item.id === selected);
     if (model.provider === "OpenRouter") {
-      toast(model.free ? "OpenRouter Free selected. Your messages go to OpenRouter; provider limits apply." : "Paid OpenRouter model selected. Your messages go to OpenRouter and usage charges may apply.");
+      toast(model.free ? "OpenRouter $0 model selected. Your messages go to OpenRouter; provider limits and account conditions apply." : "Paid OpenRouter model selected. Your messages go to OpenRouter and usage charges may apply.");
     } else {
       toast("Preferred model: " + model.name);
     }
