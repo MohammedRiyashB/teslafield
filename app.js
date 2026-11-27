@@ -1874,7 +1874,8 @@
     const preferred = userPreferences.model || "teslafield";
     select.replaceChildren();
     const groups = [
-      { label: "FREE MODELS", models: availableModels.filter((model) => model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true) },\n      { label: "TESLAFIELD", models: availableModels.filter((model) => model.id === "teslafield") }
+      { label: "FREE MODELS", models: availableModels.filter((model) => model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true) },
+      { label: "TESLAFIELD", models: availableModels.filter((model) => model.id === "teslafield") }
     ];
     groups.forEach((group) => {
       if (!group.models.length) return;
@@ -1956,16 +1957,26 @@
       status.textContent = modelCatalogStatus;
     }
     const groups = [];
+    const freeProviders = availableModels.filter((model) =>
+      model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true
+    );
+    const providerGroups = new Map();
+    freeProviders.forEach((model) => {
+      const brand = getModelBrand(model);
+      if (!providerGroups.has(brand.key)) {
+        providerGroups.set(brand.key, { key: brand.key, title: brand.label, brand, models: [] });
+      }
+      providerGroups.get(brand.key).models.push(model);
+    });
+    if (freeProviders.length) {
+      const freeHeading = document.createElement("div");
+      freeHeading.className = "model-picker-group-title";
+      freeHeading.textContent = "FREE MODELS";
+      list.appendChild(freeHeading);
+    }
+    groups.push(...Array.from(providerGroups.values()).sort((a, b) => a.title.localeCompare(b.title)));
     const own = availableModels.filter((model) => model.id === "teslafield");
     if (own.length) groups.push({ key: "teslafield", title: "TESLAFIELD", models: own });
-    const providerGroups = new Map();
-    availableModels.filter((model) => model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true)
-      .forEach((model) => {
-        const brand = getModelBrand(model);
-        if (!providerGroups.has(brand.key)) providerGroups.set(brand.key, { key: brand.key, title: brand.label, brand, models: [] });
-        providerGroups.get(brand.key).models.push(model);
-      });
-    if (freeProviders.length) {\n      const freeHeading = document.createElement("div");\n      freeHeading.className = "model-picker-group-title";\n      freeHeading.textContent = "FREE MODELS";\n      list.appendChild(freeHeading);\n    }\n    groups.push(...Array.from(providerGroups.values()).sort((a, b) => a.title.localeCompare(b.title)));\n    const own = availableModels.filter((model) => model.id === "teslafield");\n    if (own.length) groups.push({ key: "teslafield", title: "TESLAFIELD", models: own });
     groups.forEach((group) => {
       if (!group.models.length) return;
       const heading = document.createElement("div");
