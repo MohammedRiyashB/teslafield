@@ -1,6 +1,7 @@
 "use strict";
 
 const crypto = require("node:crypto");
+const { pruneExpiredEntries, hasCapacity } = require("./security-collections");
 
 const PUBLIC_BASE_URL = trimSlash(process.env.PUBLIC_BASE_URL || "https://teslafield-api.onrender.com");
 const MCP_RESOURCE = PUBLIC_BASE_URL + "/mcp";
@@ -10,6 +11,8 @@ const REQUIRED_SCOPE = "teslafield:chat";
 const KNOWN_PROTOCOL_VERSIONS = new Set(["2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"]);
 const pendingAuthorizations = new Map();
 const authorizationCodes = new Map();
+const MAX_PENDING_AUTHORIZATIONS = 5_000;
+const MAX_AUTHORIZATION_CODES = 5_000;
 
 function trimSlash(value) {
   return String(value || "").replace(/\/+$/, "");
@@ -30,6 +33,13 @@ function sendJson(res, status, payload, headers = {}) {
 
 function readBody(req, maxBytes = 16384) {
   return new Promise((resolve, reject) => {
+    const contentLength = req.headers["content-length"];
+    if (contentLength !== undefined &&
+        (!/^[0-9]+$/.test(String(contentLength)) || Number(contentLength) > maxBytes)) {
+      req.resume();
+      reject(new Error("BODY_TOO_LARGE"));
+      return;
+    }
     let body = "";
     let size = 0;
     let tooLarge = false;
@@ -46,6 +56,7 @@ function readBody(req, maxBytes = 16384) {
       if (tooLarge) return reject(new Error("BODY_TOO_LARGE"));
       resolve(body);
     });
+    req.on("aborted", () => reject(new Error("REQUEST_ABORTED")));
     req.on("error", reject);
   });
 }
@@ -244,6 +255,10 @@ async function handleAuthorize(req, res) {
     return sendOAuthError(res, unavailable ? 503 : 400, unavailable ? "temporarily_unavailable" : "invalid_client", "The ChatGPT client metadata or registered redirect URI could not be verified.");
   }
 
+  pruneExpiredEntries(pendingAuthorizations, Date.now(), "expiresAt");
+  if (!hasCapacity(pendingAuthorizations, MAX_PENDING_AUTHORIZATIONS)) {
+    return sendOAuthError(res, 503, "temporarily_unavailable", "The authorization service is temporarily at capacity. Please retry shortly.");
+  }
   const requestId = crypto.randomBytes(24).toString("base64url");
   pendingAuthorizations.set(requestId, {
     clientId,
@@ -294,6 +309,10 @@ async function handleConsent(req, res, context) {
     return sendOAuthError(res, 401, "login_required", "Your TeslafieldAI account could not be verified.");
   }
 
+  pruneExpiredEntries(authorizationCodes, Date.now(), "expiresAt");
+  if (!hasCapacity(authorizationCodes, MAX_AUTHORIZATION_CODES)) {
+    return sendOAuthError(res, 503, "temporarily_unavailable", "The authorization service is temporarily at capacity. Please retry shortly.");
+  }
   pendingAuthorizations.delete(requestId);
   const code = crypto.randomBytes(32).toString("base64url");
   authorizationCodes.set(code, {
@@ -626,14 +645,8 @@ async function handleOAuthMcp(req, res, context) {
 
 const cleanup = setInterval(() => {
   const now = Date.now();
-  for (const [key, value] of pendingAuthorizations) {
-    if (now >= value.expiresAt) pendingAuthorizations.delete(key);
-  }
-  for (const [key, value] of authorizationCodes) {
-    if (now >= value.expiresAt) authorizationCodes.delete(key);
-  }
-  if (pendingAuthorizations.size > 5000) pendingAuthorizations.clear();
-  if (authorizationCodes.size > 5000) authorizationCodes.clear();
+  pruneExpiredEntries(pendingAuthorizations, now, "expiresAt");
+  pruneExpiredEntries(authorizationCodes, now, "expiresAt");
 }, 60_000);
 if (typeof cleanup.unref === "function") cleanup.unref();
 

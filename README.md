@@ -9,7 +9,7 @@ TeslafieldAI is an independent AI assistant project with a browser-based chat in
 | Web client | Static HTML, CSS and JavaScript; installable PWA shell | Implemented |
 | Authentication | Firebase Authentication with Google sign-in; API verifies Firebase ID tokens | Implemented |
 | Chat API | Node.js HTTP service on Render | Implemented |
-| Chat model | TeslafieldAI Qwen3-0.6B; optional OpenRouter free and paid chat models | Local free model is default; OpenRouter is opt-in |
+| Chat model | TeslafieldAI Qwen3-0.6B; optional OpenRouter `:free` text-chat models | Exact selected ID only; no paid models or automatic fallback |
 | Response UX | Complete-response chat with a thinking indicator; token-by-token rendering is intentionally not used by the current web client | Implemented |
 | Speech input | Browser MediaRecorder + speech transcription endpoint | Implemented; provider availability varies |
 | Voice output | Text-to-speech endpoint | Implemented; provider availability varies |

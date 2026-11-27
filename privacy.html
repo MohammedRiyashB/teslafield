@@ -31,7 +31,7 @@
 
     <h2>4. Files and audio</h2>
     <p>File selection currently performs browser-side file type, size and signature checks. Selected files remain on your device; file analysis and file upload through the Teslafield chat composer are not currently enabled.</p>
-    <p>Microphone recording and audio processing are currently disabled in the website interface. If these features are reintroduced, this policy will be updated before they become available.</p>
+    <p>Voice recording and speech transcription are available only after you sign in and grant microphone permission. Audio is sent to the backend for transcription; voice generation sends the text you choose to read aloud to the configured voice provider. Do not record another person without their permission.</p>
 
     <h2>5. Security logs</h2>
     <p>Teslafield's application security audit messages are designed not to record prompt text, conversation bodies, audio, file names, passwords or authentication tokens. They may record the event type, API route, timestamp and a shortened hash derived from the Firebase user ID. Hosting providers may also maintain infrastructure and network logs under their own policies.</p>
@@ -42,7 +42,7 @@
     <p>You can reopen the consent choices at any time using “Your privacy choices” on the first-visit screen.</p>
 
     <h2>7. Account deletion</h2>
-    <p>The account deletion control requests deletion of your Firebase Authentication account and removes that account's locally saved conversation history from the current browser. It does not currently bulk-delete the account's Firestore cloud conversations. Delete cloud conversations individually before account deletion if cloud history is enabled. It also does not delete data held by Google, Hugging Face, OpenRouter or other external providers, or browser copies on other devices.</p>
+    <p>The account deletion control first attempts to delete known cloud conversation contents while the Firebase session is valid, then deletes the Firebase Authentication account and the local conversation cache for that account on the current browser. To prevent an older offline device from silently restoring a deleted conversation, minimal deletion-marker metadata (conversation ID and deletion timestamp) may remain in Firestore. These markers do not contain conversation messages. If cloud cleanup fails, account deletion is stopped and you are asked to retry. This process does not delete data held by Google, Hugging Face, OpenRouter or other external providers, or local browser copies on other devices.</p>
 
     <h2>8. Data minimisation</h2>
     <p>Teslafield aims to collect only information needed to authenticate requests, operate the interface and protect the API. We do not currently operate advertising or analytics trackers on the website.</p>

@@ -16,7 +16,7 @@ Node.js API for the TESLAFIELD web app and ChatGPT MCP connection.
 - `GET /` — service information
 - `GET /health` — Render health check
 - `GET /api/v1/status` — integration status
-- `GET /api/v1/models` — available free and paid text models; paid catalogue requires OpenRouter configuration
+- `GET /api/v1/models` — Teslafield B1 plus eligible OpenRouter `:free` text-chat models only
 - `GET /api/v1/warmup` — warmup checks for the AI integrations
 - `GET /api/v1/conversations` — Firebase-authenticated list of the signed-in user's cloud conversations
 - `PUT /api/v1/conversations` — Firebase-authenticated create/update of one owned conversation
@@ -49,7 +49,7 @@ openssl rand -base64 48
 Keep this value only in Render's environment settings. Do not commit it or paste it into GitHub. Rotating it immediately invalidates existing MCP access tokens.
 
 Optional settings:
-- `OPENROUTER_API_KEY` — optional server-side key for OpenRouter free and paid chat models. Store only in Render environment settings. The local TeslafieldAI Qwen model remains the default when this is absent. Paid models are selected explicitly by the user and can incur OpenRouter charges; there is no automatic paid fallback.
+- `OPENROUTER_API_KEY` — optional server-side key for eligible OpenRouter `:free` chat models only. Store it only in Render environment settings. The local TeslafieldAI Qwen model remains the default when this is absent. Paid model IDs are rejected by the API; there is no paid routing or automatic model fallback.
 - `PUBLIC_BASE_URL` — defaults to `https://teslafield-api.onrender.com`
 - `TESLAFIELD_OAUTH_PAGE` — defaults to `https://teslafieldai.web.app/oauth`
 - `FIREBASE_PROJECT_ID` — defaults to `teslafieldai`
@@ -67,7 +67,7 @@ Do not add model provider keys, OAuth signing secrets, Firebase service-account 
 
 ## Model selection
 
-The browser model selector defaults to the existing TeslafieldAI Qwen3-0.6B Space. If `OPENROUTER_API_KEY` is configured, the API loads the current OpenRouter text-chat catalogue, separates zero-priced models from paid models, and returns price-per-million-token metadata for the UI. The browser sends only the selected model ID; the provider key remains on the server. The API validates model IDs against the live provider catalogue before making a request and includes the selected model in the idempotency fingerprint. Free provider models can still be rate-limited or unavailable. Paid models are never selected automatically; users must explicitly choose one.
+The browser model selector defaults to the TeslafieldAI Qwen3-0.6B Space. If `OPENROUTER_API_KEY` is configured, the API loads only current OpenRouter text-chat model IDs that explicitly end in `:free`, accept text input/output and report zero prompt/completion pricing. The browser sends only the exact selected model ID; the provider key remains on the server. The API revalidates the selected ID against the live eligible catalogue before each request. Paid IDs are rejected, and the API never uses a router or fallback model. Free provider models can still be rate-limited, unavailable or removed upstream.
 
 
 ## Cloud conversation history (Stage 6)
@@ -83,7 +83,7 @@ The web client retains localStorage as an offline cache, merges remote and local
 
 Deletion is protected against stale offline devices: the client saves a local deletion marker immediately, the API writes a durable owner-scoped Firestore tombstone before deleting the conversation document, and sync filters tombstoned IDs before merging local and remote history. Tombstones are retained and paginated so an old offline copy cannot silently restore a deleted chat. A deliberate explicit save of the same ID clears its tombstone.
 
-The chat-history Export action downloads the currently synchronized local history as JSON. Account deletion first attempts to remove known cloud conversations and tombstones while the Firebase ID token is valid, then deletes the Firebase Auth account and local data. If cloud cleanup fails, account deletion is stopped. This does not delete records that external AI providers may retain under their own policies.
+The chat-history Export action downloads the currently synchronized local history as JSON. Account deletion first attempts to delete known cloud conversation documents while the Firebase ID token is valid, then deletes the Firebase Auth account and local data on the current browser. The conversation-delete endpoint also writes minimal deletion tombstones (conversation IDs and timestamps) to prevent stale offline devices from restoring removed conversations; these markers can remain after account deletion and do not contain message bodies. If cloud cleanup fails, account deletion is stopped. This does not delete data retained by external AI providers or local browser copies on other devices.
 
 Each conversation is validated (safe document ID, message role/content limits and a 400 KiB serialized size cap). API user identity always comes from the verified Firebase token, never from a client-supplied UID.
 

@@ -574,7 +574,7 @@
     if (!currentUser) return;
     const user = currentUser;
     const uid = user.uid;
-    if (!window.confirm("Permanently delete your TeslafieldAI account and its cloud conversations? This also removes local chat data on this device. External AI providers may retain data under their own policies. This cannot be undone.")) return;
+    if (!window.confirm("Permanently delete your TeslafieldAI account and cloud conversation contents? This also removes local chat data on this device. Minimal conversation deletion markers may remain in Firestore to prevent stale offline devices from restoring deleted chats. External AI providers may retain data under their own policies. This cannot be undone.")) return;
     try {
       const token = await user.getIdToken();
       const remote = await cloudHistoryRequest("GET", token);
@@ -597,7 +597,7 @@
       cloudSyncedDeletedIds = new Set();
       activeId = null;
       renderConversation();
-      toast("Your TeslafieldAI account and cloud chat data were deleted.");
+      toast("Your account and cloud conversation contents were deleted. Minimal deletion markers may remain to prevent stale-device restores.");
     } catch (error) {
       if (error && error.code === "auth/requires-recent-login") {
         toast("For security, sign in again with Google and retry account deletion.");
@@ -975,6 +975,35 @@
     const binary = atob(normalized + "=".repeat((4 - normalized.length % 4) % 4));
     return Uint8Array.from(binary, (char) => char.charCodeAt(0));
   }
+  const MAX_SHARED_RESPONSE_BYTES = 5 * 1024 * 1024;
+  const MAX_SHARED_PAYLOAD_CHARS = Math.ceil((MAX_SHARED_RESPONSE_BYTES + 128 * 1024) * 4 / 3) + 8;
+
+  async function readStreamWithLimit(stream, maxBytes) {
+    const reader = stream.getReader();
+    const chunks = [];
+    let total = 0;
+    try {
+      while (true) {
+        const part = await reader.read();
+        if (part.done) break;
+        total += part.value.byteLength;
+        if (total > maxBytes) {
+          try { await reader.cancel(); } catch (error) {}
+          throw new Error("Shared response is too large");
+        }
+        chunks.push(part.value);
+      }
+    } finally {
+      try { reader.releaseLock(); } catch (error) {}
+    }
+    const result = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+      result.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return result;
+  }
 
   async function openSharedMessagePage() {
     if (!/^\/share\/\d{12,24}\/?$/.test(location.pathname)) return false;
@@ -985,14 +1014,19 @@
       const query = new URLSearchParams(location.search);
       // Prefer the query payload used by current links; retain fragment support for older links.
       const payload = query.get("data") || location.hash.slice(1);
-      if (!payload || !/^[gj][A-Za-z0-9_-]+$/.test(payload)) throw new Error("Missing or invalid share data");
+      if (!payload || payload.length > MAX_SHARED_PAYLOAD_CHARS || !/^[gj][A-Za-z0-9_-]+$/.test(payload)) {
+        throw new Error("Missing, invalid or oversized share data");
+      }
+      if (payload[0] === "j" && payload.length > Math.ceil(MAX_SHARED_RESPONSE_BYTES * 4 / 3) + 4) {
+        throw new Error("Shared response is too large");
+      }
       let bytes = base64UrlDecode(payload.slice(1));
       if (payload[0] === "g") {
         if (!("DecompressionStream" in window)) throw new Error("This browser cannot open this compressed share link");
         const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
-        bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+        bytes = await readStreamWithLimit(stream, MAX_SHARED_RESPONSE_BYTES);
       }
-      if (bytes.byteLength > 5 * 1024 * 1024) throw new Error("Shared response is too large");
+      if (bytes.byteLength > MAX_SHARED_RESPONSE_BYTES) throw new Error("Shared response is too large");
       const data = JSON.parse(new TextDecoder().decode(bytes));
       if (!data || typeof data.content !== "string" || !data.content.trim()) throw new Error("Invalid share data");
       $("sharedMessageContent").innerHTML = renderMarkdown(data.content);
