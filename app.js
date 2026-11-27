@@ -630,6 +630,7 @@
       cloudSyncFingerprints = new Map(remote.map((chat) => [chat.id, cloudConversationFingerprint(chat)]));
       cloudSyncReady = true;
       renderConversation();
+      cloudSyncBusy = false;
       await pushCloudHistoryChanges();
     } catch (error) {
       cloudSyncReady = false;
