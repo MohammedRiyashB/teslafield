@@ -74,11 +74,17 @@ The browser model selector defaults to the existing TeslafieldAI Qwen3-0.6B Spac
 
 The API stores conversations in the existing Firebase project's default Cloud Firestore database. It uses the caller's Firebase ID token with the Firestore REST API, so Firestore Security Rules enforce ownership; no service-account private key or paid database is added to the backend.
 
-Before cloud sync can work, the project owner must:
-1. Open the Firebase console for project `teslafieldai` and create/enable the default Cloud Firestore database (choose a region after reviewing data-residency needs).
-2. From a trusted local checkout with Firebase CLI authenticated as a project administrator, run `firebase deploy --only firestore:rules --project teslafieldai`. The repository's `firestore.rules` allows a signed-in user to access only `users/{their-uid}/conversations/*`.
-3. Confirm the Firestore API is enabled for the project. The app will continue using browser-local history if Firestore is not ready.
+Before cross-device cloud sync can work, the project owner must:
+1. Open the Firebase console for project `teslafieldai` and create/enable the default Cloud Firestore database. Choose a region only after reviewing data-residency needs.
+2. Confirm the Cloud Firestore API is enabled.
+3. From a trusted local checkout with Firebase CLI authenticated as a project administrator, run `firebase deploy --only firestore:rules --project teslafieldai`. The repository's `firestore.rules` permits a signed-in user to access only their own `users/{uid}/conversations/*` and `users/{uid}/deletedConversations/*` documents.
 
-The Firebase Spark plan currently includes a no-cost Firestore Standard quota of 1 GiB stored data, 50,000 document reads/day, 20,000 writes/day, 20,000 deletes/day and 10 GiB/month outbound transfer. The free quota applies to one database per project; on Spark, reaching a quota can stop that product until the next monthly cycle. Check the current Firebase pricing and quotas before enabling public usage.\n\nThe web client keeps its localStorage cache for offline resilience, merges remote and local conversations by their `updated` timestamp on sign-in and refreshes when the page regains focus. Changes are uploaded through the authenticated API. Cloud sync is not a realtime Firestore listener; it refreshes on sign-in, page focus and local edits. A failed cloud request never deletes the local copy.
+The web client retains localStorage as an offline cache, merges remote and local conversations on sign-in, refreshes when the page regains focus, and uploads local edits through the authenticated API. This is foreground/online synchronization, not a realtime Firestore listener.
 
-Each conversation is validated (safe document ID, message role/content limits and a 400 KiB serialized size cap). API user identity always comes from the verified Firebase token, never from a client-supplied UID. Cloud data is not automatically erased when a Firebase account is deleted; account deletion/export lifecycle and conflict/tombstone handling remain follow-up work before public release.
+Deletion is protected against stale offline devices: the client saves a local deletion marker immediately, the API writes a durable owner-scoped Firestore tombstone before deleting the conversation document, and sync filters tombstoned IDs before merging local and remote history. Tombstones are retained and paginated so an old offline copy cannot silently restore a deleted chat. A deliberate explicit save of the same ID clears its tombstone.
+
+The chat-history Export action downloads the currently synchronized local history as JSON. Account deletion first attempts to remove known cloud conversations and tombstones while the Firebase ID token is valid, then deletes the Firebase Auth account and local data. If cloud cleanup fails, account deletion is stopped. This does not delete records that external AI providers may retain under their own policies.
+
+Each conversation is validated (safe document ID, message role/content limits and a 400 KiB serialized size cap). API user identity always comes from the verified Firebase token, never from a client-supplied UID.
+
+The Firebase Spark plan has historically included a no-cost Firestore Standard quota, but quotas, pricing and eligibility can change. Check the current Firebase pricing and quotas before enabling public usage. On free quotas, reaching a limit may stop Firestore operations until the quota resets. This implementation does not create a database, select its region, deploy rules, or enable billing.
