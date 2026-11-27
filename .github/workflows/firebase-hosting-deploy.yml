@@ -77,6 +77,13 @@ jobs:
           assert.ok(uiCss.includes(".message-row.user .message-content") && uiCss.includes("background:var(--surface-2)!important"), "User messages must use theme-aware ChatGPT-style bubbles");
           assert.ok(app.includes('document.body.classList.toggle("sidebar-collapsed")'), "Desktop menu must toggle the sidebar");
           assert.ok(uiCss.includes(".composer-shell") && uiCss.includes("max-width:768px!important"), "Composer must use a centered ChatGPT-style width");
+          assert.ok(uiCss.includes("body.signed-in:not(.guest-mode) .conversation-scroll") && uiCss.includes("overflow-y:auto!important"), "Signed-in messages must remain the scrolling layer");
+          assert.ok(uiCss.includes("body.signed-in:not(.guest-mode) .topbar") && uiCss.includes("pointer-events:none!important"), "Top controls must float over the conversation");
+          assert.ok(uiCss.includes("border-radius:50%!important") && uiCss.includes("body.signed-in:not(.guest-mode) .connect-entry-button"), "Menu and CONNECTO controls must be circular");
+          assert.ok(uiCss.includes("border-radius:999px!important") && uiCss.includes("composer-model-row .model-picker-button"), "Floating model selector must be a capsule");
+          assert.ok(uiCss.includes("body.signed-in:not(.guest-mode) .composer-area") && uiCss.includes("inset:auto 0 0 0!important"), "Composer must be fixed as a floating bottom dock");
+          assert.ok(uiCss.includes("backdrop-filter:blur(22px) saturate(150%)!important"), "Composer must have a translucent glass surface");
+          assert.ok(uiCss.includes("body.signed-in:not(.guest-mode) .guest-legal{display:none!important}"), "No extra footer line should appear below the signed-in dock");
           assert.match(html, /id="personalizeModal"/);
           assert.ok(app.includes('/api/v1/chat/completions'), 'Frontend must call the complete-response model endpoint');
           assert.ok(!app.includes('/api/v1/chat/stream'), 'Frontend must not render token-by-token streaming');
@@ -117,7 +124,7 @@ jobs:
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-icon-192.png' && icon.sizes === '192x192'));
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-icon-512.png' && icon.sizes === '512x512'));
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-pwa-icon.svg'));
-          assert.ok(fs.readFileSync('sw.js', 'utf8').includes('teslafield-pwa-shell-v10'));
+          assert.ok(fs.readFileSync('sw.js', 'utf8').includes('teslafield-pwa-shell-v11'));
           assert.ok(fs.readFileSync('theme-init.js', 'utf8').includes('teslafield.appearance.v2'));
           const chatEngine = fs.readFileSync('huggingface/chat-space/app.py', 'utf8');
           assert.ok(chatEngine.includes('MODEL_ID = "Qwen/Qwen3-0.6B"'));
@@ -247,7 +254,7 @@ jobs:
           curl --fail --silent --show-error "${BASE}/manifest.webmanifest" -o /tmp/teslafield-manifest.json
           node -e "const m=JSON.parse(require('node:fs').readFileSync('/tmp/teslafield-manifest.json','utf8')); if(m.id!=='/' || m.display!=='standalone') process.exit(1)"
           curl --fail --silent --show-error "${BASE}/sw.js?verify=${GITHUB_SHA}" -o /tmp/teslafield-sw.js
-          grep -q "teslafield-pwa-shell-v10" /tmp/teslafield-sw.js
+          grep -q "teslafield-pwa-shell-v11" /tmp/teslafield-sw.js
           curl --fail --silent --show-error "${BASE}/teslafield-pwa-icon.svg" -o /tmp/teslafield-icon.svg
           grep -q "<svg" /tmp/teslafield-icon.svg
           curl --fail --silent --show-error "${BASE}/teslafield-icon-192.png" -o /tmp/teslafield-icon-192.png
@@ -275,6 +282,10 @@ jobs:
           grep -q "body.signed-in .connect-entry-button" /tmp/teslafield-styles.css
           grep -q "background:var(--surface-2)!important" /tmp/teslafield-styles.css
           grep -q "max-width:768px!important" /tmp/teslafield-styles.css
+          grep -q "body.signed-in:not(.guest-mode) .conversation-scroll" /tmp/teslafield-styles.css
+          grep -q "backdrop-filter:blur(22px) saturate(150%)!important" /tmp/teslafield-styles.css
+          grep -q "border-radius:999px!important" /tmp/teslafield-styles.css
+          grep -q "inset:auto 0 0 0!important" /tmp/teslafield-styles.css
           grep -q 'classList.toggle("sidebar-collapsed")' /tmp/teslafield-app.js
           curl --fail --location --silent --show-error "${BASE}/terms" -o /tmp/teslafield-terms.html
           grep -q "Terms of Use" /tmp/teslafield-terms.html
