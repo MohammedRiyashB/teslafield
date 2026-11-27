@@ -161,3 +161,25 @@ This document is a measured engineering roadmap, not a claim that every category
 - JavaScript syntax checks (including `backend/model-catalog.js`) and Python compilation passed.
 - **35 Node.js tests and 5 Python tests passed; zero failures.**
 - This validates code in the engineering branch only; no production deployment or merge was performed.
+
+
+### Stage 5 UX refinement — branded model capsule (implementation in progress)
+
+- Replace the native select appearance with a compact capsule in the composer.
+- Open an anchored popup above the capsule, with Teslafield B1 and its own brand logo first, followed by OpenRouter free and paid models with the OpenRouter mark and provider-supplied model names.
+- Keep the native select hidden as the existing model-selection contract so preference persistence and request routing remain compatible.
+- The OpenRouter free section is capped at 13 displayed catalogue entries; the catalogue is dynamic and can return fewer than 13 when fewer compatible free text models are available. Paid models remain in their own section.
+- Manual Android browser/device visual testing is still required.
+
+### Stage 6 — cloud conversation history (initial implementation; configuration and validation pending)
+
+- Add a Firestore REST storage adapter with per-user document paths derived only from the verified Firebase UID.
+- Add authenticated GET, PUT and DELETE conversation endpoints; use the caller's Firebase ID token so Firestore Security Rules enforce owner-only access.
+- Add safe conversation/document ID validation, message role and length validation, and a 400 KiB per-conversation size cap.
+- Add owner-only rules in `firestore.rules` and register the rules file in `firebase.json`.
+- Keep localStorage as the offline cache; merge local and cloud conversations by update timestamp on sign-in, upload local changes, and refresh when the app regains focus.
+- Add backend unit and unauthenticated API/CORS regression tests.
+- No database has been provisioned, no rules have been deployed, and no cloud data has been written in production. The project owner must create the default Firestore database and deploy rules using the instructions in `backend/README.md`.
+- Known remaining work before Stage 6 can be called complete: deterministic conflict/deletion tombstones, account deletion/export lifecycle, Firestore emulator/integration tests, live cross-device tests, and confirmation of the project's Firestore free quota and region.
+
+**Current status:** Stage 6 implementation is underway on the engineering branch only. No production merge or deployment has been performed.
