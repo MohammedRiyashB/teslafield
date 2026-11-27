@@ -16,6 +16,7 @@ Node.js API for the TESLAFIELD web app and ChatGPT MCP connection.
 - `GET /` — service information
 - `GET /health` — Render health check
 - `GET /api/v1/status` — integration status
+- `GET /api/v1/models` — available free and paid text models; paid catalogue requires OpenRouter configuration
 - `GET /api/v1/warmup` — warmup checks for the AI integrations
 - `POST /api/v1/chat/completions` — Firebase-authenticated TeslafieldAI chat
 - `POST /api/v1/chat/stream` — Firebase-authenticated chat stream
@@ -45,6 +46,7 @@ openssl rand -base64 48
 Keep this value only in Render's environment settings. Do not commit it or paste it into GitHub. Rotating it immediately invalidates existing MCP access tokens.
 
 Optional settings:
+- `OPENROUTER_API_KEY` — optional server-side key for OpenRouter free and paid chat models. Store only in Render environment settings. The local TeslafieldAI Qwen model remains the default when this is absent. Paid models are selected explicitly by the user and can incur OpenRouter charges; there is no automatic paid fallback.
 - `PUBLIC_BASE_URL` — defaults to `https://teslafield-api.onrender.com`
 - `TESLAFIELD_OAUTH_PAGE` — defaults to `https://teslafieldai.web.app/oauth`
 - `FIREBASE_PROJECT_ID` — defaults to `teslafieldai`
@@ -59,3 +61,7 @@ Chat completion requests may send an `Idempotency-Key` header. The API scopes th
 OAuth authorization requests and single-use authorization codes are held in process memory with short expirations; access tokens are HMAC-signed and resource-scoped. Keep this Render service at one instance for this initial release. Before scaling to multiple instances or using multiple regions, move the short-lived authorization state and one-time code store to shared Redis/Key Value or a database.
 
 Do not add model provider keys, OAuth signing secrets, Firebase service-account keys or user tokens to frontend files or the public repository.
+
+## Model selection
+
+The browser model selector defaults to the existing TeslafieldAI Qwen3-0.6B Space. If `OPENROUTER_API_KEY` is configured, the API loads the current OpenRouter text-chat catalogue, separates zero-priced models from paid models, and returns price-per-million-token metadata for the UI. The browser sends only the selected model ID; the provider key remains on the server. The API validates model IDs against the live provider catalogue before making a request and includes the selected model in the idempotency fingerprint. Free provider models can still be rate-limited or unavailable. Paid models are never selected automatically; users must explicitly choose one.
