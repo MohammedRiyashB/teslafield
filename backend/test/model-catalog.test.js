@@ -16,6 +16,7 @@ test("catalog normalizes text chat models and computes per-million prices", () =
     id: "provider/model",
     name: "Provider Model",
     free: false,
+    freeTier: false,
     promptPerMillion: 2,
     completionPerMillion: 8,
     contextLength: 128000
@@ -29,6 +30,7 @@ test("catalog marks zero-priced models free and excludes non-chat or invalid pri
     pricing: { prompt: "0", completion: "0" }
   });
   assert.equal(free.free, true);
+  assert.equal(free.freeTier, false);
   assert.equal(normalizeOpenRouterModel({
     id: "provider/image",
     architecture: { input_modalities: ["image"], output_modalities: ["image"] },
@@ -72,5 +74,6 @@ test("catalog caches model data and resolves free and paid models", async () => 
   assert.equal(models[0].id, "provider/free");
   assert.equal((await catalog.findModel("provider/paid")).free, false);
   assert.equal((await catalog.findModel("openrouter/free")).free, true);
+  assert.equal((await catalog.findModel("openrouter/free")).freeTier, true);
   assert.equal(calls, 1);
 });
