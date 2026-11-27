@@ -45,8 +45,9 @@ jobs:
             echo "::endgroup::"
           }
 
-          # /health keeps the Node API's public health route active.
+          # Keep the Node API active and warm the public model catalogue on every page refresh cycle.
           ping "Render API health" "https://teslafield-api.onrender.com/health"
+          ping "TeslafieldAI model catalogue" "https://teslafield-api.onrender.com/api/v1/models"
 
           # This endpoint also checks the Chat, Speech and Voice Hugging Face Spaces.
           warmup_file="$(mktemp)"
