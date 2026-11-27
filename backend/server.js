@@ -462,7 +462,7 @@ const server = http.createServer(async (req, res) => {
     res.setHeader("Vary", "Origin");
   }
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, MCP-Protocol-Version, Mcp-Session-Id, Last-Event-ID");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, Idempotency-Key, MCP-Protocol-Version, Mcp-Session-Id, Last-Event-ID");
   res.setHeader("Access-Control-Max-Age", "600");
 
   if (req.method === "OPTIONS") {
