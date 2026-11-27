@@ -425,13 +425,12 @@
   function initializeCookieChoices() {
     const key = "teslafield.cookieConsent.v1";
     let saved = null;
+    // Cookie preferences remain available from the account menu, but never
+    // interrupt a first visit with an unsolicited banner.
+    $("cookieBanner").hidden = true;
     try { saved = JSON.parse(localStorage.getItem(key) || "null"); } catch (error) {}
-    if (!saved || saved.version !== 1 || typeof saved.essential !== "boolean") {
-      $("cookieBanner").hidden = false;
-      return;
-    }
-    $("cookieAnalytics").checked = !!saved.analytics;
-    $("cookieAdvertising").checked = !!saved.advertising;
+    $("cookieAnalytics").checked = !!(saved && saved.version === 1 && saved.analytics);
+    $("cookieAdvertising").checked = !!(saved && saved.version === 1 && saved.advertising);
   }
 
   function storeCookieChoices(analytics, advertising) {
