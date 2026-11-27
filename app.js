@@ -90,6 +90,7 @@
   let cloudSyncBusy = false;
   let cloudSyncTimer = null;
   let cloudSyncFingerprints = new Map();
+  let cloudDeletedIds = new Set();
   let cloudHistoryWarningShown = false;
   let resolveAuthReady;
   const authReadyPromise = new Promise((resolve) => { resolveAuthReady = resolve; });
@@ -380,9 +381,11 @@
       activeId = null;
       cloudSyncReady = false;
       cloudSyncFingerprints = new Map();
+      cloudDeletedIds = new Set();
       if (cloudSyncTimer) { clearTimeout(cloudSyncTimer); cloudSyncTimer = null; }
       if (currentUser) {
         loadStore();
+        loadDeletedConversationIds();
         activeId = chats.length ? chats[0].id : null;
         syncCloudHistory();
       }
@@ -539,17 +542,31 @@
 
   async function deleteAccountAndLocalData() {
     if (!currentUser) return;
-    const uid = currentUser.uid;
-    if (!window.confirm("Permanently delete this TeslafieldAI sign-in account and its locally saved chats on this device? Cloud Firestore conversations are not bulk-deleted by this action; delete them individually first. This does not erase records external AI providers may retain. This cannot be undone.")) return;
+    const user = currentUser;
+    const uid = user.uid;
+    if (!window.confirm("Permanently delete your TeslafieldAI account and its cloud conversations? This also removes local chat data on this device. External AI providers may retain data under their own policies. This cannot be undone.")) return;
     try {
-      await currentUser.delete();
+      const token = await user.getIdToken();
+      const remote = await cloudHistoryRequest("GET", token);
+      const ids = new Set([
+        ...chats.map((chat) => chat.id),
+        ...(Array.isArray(remote.conversations) ? remote.conversations.map((chat) => chat.id) : []),
+        ...(Array.isArray(remote.deleted) ? remote.deleted.map((item) => item.id) : [])
+      ]);
+      for (const id of ids) {
+        if (currentUser !== user) throw new Error("ACCOUNT_CHANGED");
+        await cloudHistoryRequest("DELETE", token, null, id);
+      }
+      await user.delete();
       localStorage.removeItem("teslafield.conversations.v4." + uid);
+      localStorage.removeItem("teslafield.conversations.deleted.v1." + uid);
       localStorage.removeItem("teslafield.conversations.v2");
       localStorage.removeItem("teslafield.conversations.v3");
       chats = [];
+      cloudDeletedIds = new Set();
       activeId = null;
       renderConversation();
-      toast("Your account and its local chat data were deleted.");
+      toast("Your TeslafieldAI account and cloud chat data were deleted.");
     } catch (error) {
       if (error && error.code === "auth/requires-recent-login") {
         toast("For security, sign in again with Google and retry account deletion.");
@@ -560,6 +577,46 @@
   }
   function conversationStoreKey() {
     return currentUser ? "teslafield.conversations.v4." + currentUser.uid : null;
+  }
+  function deletedConversationStoreKey() {
+    return currentUser ? "teslafield.conversations.deleted.v1." + currentUser.uid : null;
+  }
+  function loadDeletedConversationIds() {
+    cloudDeletedIds = new Set();
+    const key = deletedConversationStoreKey();
+    if (!key) return;
+    try {
+      const value = JSON.parse(localStorage.getItem(key) || "[]");
+      if (Array.isArray(value)) value.filter((id) => typeof id === "string").forEach((id) => cloudDeletedIds.add(id));
+    } catch (error) {}
+  }
+  function saveDeletedConversationIds() {
+    const key = deletedConversationStoreKey();
+    if (!key) return;
+    try { localStorage.setItem(key, JSON.stringify(Array.from(cloudDeletedIds).slice(-500))); } catch (error) {}
+  }
+  function markConversationDeleted(id) {
+    if (typeof id !== "string" || !id) return;
+    cloudDeletedIds.add(id);
+    saveDeletedConversationIds();
+    queueCloudHistorySync();
+  }
+  function exportConversationHistory() {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      product: "TeslafieldAI",
+      conversations: chats
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "teslafieldai-chat-history-" + new Date().toISOString().slice(0, 10) + ".json";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast("Your visible chat history export is ready.");
   }
   function loadStore() {
     chats = [];
@@ -618,8 +675,14 @@
       const result = await cloudHistoryRequest("GET", token);
       if (currentUser !== user) return;
       const remote = Array.isArray(result.conversations) ? result.conversations : [];
+      const remoteDeleted = Array.isArray(result.deleted) ? result.deleted.map((item) => item && item.id).filter(Boolean) : [];
+      remoteDeleted.forEach((id) => cloudDeletedIds.add(id));
+      saveDeletedConversationIds();
+      const deletedIds = new Set(cloudDeletedIds);
+      chats = chats.filter((chat) => !deletedIds.has(chat.id));
+      const liveRemote = remote.filter((chat) => !deletedIds.has(chat.id));
       const local = chats.slice(0, MAX_HISTORY);
-      const merged = new Map(remote.map((chat) => [chat.id, chat]));
+      const merged = new Map(liveRemote.map((chat) => [chat.id, chat]));
       local.forEach((chat) => {
         const existing = merged.get(chat.id);
         if (!existing || Number(chat.updated || 0) >= Number(existing.updated || 0)) merged.set(chat.id, chat);
@@ -627,7 +690,7 @@
       chats = Array.from(merged.values()).sort((a, b) => Number(b.updated || b.created || 0) - Number(a.updated || a.created || 0)).slice(0, MAX_HISTORY);
       if (!activeId || !chats.some((chat) => chat.id === activeId)) activeId = chats.length ? chats[0].id : null;
       try { localStorage.setItem(conversationStoreKey(), JSON.stringify(chats)); } catch (error) {}
-      cloudSyncFingerprints = new Map(remote.map((chat) => [chat.id, cloudConversationFingerprint(chat)]));
+      cloudSyncFingerprints = new Map(liveRemote.map((chat) => [chat.id, cloudConversationFingerprint(chat)]));
       cloudSyncReady = true;
       renderConversation();
       cloudSyncBusy = false;
@@ -664,6 +727,11 @@
       const token = await user.getIdToken();
       const local = chats.slice(0, MAX_HISTORY);
       const currentIds = new Set(local.map((chat) => chat.id));
+      for (const id of cloudDeletedIds) {
+        if (currentUser !== user) return;
+        await cloudHistoryRequest("DELETE", token, null, id);
+        cloudSyncFingerprints.delete(id);
+      }
       for (const chat of local) {
         if (currentUser !== user) return;
         const fingerprint = cloudConversationFingerprint(chat);
@@ -985,6 +1053,7 @@
           remove.onclick = () => {
             if (!window.confirm("Delete this conversation from this browser?")) return;
             chats = chats.filter((item) => item.id !== chat.id);
+            markConversationDeleted(chat.id);
             if (activeId === chat.id) { activeId = null; messageList.innerHTML = ""; welcome.hidden = false; }
             saveStore(); renderHistory();
           };
@@ -1818,10 +1887,12 @@
   document.querySelectorAll("[data-prompt]").forEach((button) => {
     button.onclick = () => sendMessage(button.dataset.prompt);
   });
+  $("exportHistory").onclick = exportConversationHistory;
   $("clearHistory").onclick = () => {
     const hasLegacyHistory = !!(localStorage.getItem("teslafield.conversations.v2") || localStorage.getItem("teslafield.conversations.v3"));
     if (!chats.length && !hasLegacyHistory) { toast("There are no saved conversations."); return; }
     if (window.confirm("Delete all conversations for this signed-in account and remove older unassigned device history?")) {
+      chats.forEach((chat) => markConversationDeleted(chat.id));
       chats = [];
       saveStore();
       try {
