@@ -74,3 +74,13 @@ test("model picker renders immediately, shows loading feedback and can retry the
   assert.ok(app.includes("AbortSignal.timeout(25000)"));
   assert.ok(app.includes("loadModelCatalog({ force: true })"));
 });
+
+
+test("model picker shows provider logos and rate-limit text without FREE badges", () => {
+  assert.match(app, /className = "model-option-logo"/);
+  assert.match(app, /modelBrand\.logo/);
+  assert.match(app, /meta\.textContent = model\.provider === "OpenRouter" \? "Rate-limited" : "TeslafieldAI"/);
+  assert.doesNotMatch(app, /FREE · Rate-limited|FREE · TeslafieldAI|option\.textContent = model\.name \+ " · FREE"/);
+  assert.doesNotMatch(app, /"Free models only\./);
+  assert.match(app, /model\.id\.endsWith\(":free"\)/);
+});
