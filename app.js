@@ -1690,7 +1690,7 @@
         const meta = document.createElement("small");
         meta.textContent = model.free
           ? (model.provider === "OpenRouter" ? "FREE · OpenRouter" : "FREE · TeslafieldAI")
-          : "PAID · $" + Number(model.promptPerMillion || 0).toFixed(4).replace(/0+$/, "").replace(/\\.$/, "") + " / 1M input tokens";
+          : "PAID · $" + Number(model.promptPerMillion || 0).toFixed(4) + " / 1M input tokens";
         copy.append(name, meta);
         const check = document.createElement("span");
         check.className = "model-option-check";
