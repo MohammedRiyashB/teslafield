@@ -1708,7 +1708,7 @@
       group.models.forEach((model) => {
         const option = document.createElement("option");
         option.value = model.id;
-        option.textContent = model.name + (model.provider === "OpenRouter" ? " · FREE · rate-limited" : " · FREE");
+        option.textContent = model.name + " · FREE";
         optgroup.appendChild(option);
       });
       select.appendChild(optgroup);
@@ -1724,9 +1724,26 @@
     if (hint) {
       const routerReady = availableModels.some((model) => model.provider === "OpenRouter");
       hint.textContent = modelCatalogStatus || (routerReady
-        ? "Only OpenRouter :free models are listed. Your selected model ID is sent directly; no paid-model fallback. Free-tier rate limits and availability apply."
-        : "Teslafield B1 is available. No OpenRouter :free models have loaded yet.");
+        ? "Free models only. Your selected model is sent directly; no automatic model switching or paid fallback. Provider rate limits and availability apply."
+        : "Teslafield B1 is available. Free provider models have not loaded yet.");
     }
+  }
+
+  function getModelBrand(model) {
+    if (!model || model.id === "teslafield") return { key: "teslafield", label: "TESLAFIELD", domain: "teslafieldai.web.app", logo: "/teslafieldai-logo.png?v=20261127-03" };
+    const slug = String(model.id || "").split("/")[0].toLowerCase();
+    const brands = {
+      baidu: { label: "BAIDU", domain: "baidu.com" },
+      nvidia: { label: "NVIDIA", domain: "nvidia.com" },
+      recursive: { label: "RECURSIVE", domain: "recursive.ai" },
+      perplexity: { label: "PERPLEXITY", domain: "perplexity.ai" },
+      google: { label: "GOOGLE", domain: "google.com" },
+      inclusionai: { label: "INCLUSIONAI", domain: "inclusion.ai" },
+      liquid: { label: "LIQUID AI", domain: "liquid.ai" },
+      "particle-ai": { label: "PARTICLE AI", domain: "particle.network" }
+    };
+    const brand = brands[slug] || { label: slug.replace(/[-_]/g, " ").toUpperCase(), domain: "" };
+    return { key: slug || "provider", label: brand.label, domain: brand.domain, logo: brand.domain ? "https://www.google.com/s2/favicons?domain=" + encodeURIComponent(brand.domain) + "&sz=64" : "" };
   }
 
   function renderModelPicker() {
@@ -1738,9 +1755,11 @@
     const selected = availableModels.find((model) => model.id === (userPreferences.model || "teslafield")) ||
       availableModels.find((model) => model.id === "teslafield");
     if (selected) {
+      const brand = getModelBrand(selected);
       selectedName.textContent = selected.id === "teslafield" ? "Teslafield B1" : selected.name;
-      selectedLogo.src = selected.provider === "OpenRouter" ? "https://openrouter.ai/favicon.ico" : "/teslafieldai-logo.png?v=20261127-02";
+      selectedLogo.src = brand.logo || "/teslafieldai-logo.png?v=20261127-03";
       selectedLogo.alt = "";
+      selectedLogo.onerror = () => { selectedLogo.src = "/teslafieldai-logo.png?v=20261127-03"; };
     }
     list.replaceChildren();
     const status = $("modelPickerStatus");
@@ -1748,27 +1767,28 @@
       status.hidden = !modelCatalogStatus;
       status.textContent = modelCatalogStatus;
     }
+    const groups = [];
     const own = availableModels.filter((model) => model.id === "teslafield");
-    const routerFree = availableModels.filter((model) => model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true);
-    const groups = [
-      { title: "TESLAFIELD", models: own },
-      { title: "OPENROUTER · FREE MODELS", models: routerFree }
-    ];
+    if (own.length) groups.push({ key: "teslafield", title: "TESLAFIELD", models: own });
+    const providerGroups = new Map();
+    availableModels.filter((model) => model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true)
+      .forEach((model) => {
+        const brand = getModelBrand(model);
+        if (!providerGroups.has(brand.key)) providerGroups.set(brand.key, { key: brand.key, title: brand.label, brand, models: [] });
+        providerGroups.get(brand.key).models.push(model);
+      });
+    groups.push(...Array.from(providerGroups.values()).sort((a, b) => a.title.localeCompare(b.title)));
     groups.forEach((group) => {
       if (!group.models.length) return;
       const heading = document.createElement("div");
       heading.className = "model-picker-group-title";
-      if (group.title.startsWith("OPENROUTER")) {
+      const brand = group.brand || getModelBrand(group.models[0]);
+      if (brand.logo) {
         const logo = document.createElement("img");
-        logo.src = "https://openrouter.ai/favicon.ico";
+        logo.src = brand.logo;
         logo.alt = "";
         logo.className = "model-provider-logo";
-        heading.appendChild(logo);
-      } else {
-        const logo = document.createElement("img");
-        logo.src = "/teslafieldai-logo.png?v=20261127-02";
-        logo.alt = "";
-        logo.className = "model-provider-logo";
+        logo.onerror = () => { logo.hidden = true; };
         heading.appendChild(logo);
       }
       const label = document.createElement("span");
@@ -1783,7 +1803,8 @@
         option.setAttribute("aria-selected", String(model.id === (userPreferences.model || "teslafield")));
         option.dataset.modelId = model.id;
         const logo = document.createElement("img");
-        logo.src = model.provider === "OpenRouter" ? "https://openrouter.ai/favicon.ico" : "/teslafieldai-logo.png?v=20261127-02";
+        const modelBrand = getModelBrand(model);
+        logo.src = modelBrand.logo || "/teslafieldai-logo.png?v=20261127-03";
         logo.alt = "";
         logo.className = "model-option-logo";
         logo.onerror = () => { logo.hidden = true; };
@@ -1792,7 +1813,7 @@
         const name = document.createElement("strong");
         name.textContent = model.id === "teslafield" ? "Teslafield B1" : model.name;
         const meta = document.createElement("small");
-        meta.textContent = model.provider === "OpenRouter" ? "FREE · OpenRouter :free · rate-limited" : "FREE · TeslafieldAI";
+        meta.textContent = model.provider === "OpenRouter" ? "FREE · Rate-limited" : "FREE · TeslafieldAI";
         copy.append(name, meta);
         const check = document.createElement("span");
         check.className = "model-option-check";
@@ -1806,11 +1827,7 @@
           renderModelSelector();
           renderModelPicker();
           closeModelPicker();
-          if (model.provider === "OpenRouter") {
-            toast("OpenRouter :free model selected. Free-tier limits and availability apply.");
-          } else {
-            toast("Teslafield B1 selected.");
-          }
+          toast(model.id === "teslafield" ? "Teslafield B1 selected." : model.name + " selected.");
         });
         list.appendChild(option);
       });

@@ -34,6 +34,19 @@ test("catalog is unavailable without a server-side API key", async () => {
   assert.equal(calls, 0);
 });
 
+test("catalog excludes the five reported non-working free models", () => {
+  for (const id of [
+    "google/gemma-4-26b-a4b-it:free",
+    "google/gemma-4-31b-it:free",
+    "inclusionai/ling-3.2-flash:free",
+    "liquid/lfm-3.1-1.7b:free",
+    "particle-ai/particle-1:free"
+  ]) assert.equal(normalizeOpenRouterModel(model(id)), null, id);
+  assert.ok(normalizeOpenRouterModel(model("baidu/ernie-5.5-flash-preview:free")));
+  assert.ok(normalizeOpenRouterModel(model("nvidia/nemotron-3-ultra:free")));
+  assert.ok(normalizeOpenRouterModel(model("recursive/flint-v1.0:free")));
+});
+
 test("catalog caches only exact :free models", async () => {
   let calls = 0;
   const catalog = createOpenRouterCatalog({

@@ -9,8 +9,10 @@ function pricePerMillion(value) {
 
 function normalizeOpenRouterModel(item) {
   if (!item || typeof item.id !== "string" || !item.id.trim()) return null;
-  // Only OpenRouter IDs explicitly published as :free are eligible. A $0 price alone is not enough.
+  // Only exact free endpoints are eligible; remove the five models reported as non-working in TeslafieldAI.
   if (!item.id.endsWith(":free")) return null;
+  const identity = (item.id + " " + (typeof item.name === "string" ? item.name : "")).toLowerCase();
+  if (/(gemma[- ]4[- ]26b[- ]a4b|gemma[- ]4[- ]31b|ling[- ]3[.]2[- ]flash|lfm.*1[.]7b|particle[- ]1)/i.test(identity)) return null;
   const architecture = item.architecture || {};
   const inputs = Array.isArray(architecture.input_modalities) ? architecture.input_modalities : [];
   const outputs = Array.isArray(architecture.output_modalities) ? architecture.output_modalities : [];
