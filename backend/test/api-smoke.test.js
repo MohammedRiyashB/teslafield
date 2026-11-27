@@ -147,3 +147,98 @@ test("MCP initialize rejects an unauthenticated client with resource metadata ch
     "Missing protected-resource metadata challenge: " + challenge
   );
 });
+
+
+test("Firebase rejects a token issued for a different project", async () => {
+  const encode = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
+  const now = Math.floor(Date.now() / 1000);
+  const token = [
+    encode({ alg: "RS256", kid: "test-key-id" }),
+    encode({
+      aud: "another-firebase-project",
+      iss: "https://securetoken.google.com/another-firebase-project",
+      sub: "test-user",
+      exp: now + 3600,
+      iat: now,
+      auth_time: now
+    }),
+    "invalid-signature"
+  ].join(".");
+  const response = await fetch(baseUrl + "/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + token
+    },
+    body: JSON.stringify({ messages: [{ role: "user", content: "test" }] })
+  });
+  assert.equal(response.status, 401);
+  assert.equal((await response.json()).error, "INVALID_AUTH_TOKEN");
+});
+
+test("OAuth authorization rejects an unsupported response type before redirect validation", async () => {
+  const url = new URL(baseUrl + "/oauth/authorize");
+  url.searchParams.set("response_type", "token");
+  url.searchParams.set("client_id", "https://not-a-trusted-client.invalid/client.json");
+  url.searchParams.set("redirect_uri", "https://example.invalid/callback");
+  const response = await fetch(url);
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).error, "invalid_request");
+});
+
+test("OAuth consent rejects an unknown or expired authorization request", async () => {
+  const response = await fetch(baseUrl + "/oauth/consent", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ request_id: "not-a-pending-request", id_token: "not-used" })
+  });
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).error, "invalid_request");
+});
+
+test("OAuth token endpoint rejects unsupported grants", async () => {
+  const response = await fetch(baseUrl + "/oauth/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ grant_type: "client_credentials" })
+  });
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).error, "unsupported_grant_type");
+});
+
+test("OAuth token endpoint rejects unknown authorization codes", async () => {
+  const verifier = "v".repeat(48);
+  const response = await fetch(baseUrl + "/oauth/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "authorization_code",
+      code: "not-a-real-code",
+      client_id: "https://chatgpt.com/oauth/client.json",
+      redirect_uri: "https://chatgpt.com/callback",
+      code_verifier: verifier,
+      resource: "https://teslafield-api.onrender.com/mcp"
+    })
+  });
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).error, "invalid_grant");
+});
+
+test("MCP rejects a malformed bearer token", async () => {
+  const response = await fetch(baseUrl + "/mcp", {
+    method: "POST",
+    headers: {
+      Accept: "application/json, text/event-stream",
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + "x".repeat(40)
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 2,
+      method: "initialize",
+      params: { protocolVersion: "2025-11-25" }
+    })
+  });
+  assert.equal(response.status, 401);
+  assert.match(response.headers.get("www-authenticate") || "", /resource_metadata=/);
+});
