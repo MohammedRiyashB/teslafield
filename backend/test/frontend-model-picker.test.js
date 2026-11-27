@@ -37,3 +37,15 @@ test("cloud history retains local cache and authenticates remote sync", () => {
   assert.match(app, /Authorization: "Bearer " \+ token/);
   assert.match(app, /localStorage\.setItem\(key, JSON\.stringify\(chats\.slice\(0, MAX_HISTORY\)\)\)/);
 });
+
+test("Firestore rules restrict conversation reads and writes to the authenticated owner", () => {
+  const rules = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
+  const firebaseConfig = JSON.parse(fs.readFileSync(path.join(root, "firebase.json"), "utf8"));
+  assert.match(rules, /request\.auth\.uid == userId/);
+  assert.match(rules, /request\.resource\.data\.id == conversationId/);
+  assert.equal(firebaseConfig.firestore.rules, "firestore.rules");
+});
+
+test("cloud sync retries for the newly selected account after an in-flight account switch", () => {
+  assert.match(app, /if \(currentUser && currentUser !== user\) syncCloudHistory\(\);/);
+});
