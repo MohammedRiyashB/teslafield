@@ -43,6 +43,16 @@ const registryPayload = {
   ]
 };
 
+test("model discovery refuses to call the authenticated catalogue without a server key", async () => {
+  let calls = 0;
+  const integration = createOpenRouterIntegration({
+    fetchImpl: async () => { calls += 1; throw new Error("Unexpected network call"); }
+  });
+  assert.equal(integration.configured, false);
+  await assert.rejects(integration.listFreeChatModels(), /OPENROUTER_API_KEY_MISSING/);
+  assert.equal(calls, 0);
+});
+
 test("OpenRouter provider registry reads OpenRouter's own slug, name and icon URL", () => {
   const providers = normalizeProviderRegistry(registryPayload);
   assert.equal(providers.get("nvidia").name, "NVIDIA");
@@ -98,9 +108,14 @@ test("model discovery uses the public OpenRouter catalogue without the server AP
     providerTtlMs: 60000,
     fetchImpl: async (url, options = {}) => {
       calls.push({ url, options });
-      assert.equal(options.headers.Authorization, undefined, "catalogue and logo registry are public endpoints");
-      if (url.startsWith(OPENROUTER_API + "/models?")) return response({ data: catalogItems });
-      if (url === OPENROUTER_FRONTEND_API + "/all-providers") return response(registryPayload);
+      if (url.startsWith(OPENROUTER_API + "/models?")) {
+        assert.equal(options.headers.Authorization, "Bearer server-only-test-key");
+        return response({ data: catalogItems });
+      }
+      if (url === OPENROUTER_FRONTEND_API + "/all-providers") {
+        assert.equal(options.headers.Authorization, undefined);
+        return response(registryPayload);
+      }
       throw new Error("Unexpected URL: " + url);
     }
   });
@@ -149,6 +164,7 @@ test("logo proxy serves only the logo URL provided by OpenRouter's registry", as
   };
   let logoRequested = "";
   const integration = createOpenRouterIntegration({
+    apiKey: "server-only-test-key",
     fetchImpl: async (url) => {
       if (url.startsWith(OPENROUTER_API + "/models?")) return response({ data: [model("nvidia/nemotron-3.5-lightning:free")] });
       if (url === OPENROUTER_FRONTEND_API + "/all-providers") return response(registryPayload);
@@ -171,6 +187,7 @@ test("logo proxy serves only the logo URL provided by OpenRouter's registry", as
 
 test("provider registry failure does not hide free chat models", async () => {
   const integration = createOpenRouterIntegration({
+    apiKey: "server-only-test-key",
     fetchImpl: async (url) => {
       if (url.startsWith(OPENROUTER_API + "/models?")) return response({
         data: [model("nvidia/nemotron-3.5-lightning:free")]
