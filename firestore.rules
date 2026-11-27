@@ -8,6 +8,13 @@ service cloud.firestore {
         && request.resource.data.id == conversationId;
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
+    match /users/{userId}/deletedConversations/{conversationId} {
+      allow get, list: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.id == conversationId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
     match /{document=**} {
       allow read, write: if false;
     }
