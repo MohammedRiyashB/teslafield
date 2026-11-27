@@ -5,7 +5,7 @@ const SHELL_ASSETS = [
   "/index.html",
   "/styles.css?v=20261127-20",
   "/app.js?v=20261127-20",
-  "/theme-init.js?v=20261127-19",
+  "/theme-init.js?v=20261127-20",
   "/manifest.webmanifest",
   "/teslafield-icon-192.png",
   "/teslafield-icon-512.png",
