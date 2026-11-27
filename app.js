@@ -1024,20 +1024,23 @@
   }
   async function shareAssistantMessage(content) {
     try {
-      const payload = JSON.stringify({ content: String(content || ""), createdAt: new Date().toISOString() });
-      const bytes = new TextEncoder().encode(payload);
-      let encoded = "j" + base64UrlEncode(bytes);
-      // Use gzip only when both ends of the share flow support it, and only when it shortens the URL.
-      if ("CompressionStream" in window && "DecompressionStream" in window) {
-        try {
-          const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip"));
-          const compressed = new Uint8Array(await new Response(stream).arrayBuffer());
-          const gzipEncoded = "g" + base64UrlEncode(compressed);
-          if (gzipEncoded.length < encoded.length) encoded = gzipEncoded;
-        } catch (error) {}
+      const responseText = String(content || "").trim();
+      if (!responseText) throw new Error("There is no completed response to share.");
+      const token = await getAuthToken();
+      const response = await fetch(API + "/api/v1/shares", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify({ content: responseText }),
+        cache: "no-store"
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.id || !/^[a-f0-9]{24}$/.test(result.id)) {
+        throw new Error(result.message || "The share link could not be created.");
       }
-      const id = Array.from(crypto.getRandomValues(new Uint8Array(18)), (v, i) => String(i === 0 ? (v % 9) + 1 : v % 10)).join("");
-      const shareUrl = location.origin + "/share/" + id + "?data=" + encodeURIComponent(encoded);
+      const shareUrl = location.origin + "/share/" + result.id;
       if (navigator.share) {
         try {
           await navigator.share({ title: "TeslafieldAI AI response", text: "A response shared from TeslafieldAI AI", url: shareUrl });
@@ -1045,9 +1048,9 @@
         } catch (error) { if (error && error.name === "AbortError") return; }
       }
       await copyText(shareUrl);
-      toast("Share link copied. Send it to anyone.");
+      toast("Short share link copied. Send it to anyone.");
     } catch (error) {
-      toast("This response could not be prepared for sharing. Please try again.");
+      toast(error && error.message ? error.message : "This response could not be prepared for sharing. Please try again.");
     }
   }
 
@@ -1093,27 +1096,42 @@
   }
 
   async function openSharedMessagePage() {
-    if (!/^\/share\/\d{12,24}\/?$/.test(location.pathname)) return false;
+    const pathMatch = location.pathname.match(/^\/share\/([a-f0-9]{24}|\d{12,24})\/?$/i);
+    if (!pathMatch) return false;
+    const shareId = pathMatch[1];
     const appShell = document.querySelector(".app-shell");
     if (appShell) appShell.hidden = true;
     $("sharedMessagePage").hidden = false;
     try {
       const query = new URLSearchParams(location.search);
-      const payload = query.get("data") || location.hash.slice(1);
-      if (!payload || payload.length > MAX_SHARED_PAYLOAD_CHARS || !/^[gj][A-Za-z0-9_-]+$/.test(payload)) {
-        throw new Error("Missing, invalid or oversized share data");
+      const legacyPayload = query.get("data") || location.hash.slice(1);
+      let data;
+      if (legacyPayload) {
+        // Continue supporting previously generated long /share/{id}?data=... links.
+        if (legacyPayload.length > MAX_SHARED_PAYLOAD_CHARS || !/^[gj][A-Za-z0-9_-]+$/.test(legacyPayload)) {
+          throw new Error("Missing, invalid or oversized share data");
+        }
+        if (legacyPayload[0] === "j" && legacyPayload.length > Math.ceil(MAX_SHARED_RESPONSE_BYTES * 4 / 3) + 4) {
+          throw new Error("Shared response is too large");
+        }
+        let bytes = base64UrlDecode(legacyPayload.slice(1));
+        if (legacyPayload[0] === "g") {
+          if (!("DecompressionStream" in window)) throw new Error("This browser cannot open this compressed share link");
+          const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+          bytes = await readStreamWithLimit(stream, MAX_SHARED_RESPONSE_BYTES);
+        }
+        if (bytes.byteLength > MAX_SHARED_RESPONSE_BYTES) throw new Error("Shared response is too large");
+        data = JSON.parse(new TextDecoder().decode(bytes));
+      } else {
+        const response = await fetch(API + "/api/v1/shares/" + encodeURIComponent(shareId), {
+          method: "GET",
+          headers: { "Accept": "application/json" },
+          cache: "no-store"
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.message || "This shared response is unavailable.");
+        data = result;
       }
-      if (payload[0] === "j" && payload.length > Math.ceil(MAX_SHARED_RESPONSE_BYTES * 4 / 3) + 4) {
-        throw new Error("Shared response is too large");
-      }
-      let bytes = base64UrlDecode(payload.slice(1));
-      if (payload[0] === "g") {
-        if (!("DecompressionStream" in window)) throw new Error("This browser cannot open this compressed share link");
-        const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
-        bytes = await readStreamWithLimit(stream, MAX_SHARED_RESPONSE_BYTES);
-      }
-      if (bytes.byteLength > MAX_SHARED_RESPONSE_BYTES) throw new Error("Shared response is too large");
-      const data = JSON.parse(new TextDecoder().decode(bytes));
       if (!data || typeof data.content !== "string" || !data.content.trim()) throw new Error("Invalid share data");
       $("sharedMessageContent").innerHTML = renderMarkdown(data.content);
       $("copySharedMessage").hidden = false;
@@ -1127,7 +1145,6 @@
     }
     return true;
   }
-
   function renderConversation() {
     const chat = activeChat();
     messageList.innerHTML = "";
@@ -1519,6 +1536,8 @@
     const decoder = new TextDecoder();
     let buffer = "";
     let completeText = "";
+    let streamDone = false;
+    let finishReason = null;
 
     const append = (value) => {
       if (typeof value !== "string" || !value) return;
@@ -1532,7 +1551,11 @@
         .map((line) => line.slice(5).replace(/^ /, ""));
       if (!data.length) return;
       const payloadText = data.join("\n").trim();
-      if (!payloadText || payloadText === "[DONE]") return;
+      if (!payloadText) return;
+      if (payloadText === "[DONE]") {
+        streamDone = true;
+        return;
+      }
       let payload;
       try { payload = JSON.parse(payloadText); }
       catch (error) { throw new Error("OpenRouter sent an invalid streaming event."); }
@@ -1542,7 +1565,12 @@
           : payload.error.message || payload.error.code || "OpenRouter stream failed.";
         throw new Error(String(detail).slice(0, 420));
       }
-      const delta = payload && payload.choices && payload.choices[0] && payload.choices[0].delta;
+      const choice = payload && payload.choices && payload.choices[0];
+      if (!choice) return;
+      if (choice.finish_reason !== undefined && choice.finish_reason !== null) {
+        finishReason = String(choice.finish_reason);
+      }
+      const delta = choice.delta;
       if (!delta) return;
       if (typeof delta.content === "string") append(delta.content);
       else if (Array.isArray(delta.content)) {
@@ -1574,12 +1602,17 @@
         else append(tail);
       }
       if (isEventStream && buffer.trim()) readEvent(buffer);
-      return completeText;
+      return {
+        text: completeText,
+        eventStream: isEventStream,
+        streamDone,
+        finishReason,
+        complete: !isEventStream || streamDone || Boolean(finishReason && finishReason !== "length")
+      };
     } finally {
       try { reader.releaseLock(); } catch (error) {}
     }
   }
-
   function createStreamingAssistantBubble() {
     const row = document.createElement("article");
     row.className = "message-row assistant";
@@ -1587,7 +1620,7 @@
     const stack = document.createElement("div");
     stack.className = "message-stack assistant-stack";
     const body = document.createElement("div");
-    body.className = "message-content";
+    body.className = "message-content is-revealing";
     body.setAttribute("aria-live", "polite");
     body.textContent = "";
     stack.appendChild(body);
@@ -1604,30 +1637,38 @@
     const typingIndicator = showTyping();
     let streamingBubble = null;
     let completedMessage = null;
+    let streamedPartialText = "";
     setGenerating(true);
     try {
       await waitForApiReady(90000, requestSignal);
       if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
       const token = await getAuthToken();
       if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
-      const chatRequest = {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "text/event-stream, text/plain",
-          "Authorization": "Bearer " + token
-        },
-        body: JSON.stringify({
-          messages: chat.messages.slice(-30),
-          response_style: userPreferences.responseStyle,
-          model: userPreferences.model
-        }),
-        signal: requestSignal,
-        cache: "no-store"
-      };
-
+      const baseMessages = chat.messages.slice(-27);
+      while (baseMessages.length > 1 && baseMessages.reduce((total, message) => total + String(message.content || "").length, 0) > 24000) baseMessages.shift();
+      let outgoingMessages = baseMessages;
+      let accumulatedText = "";
+      let continuationCount = 0;
       let response;
-      for (let attempt = 0; attempt < 3; attempt += 1) {
+      while (true) {
+        const chatRequest = {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream, text/plain",
+            "Authorization": "Bearer " + token
+          },
+          body: JSON.stringify({
+            messages: outgoingMessages,
+            response_style: userPreferences.responseStyle,
+            model: userPreferences.model
+          }),
+          signal: requestSignal,
+          cache: "no-store"
+        };
+
+        response = null;
+        for (let attempt = 0; attempt < 3; attempt += 1) {
         if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
         try {
           response = await fetch(API + "/api/v1/chat/stream", chatRequest);
@@ -1666,33 +1707,73 @@
         });
       }
 
-      if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
-      if (!response || !response.ok) throw new Error("TeslafieldAI could not open the response stream. Please retry.");
-      typingIndicator.remove();
-      streamingBubble = createStreamingAssistantBubble();
-      const replyText = await consumeChatStream(response, (currentText) => {
-        streamingBubble.body.textContent = currentText;
+        if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
+        if (!response || !response.ok) throw new Error("TeslafieldAI could not open the response stream. Please retry.");
+        if (!streamingBubble) {
+          typingIndicator.remove();
+          streamingBubble = createStreamingAssistantBubble();
+        }
+        const segment = await consumeChatStream(response, (segmentText) => {
+          streamedPartialText = accumulatedText + segmentText;
+          streamingBubble.body.textContent = streamedPartialText;
+          scrollBottom();
+        });
+        accumulatedText += segment.text;
+        streamedPartialText = accumulatedText;
+        streamingBubble.body.textContent = accumulatedText;
         scrollBottom();
-      });
+        if (!accumulatedText.trim()) throw new Error("The selected model ended the stream without returning text.");
+        if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
+
+        const needsContinuation = segment.finishReason === "length" ||
+          (segment.eventStream && !segment.streamDone && !segment.finishReason);
+        if (!needsContinuation) break;
+        if (continuationCount >= 2) {
+          accumulatedText += "\n\nThe model reached its response limit. Ask it to continue for the remaining details.";
+          streamingBubble.body.textContent = accumulatedText;
+          break;
+        }
+        continuationCount += 1;
+        outgoingMessages = [
+          ...baseMessages,
+          { role: "assistant", content: accumulatedText.slice(-11500) },
+          { role: "user", content: "Continue exactly where the previous response stopped. Do not repeat the completed text. Complete every remaining section, sentence, formula and table row." }
+        ];
+      }
+      const replyText = accumulatedText;
       if (!replyText.trim()) throw new Error("The selected model ended the stream without returning text.");
       if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
+      streamingBubble.body.classList.remove("is-revealing");
       chat.messages.push({ role: "assistant", content: replyText.trim() });
       completedMessage = chat.messages[chat.messages.length - 1];
       chat.updated = Date.now();
       saveStore();
       if (typeof window.showBannerWhenDue === "function") window.showBannerWhenDue(chat);
     } catch (error) {
-      if (streamingBubble && streamingBubble.row.isConnected) streamingBubble.row.remove();
-      if (error.name !== "AbortError" && !requestSignal.aborted) {
-        const message = error.message || "The AI service could not complete this request.";
-        chat.messages.push({
-          role: "assistant",
-          content: "**TeslafieldAI service notice**\n\n" + message + "\n\nYour prompt is saved in this conversation. You can retry after the service is connected."
-        });
+      const message = error.message || "The AI service could not complete this request.";
+      if (error.name !== "AbortError" && !requestSignal.aborted && streamedPartialText.trim()) {
+        const preserved = streamedPartialText + "\n\n**Continuation interrupted:** " + message + " You can ask the same model to continue from here.";
+        if (streamingBubble && streamingBubble.row.isConnected) {
+          streamingBubble.body.textContent = preserved;
+          streamingBubble.body.classList.remove("is-revealing");
+        }
+        chat.messages.push({ role: "assistant", content: preserved });
         completedMessage = chat.messages[chat.messages.length - 1];
         chat.updated = Date.now();
         saveStore();
-        toast(message);
+        toast("The connection stopped. The text already received has been saved.");
+      } else {
+        if (streamingBubble && streamingBubble.row.isConnected) streamingBubble.row.remove();
+        if (error.name !== "AbortError" && !requestSignal.aborted) {
+          chat.messages.push({
+            role: "assistant",
+            content: "**TeslafieldAI service notice**\n\n" + message + "\n\nYour prompt is saved in this conversation. You can retry after the service is connected."
+          });
+          completedMessage = chat.messages[chat.messages.length - 1];
+          chat.updated = Date.now();
+          saveStore();
+          toast(message);
+        }
       }
     } finally {
       typingIndicator.remove();

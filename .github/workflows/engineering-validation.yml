@@ -8,6 +8,7 @@ on:
       - "app.js"
       - "oauth.js"
       - "sw.js"
+      - "firestore.rules"
       - "backend/**"
       - "huggingface/chat-space/**"
       - "huggingface/speech-space/**"
@@ -57,10 +58,11 @@ jobs:
           node --check backend/idempotency.js
           node --check backend/openrouter.js
           node --check backend/conversation-store.js
+          node --check backend/shared-response-store.js
           node --check backend/oauth-mcp.js
           node --check sw.js
           node --check backend/test/live-security-smoke.js
-          python -m py_compile huggingface/chat-space/app.py huggingface/chat-space/response_style.py huggingface/speech-space/app.py huggingface/voice-space/app.py
+          python -m py_compile huggingface/chat-space/app.py huggingface/chat-space/response_style.py huggingface/chat-space/stream_utils.py huggingface/speech-space/app.py huggingface/voice-space/app.py
           PYTHONPATH=huggingface/chat-space python -m unittest discover -s huggingface/chat-space/tests -v
 
       - name: Run backend API regression tests

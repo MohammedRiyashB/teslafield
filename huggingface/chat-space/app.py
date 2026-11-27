@@ -7,6 +7,7 @@ from pathlib import Path
 from threading import Lock, Thread
 from typing import Any
 from response_style import apply_response_style
+from stream_utils import generation_finish_reason
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -200,7 +201,7 @@ _model_lock = Lock()
 class ChatRequest(BaseModel):
     message: str | None = None
     messages: list[dict[str, Any]] | None = None
-    max_new_tokens: int = Field(default=256, ge=16, le=768)
+    max_new_tokens: int = Field(default=1024, ge=16, le=2048)
     response_style: str = "balanced"
 
 
@@ -310,15 +311,47 @@ async def stream_api(request: ChatRequest):
         repetition_penalty=1.08,
         pad_token_id=tokenizer.eos_token_id,
     )
+    generation_result: dict[str, Any] = {}
 
     def run_generation():
-        with torch.inference_mode():
-            model.generate(**generation_kwargs)
+        try:
+            with torch.inference_mode():
+                generation_result["sequences"] = model.generate(**generation_kwargs)
+        except Exception as error:
+            generation_result["error"] = error
+            streamer.end()
 
-    Thread(target=run_generation, daemon=True).start()
+    generation_thread = Thread(target=run_generation, daemon=True)
+    generation_thread.start()
 
     def token_stream():
         for piece in streamer:
-            yield piece
+            if piece:
+                event = {"choices": [{"delta": {"content": piece}}]}
+                yield "data: " + json.dumps(event, ensure_ascii=False) + "\n\n"
 
-    return StreamingResponse(token_stream(), media_type="text/plain; charset=utf-8")
+        generation_thread.join()
+        if "error" in generation_result:
+            event = {"error": {"message": "The TeslafieldAI B1 model stopped during generation."}}
+            yield "data: " + json.dumps(event) + "\n\n"
+            return
+
+        sequences = generation_result.get("sequences")
+        if sequences is None or not len(sequences):
+            event = {"error": {"message": "The TeslafieldAI B1 model returned no completion."}}
+            yield "data: " + json.dumps(event) + "\n\n"
+            return
+
+        generated_tokens = int(sequences[0].shape[-1] - inputs["input_ids"].shape[-1])
+        last_token_id = int(sequences[0][-1]) if generated_tokens else None
+        finish_reason = generation_finish_reason(
+            generated_tokens,
+            request.max_new_tokens,
+            last_token_id,
+            tokenizer.eos_token_id,
+        )
+        finish_event = {"choices": [{"delta": {}, "finish_reason": finish_reason}]}
+        yield "data: " + json.dumps(finish_event) + "\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(token_stream(), media_type="text/event-stream; charset=utf-8")

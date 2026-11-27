@@ -110,3 +110,43 @@ test("model preference is restored, saved and safely falls back to TeslafieldAI"
   assert.match(app.slice(saveStart, saveEnd), /model: userPreferences\.model/);
   assert.match(app, /userPreferences\.model = selected/);
 });
+
+
+test("stream parser tracks completion and model token-limit finish reasons", () => {
+  const start = app.indexOf("async function consumeChatStream(response, onText)");
+  const end = app.indexOf("function createStreamingAssistantBubble()", start + 1);
+  assert.ok(start >= 0 && end > start);
+  const source = app.slice(start, end);
+  assert.match(source, /payloadText === "\[DONE\]"/);
+  assert.match(source, /choice\.finish_reason/);
+  assert.match(source, /finish_reason/);
+});
+
+test("long streams continue the same selected model and keep one live bubble", () => {
+  const start = app.indexOf("async function requestReply(chat)");
+  const end = app.indexOf("function showGuestContinueCard()", start + 1);
+  const source = app.slice(start, end);
+  assert.match(source, /continuationCount >= 2/);
+  assert.match(source, /Continue exactly where the previous response stopped/);
+  assert.match(source, /model: userPreferences\.model/);
+  assert.match(source, /streamingBubble\.body\.textContent = accumulatedText/);
+  assert.match(source, /streamingBubble\.body\.classList\.remove\("is-revealing"\)/);
+});
+
+test("new share links store response on the API and use a short ID-only URL", () => {
+  const start = app.indexOf("async function shareAssistantMessage(content)");
+  const end = app.indexOf("function base64UrlEncode(", start + 1);
+  const source = app.slice(start, end);
+  assert.match(source, /API \+ "\/api\/v1\/shares"/);
+  assert.match(source, /location\.origin \+ "\/share\/" \+ result\.id/);
+  assert.doesNotMatch(source, /\?data=/);
+});
+
+test("shared response page supports old compressed links and fetches new ID links", () => {
+  const start = app.indexOf("async function openSharedMessagePage()");
+  const end = app.indexOf("\n  function ", start + 5);
+  const source = app.slice(start, end);
+  assert.match(source, /legacyPayload/);
+  assert.match(source, /API \+ "\/api\/v1\/shares\/" \+/);
+  assert.match(source, /DecompressionStream/);
+});
