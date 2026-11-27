@@ -1017,6 +1017,7 @@
         if (event.data && event.data.size) chunks.push(event.data);
       };
       recorder.onerror = () => {
+        recorder.failed = true;
         clearTimeout(recordingTimer);
         stream.getTracks().forEach((track) => track.stop());
         if (mediaRecorder === recorder) mediaRecorder = null;
@@ -1030,7 +1031,7 @@
         mediaRecorder = null;
         mediaRecorderStream = null;
         chunks = chunks || [];
-        if (recorder.cancelled) {
+        if (recorder.cancelled || recorder.failed) {
           chunks = [];
           resetMicButton();
           return;
