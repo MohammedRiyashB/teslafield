@@ -510,8 +510,11 @@ const server = http.createServer(async (req, res) => {
     audit("api.request_authorized", authUser.uid, url.pathname);
     try {
       if (req.method === "GET") {
-        const conversations = await conversationStore.list(authUser.uid, req.firebaseIdToken);
-        return sendJson(res, 200, { ok: true, conversations });
+        const [conversations, deleted] = await Promise.all([
+          conversationStore.list(authUser.uid, req.firebaseIdToken),
+          conversationStore.listDeleted(authUser.uid, req.firebaseIdToken)
+        ]);
+        return sendJson(res, 200, { ok: true, conversations, deleted });
       }
       if (req.method === "PUT") {
         const input = await readJson(req, 512 * 1024);
