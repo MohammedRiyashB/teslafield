@@ -99,8 +99,22 @@
   }
   function readCachedProviderModels() {
     try {
-      const cached = JSON.parse(localStorage.getItem(MODEL_CATALOG_CACHE_KEY) || "[]");
-      return Array.isArray(cached) ? cached.filter(isEligibleCachedModel).slice(0, 1000) : [];
+      // Migrate the last-known-good v3 catalogue instead of discarding it
+      // when a fresh deployment bumps the cache schema. This keeps the
+      // model picker populated during temporary OpenRouter/CDN 503 errors.
+      let raw = localStorage.getItem(MODEL_CATALOG_CACHE_KEY);
+      let sourceKey = MODEL_CATALOG_CACHE_KEY;
+      if (!raw) {
+        raw = localStorage.getItem("teslafield.openrouter.catalog.v3");
+        sourceKey = "teslafield.openrouter.catalog.v3";
+      }
+      const cached = raw ? JSON.parse(raw) : [];
+      const eligible = Array.isArray(cached) ? cached.filter(isEligibleCachedModel).slice(0, 1000) : [];
+      if (sourceKey !== MODEL_CATALOG_CACHE_KEY && eligible.length) {
+        localStorage.setItem(MODEL_CATALOG_CACHE_KEY, JSON.stringify(eligible));
+        localStorage.removeItem(sourceKey);
+      }
+      return eligible;
     } catch (error) {
       return [];
     }
