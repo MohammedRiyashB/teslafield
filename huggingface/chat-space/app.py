@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 from threading import Lock, Thread
 from typing import Any
+from response_style import apply_response_style
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -200,6 +201,7 @@ class ChatRequest(BaseModel):
     message: str | None = None
     messages: list[dict[str, Any]] | None = None
     max_new_tokens: int = Field(default=256, ge=16, le=768)
+    response_style: str = "balanced"
 
 
 def load_model():
@@ -233,7 +235,7 @@ def prepare_messages(request: ChatRequest):
         clean.append({"role": "user", "content": request.message[:12000]})
     else:
         raise HTTPException(status_code=400, detail="Provide message or messages.")
-    return clean
+    return apply_response_style(clean, request.response_style)
 
 
 def make_inputs(messages):
