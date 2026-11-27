@@ -1,4 +1,4 @@
-// Older v14 and v15 shell caches are removed by the activation cleanup below.
+// The legacy teslafield-pwa-shell-v14 and v15 caches are removed by activation cleanup below.
 const CACHE_NAME = "teslafield-pwa-shell-v16";
 const SHELL_ASSETS = [
   "/",
