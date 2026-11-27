@@ -42,11 +42,15 @@ function createOpenRouterCatalog({ apiKey = "", fetchImpl = fetch, ttlMs = 10 * 
     if (cachedModels && Date.now() - cachedAt < ttlMs) return cachedModels;
     if (pending) return pending;
     pending = (async () => {
-      const response = await fetchImpl(OPENROUTER_BASE_URL + "/models", {
+      const response = await fetchImpl(OPENROUTER_BASE_URL + "/models?endpoints=%2Fapi%2Fv1%2Fchat%2Fcompletions", {
         headers: { Authorization: "Bearer " + apiKey, Accept: "application/json" },
         signal: AbortSignal.timeout(15000)
       });
-      if (!response.ok) throw new Error("OPENROUTER_CATALOG_UNAVAILABLE");
+      if (!response.ok) {
+        const error = new Error("OPENROUTER_CATALOG_HTTP_" + response.status);
+        error.code = "OPENROUTER_CATALOG_HTTP_" + response.status;
+        throw error;
+      }
       const payload = await response.json();
       if (!payload || !Array.isArray(payload.data)) throw new Error("OPENROUTER_CATALOG_INVALID");
       const models = payload.data.map(normalizeOpenRouterModel).filter(Boolean);
