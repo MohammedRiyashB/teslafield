@@ -2333,3 +2333,173 @@ body.signed-in:not(.guest-mode) .guest-legal{display:none!important}
   body.signed-in:not(.guest-mode) .composer,
   body.signed-in:not(.guest-mode) .composer-model-row .model-picker-button{transition:none!important}
 }
+
+
+/* TESLAFIELD — refined neutral-grey glass controls.
+   Signed-in chat only: keep the guest welcome/auth screen unchanged. */
+:root{
+  --tf-control-bg:rgba(213,217,223,.90);
+  --tf-control-bg-hover:rgba(196,202,210,.98);
+  --tf-control-border:rgba(151,159,170,.62);
+  --tf-control-text:#353b44;
+  --tf-composer-bg:rgba(224,228,233,.94);
+  --tf-action-bg:rgba(200,206,214,.90);
+  --tf-action-hover:rgba(181,188,198,.98);
+  --tf-send-bg:#858e9a;
+  --tf-send-hover:#707b88;
+  --tf-control-shadow:0 4px 16px rgba(25,31,40,.10),inset 0 1px 0 rgba(255,255,255,.38);
+}
+:root.dark{
+  --tf-control-bg:rgba(103,109,118,.82);
+  --tf-control-bg-hover:rgba(124,131,141,.94);
+  --tf-control-border:rgba(177,184,194,.46);
+  --tf-control-text:#f3f5f7;
+  --tf-composer-bg:rgba(75,81,90,.92);
+  --tf-action-bg:rgba(105,112,122,.88);
+  --tf-action-hover:rgba(128,136,147,.98);
+  --tf-send-bg:#929ca9;
+  --tf-send-hover:#a2acb8;
+  --tf-control-shadow:0 5px 18px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.12);
+}
+body.signed-in:not(.guest-mode) .topbar .icon-button,
+body.signed-in:not(.guest-mode) .connect-entry-button{
+  background:var(--tf-control-bg)!important;
+  border:1px solid var(--tf-control-border)!important;
+  color:var(--tf-control-text)!important;
+  box-shadow:var(--tf-control-shadow)!important;
+  transition:background .18s ease,border-color .18s ease,box-shadow .18s ease,transform .16s ease!important;
+}
+body.signed-in:not(.guest-mode) .topbar .icon-button:hover,
+body.signed-in:not(.guest-mode) .connect-entry-button:hover,
+body.signed-in:not(.guest-mode) .topbar .icon-button:focus-visible,
+body.signed-in:not(.guest-mode) .connect-entry-button:focus-visible{
+  background:var(--tf-control-bg-hover)!important;
+  border-color:var(--tf-control-border)!important;
+  color:var(--tf-control-text)!important;
+  box-shadow:0 5px 19px rgba(25,31,40,.14),inset 0 1px 0 rgba(255,255,255,.34)!important;
+}
+body.signed-in:not(.guest-mode) .connect-entry-button .infinity-mark{
+  color:var(--tf-control-text)!important;
+  font-size:31px!important;
+  line-height:1!important;
+}
+body.signed-in:not(.guest-mode) .composer-model-row .model-picker-button{
+  min-height:38px!important;
+  height:38px!important;
+  padding:0 16px!important;
+  gap:9px!important;
+  border:1px solid var(--tf-control-border)!important;
+  border-radius:999px!important;
+  background:var(--tf-control-bg)!important;
+  color:var(--tf-control-text)!important;
+  box-shadow:var(--tf-control-shadow)!important;
+  font-size:13px!important;
+  font-weight:650!important;
+  letter-spacing:.005em;
+  transition:background .18s ease,border-color .18s ease,box-shadow .18s ease,transform .16s ease!important;
+}
+body.signed-in:not(.guest-mode) .composer-model-row .model-picker-button:hover,
+body.signed-in:not(.guest-mode) .composer-model-row .model-picker-wrap.is-open .model-picker-button{
+  background:var(--tf-control-bg-hover)!important;
+  border-color:var(--tf-control-border)!important;
+  box-shadow:0 5px 19px rgba(25,31,40,.14)!important;
+}
+body.signed-in:not(.guest-mode) .composer-model-row .model-picker-button:active{
+  transform:scale(.985)!important;
+}
+body.signed-in:not(.guest-mode) .composer{
+  min-height:70px!important;
+  padding:12px 15px 10px!important;
+  border-color:var(--tf-control-border)!important;
+  border-radius:28px!important;
+  background:var(--tf-composer-bg)!important;
+  box-shadow:0 9px 30px rgba(20,26,34,.13),inset 0 1px 0 rgba(255,255,255,.24)!important;
+}
+body.signed-in:not(.guest-mode) .composer:focus-within{
+  border-color:color-mix(in srgb,var(--tf-control-text) 32%,var(--tf-control-border))!important;
+  box-shadow:0 10px 34px rgba(20,26,34,.17),inset 0 1px 0 rgba(255,255,255,.27)!important;
+}
+body.signed-in:not(.guest-mode) .composer textarea{
+  font-size:15px!important;
+  line-height:1.55!important;
+}
+body.signed-in:not(.guest-mode) .composer .attachment-button,
+body.signed-in:not(.guest-mode) .composer .mic-button{
+  width:36px!important;
+  min-width:36px!important;
+  height:36px!important;
+  min-height:36px!important;
+  border:1px solid var(--tf-control-border)!important;
+  border-radius:50%!important;
+  background:var(--tf-action-bg)!important;
+  color:var(--tf-control-text)!important;
+  box-shadow:0 2px 8px rgba(20,26,34,.07)!important;
+  transition:background .16s ease,border-color .16s ease,transform .16s ease!important;
+}
+body.signed-in:not(.guest-mode) .composer .attachment-button:hover,
+body.signed-in:not(.guest-mode) .composer .mic-button:hover{
+  background:var(--tf-action-hover)!important;
+  border-color:var(--tf-control-border)!important;
+}
+body.signed-in:not(.guest-mode) .composer .attachment-button:active,
+body.signed-in:not(.guest-mode) .composer .mic-button:active{
+  transform:scale(.95)!important;
+}
+body.signed-in:not(.guest-mode) .composer .send-button{
+  width:38px!important;
+  min-width:38px!important;
+  height:38px!important;
+  min-height:38px!important;
+  border:1px solid var(--tf-control-border)!important;
+  border-radius:50%!important;
+  background:var(--tf-send-bg)!important;
+  color:#fff!important;
+  box-shadow:0 3px 10px rgba(20,26,34,.16)!important;
+  transition:background .16s ease,box-shadow .16s ease,transform .16s ease!important;
+}
+body.signed-in:not(.guest-mode) .composer .send-button:hover{
+  background:var(--tf-send-hover)!important;
+  box-shadow:0 4px 13px rgba(20,26,34,.20)!important;
+  filter:none!important;
+}
+body.signed-in:not(.guest-mode) .composer .send-button:active{
+  transform:scale(.95)!important;
+}
+@media(max-width:760px){
+  body.signed-in:not(.guest-mode) .composer-area{
+    padding:9px 12px max(9px,env(safe-area-inset-bottom))!important;
+  }
+  body.signed-in:not(.guest-mode) .composer-model-row{
+    margin:0 0 8px 2px!important;
+  }
+  body.signed-in:not(.guest-mode) .composer-model-row .model-picker-button{
+    min-height:36px!important;
+    height:36px!important;
+    padding:0 13px!important;
+    max-width:70vw!important;
+    font-size:12px!important;
+  }
+  body.signed-in:not(.guest-mode) .composer{
+    min-height:64px!important;
+    padding:9px 11px 8px!important;
+    border-radius:25px!important;
+  }
+  body.signed-in:not(.guest-mode) .composer textarea{
+    min-height:33px!important;
+    max-height:145px!important;
+    font-size:16px!important;
+  }
+  body.signed-in:not(.guest-mode) .composer .attachment-button,
+  body.signed-in:not(.guest-mode) .composer .mic-button{
+    width:34px!important;
+    min-width:34px!important;
+    height:34px!important;
+    min-height:34px!important;
+  }
+  body.signed-in:not(.guest-mode) .composer .send-button{
+    width:36px!important;
+    min-width:36px!important;
+    height:36px!important;
+    min-height:36px!important;
+  }
+}
