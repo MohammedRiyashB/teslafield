@@ -171,24 +171,22 @@ This document is a measured engineering roadmap, not a claim that every category
 - The OpenRouter free section is capped at 13 displayed catalogue entries; the catalogue is dynamic and can return fewer than 13 when fewer compatible free text models are available. Paid models remain in their own section.
 - Manual Android browser/device visual testing is still required.
 
-### Stage 6 — cloud conversation history (initial implementation; configuration and validation pending)
+### Stage 6 — cloud conversation history (implementation complete; owner activation pending)
 
 - Add a Firestore REST storage adapter with per-user document paths derived only from the verified Firebase UID.
 - Add authenticated GET, PUT and DELETE conversation endpoints; use the caller's Firebase ID token so Firestore Security Rules enforce owner-only access.
 - Add safe conversation/document ID validation, message role and length validation, and a 400 KiB per-conversation size cap.
-- Add owner-only rules in `firestore.rules` and register the rules file in `firebase.json`.
-- Keep localStorage as the offline cache; merge local and cloud conversations by update timestamp on sign-in, upload local changes, and refresh when the app regains focus.
-- Add backend unit and unauthenticated API/CORS regression tests.
-- No database has been provisioned, no rules have been deployed, and no cloud data has been written in production. The project owner must create the default Firestore database and deploy rules using the instructions in `backend/README.md`.
-- Known remaining work before Stage 6 can be called complete: deterministic conflict/deletion tombstones, account deletion/export lifecycle, Firestore emulator/integration tests, live cross-device tests, and confirmation of the project's Firestore free quota and region.
+- Add owner-only rules for both conversation documents and durable deletion tombstones in `firestore.rules`, registered in `firebase.json`.
+- Keep localStorage as the offline cache; merge local and cloud conversations on sign-in, refresh on page focus, and upload local edits.
+- Persist deletion markers locally while offline and remotely in Firestore before deleting the conversation document. Sync consumes these markers so stale offline copies cannot silently resurrect deleted chats.
+- Paginate tombstone retrieval and preserve markers across devices; a deliberate explicit save of a conversation ID clears its marker.
+- Add JSON export of the current signed-in user's locally synchronized conversation history.
+- Account deletion first attempts to delete all known cloud conversations and their tombstones while the Firebase ID token is still valid, then deletes the Firebase Auth account and local chat data. If cloud cleanup fails, account deletion is stopped rather than leaving known cloud content behind.
+- Keep the service free-tier compatible: use the existing Firebase project and caller ID tokens; no service-account private key or paid database is added.
+- Add regression coverage for Firestore serialization, owner-scoped paths, tombstone create/list/delete lifecycle, safe validation, and the existing authenticated API/UI contracts.
 
-**Current status:** Stage 6 implementation is underway on the engineering branch only. No production merge or deployment has been performed.
+**Owner activation still required before cross-device sync works:** create the default Firestore database for project `teslafieldai`, confirm the project Firestore API is enabled, and deploy `firestore.rules` with `firebase deploy --only firestore:rules --project teslafieldai`. Review the database region and current Firebase Spark quotas first. No database was provisioned and no rules were deployed by this code change.
 
+**Live verification still required:** run the Firestore Emulator or a dedicated test database, test real authorization and cross-device behavior, and visually verify the popup/history controls on Android. Automated mocks and CI do not prove that the owner's live Firebase project is configured.
 
-### Stage 6 initial implementation validation
-
-- GitHub Actions run [45938591456](https://github.com/MohammedRiyashB/teslafield/actions/runs/45938591456) completed successfully on UI/code-test commit `cfd0bf1e06bebb8fb90cc4b543889feb51f32c4a`.
-- JavaScript syntax checks passed, including `backend/conversation-store.js`.
-- **47 Node.js tests and 5 Python tests passed; zero failures.**
-- Added test coverage for owner-scoped Firestore paths, invalid IDs/messages, Firestore value serialization, authenticated history routes, CORS methods, the model capsule replacing the plus button, paperclip attachment retention, local-cache sync contract, Firestore rules and account-switch sync recovery.
-- This is code-level validation only. The live Firebase Firestore database has not been provisioned and the rules have not been deployed. Live Firestore authorization, cross-device behavior, deletion conflict handling and Android visual verification remain pending.
+**Current status:** implementation is complete on the engineering branch; production activation and live-device verification remain owner/environment tasks. No production merge or deployment has been performed.
