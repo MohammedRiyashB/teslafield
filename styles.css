@@ -1873,5 +1873,5 @@ body:not(.signed-in) .composer .attachment-button {
 
 /* Give the signed-in model capsule a little more breathing room above the composer. */
 body.signed-in .composer-model-row {
-  margin-bottom: 13px !important;
+  margin-bottom: 19px !important;
 }
