@@ -91,6 +91,7 @@
   let cloudSyncTimer = null;
   let cloudSyncFingerprints = new Map();
   let cloudDeletedIds = new Set();
+  let cloudSyncedDeletedIds = new Set();
   let cloudHistoryWarningShown = false;
   let resolveAuthReady;
   const authReadyPromise = new Promise((resolve) => { resolveAuthReady = resolve; });
@@ -382,6 +383,7 @@
       cloudSyncReady = false;
       cloudSyncFingerprints = new Map();
       cloudDeletedIds = new Set();
+      cloudSyncedDeletedIds = new Set();
       if (cloudSyncTimer) { clearTimeout(cloudSyncTimer); cloudSyncTimer = null; }
       if (currentUser) {
         loadStore();
@@ -564,6 +566,7 @@
       localStorage.removeItem("teslafield.conversations.v3");
       chats = [];
       cloudDeletedIds = new Set();
+      cloudSyncedDeletedIds = new Set();
       activeId = null;
       renderConversation();
       toast("Your TeslafieldAI account and cloud chat data were deleted.");
@@ -677,6 +680,7 @@
       const remote = Array.isArray(result.conversations) ? result.conversations : [];
       const remoteDeleted = Array.isArray(result.deleted) ? result.deleted.map((item) => item && item.id).filter(Boolean) : [];
       remoteDeleted.forEach((id) => cloudDeletedIds.add(id));
+      cloudSyncedDeletedIds = new Set(remoteDeleted);
       saveDeletedConversationIds();
       const deletedIds = new Set(cloudDeletedIds);
       chats = chats.filter((chat) => !deletedIds.has(chat.id));
@@ -729,7 +733,9 @@
       const currentIds = new Set(local.map((chat) => chat.id));
       for (const id of cloudDeletedIds) {
         if (currentUser !== user) return;
+        if (cloudSyncedDeletedIds.has(id)) continue;
         await cloudHistoryRequest("DELETE", token, null, id);
+        cloudSyncedDeletedIds.add(id);
         cloudSyncFingerprints.delete(id);
       }
       for (const chat of local) {
