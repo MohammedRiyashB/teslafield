@@ -2550,3 +2550,102 @@ body{
 body.signed-in:not(.guest-mode) .conversation-scroll{
   scrollbar-gutter:auto!important;
 }
+
+
+/* TESLAFIELD — fixed charcoal stadium composer, matching the supplied bar reference.
+   Keep the existing plus, microphone, send, menu and CONNECTO button treatments intact. */
+body.signed-in:not(.guest-mode) .composer-area{
+  padding-left:10px!important;
+  padding-right:10px!important;
+}
+body.signed-in:not(.guest-mode) .composer-shell{
+  width:min(768px,100%)!important;
+  max-width:768px!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+body.signed-in:not(.guest-mode) .composer{
+  display:grid!important;
+  grid-template-columns:36px minmax(0,1fr) auto!important;
+  align-items:center!important;
+  column-gap:8px!important;
+  width:100%!important;
+  min-height:56px!important;
+  padding:7px 10px!important;
+  border:1px solid #343638!important;
+  border-radius:9999px!important;
+  background:#212224!important;
+  background-image:none!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+body.signed-in:not(.guest-mode) .composer textarea{
+  grid-column:2!important;
+  grid-row:1!important;
+  align-self:center!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:36px!important;
+  max-height:128px!important;
+  margin:0!important;
+  padding:4px 1px!important;
+  border:0!important;
+  border-radius:0!important;
+  outline:0!important;
+  background:transparent!important;
+  color:#E3E5E8!important;
+  font-size:15.5px!important;
+  line-height:1.45!important;
+  text-align:left!important;
+  resize:none!important;
+}
+body.signed-in:not(.guest-mode) .composer textarea::placeholder{
+  color:#8E9196!important;
+  opacity:1!important;
+}
+body.signed-in:not(.guest-mode) .composer-toolbar{
+  display:contents!important;
+}
+body.signed-in:not(.guest-mode) .composer-tools{
+  grid-column:1!important;
+  grid-row:1!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-width:0!important;
+  gap:0!important;
+}
+body.signed-in:not(.guest-mode) .composer-hint{
+  display:none!important;
+}
+body.signed-in:not(.guest-mode) .composer-actions{
+  grid-column:3!important;
+  grid-row:1!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  gap:7px!important;
+  flex:none!important;
+}
+@media(max-width:760px){
+  body.signed-in:not(.guest-mode) .composer-area{
+    padding-left:9px!important;
+    padding-right:9px!important;
+  }
+  body.signed-in:not(.guest-mode) .composer{
+    grid-template-columns:34px minmax(0,1fr) auto!important;
+    column-gap:7px!important;
+    min-height:54px!important;
+    padding:6px 9px!important;
+  }
+  body.signed-in:not(.guest-mode) .composer textarea{
+    min-height:36px!important;
+    max-height:112px!important;
+    padding:4px 1px!important;
+    font-size:15.5px!important;
+  }
+  body.signed-in:not(.guest-mode) .composer-actions{
+    gap:6px!important;
+  }
+}
