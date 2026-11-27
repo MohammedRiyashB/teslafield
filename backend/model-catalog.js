@@ -2,7 +2,6 @@
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 const CHAT_COMPLETIONS_ENDPOINT = "/api/v1/chat/completions";
-const BLOCKED_MODEL_PATTERN = /(gemma[- ]4[- ]26b[- ]a4b|gemma[- ]4[- ]31b|ling[- ]3[.]2[- ]flash|lfm.*1[.]7b|particle[- ]1)/i;
 
 function normalizeOpenRouterModel(item) {
   if (!item || typeof item.id !== "string" || !item.id.trim()) return null;
@@ -16,9 +15,6 @@ function normalizeOpenRouterModel(item) {
   const inputs = Array.isArray(architecture.input_modalities) ? architecture.input_modalities : [];
   const outputs = Array.isArray(architecture.output_modalities) ? architecture.output_modalities : [];
   if (!inputs.includes("text") || !outputs.includes("text")) return null;
-
-  const identity = (item.id + " " + (typeof item.name === "string" ? item.name : "")).toLowerCase();
-  if (BLOCKED_MODEL_PATTERN.test(identity)) return null;
 
   return {
     id: item.id,
