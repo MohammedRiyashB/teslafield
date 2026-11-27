@@ -69,7 +69,7 @@ test("cloud sync retries for the newly selected account after an in-flight accou
 
 
 test("model picker renders immediately, shows loading feedback and can retry the catalogue", () => {
-  assert.ok(app.includes("renderModelPicker();\\n  loadModelCatalog();"), "Picker must render before the network catalogue request");
+  assert.ok(/renderModelPicker\(\);\s*loadModelCatalog\(\);/.test(app), "Picker must render before the network catalogue request");
   assert.ok(app.includes("Loading free models…"));
   assert.ok(app.includes("AbortSignal.timeout(25000)"));
   assert.ok(app.includes("loadModelCatalog({ force: true })"));
