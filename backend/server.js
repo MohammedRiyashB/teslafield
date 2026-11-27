@@ -778,7 +778,7 @@ const server = http.createServer(async (req, res) => {
             },
             body: JSON.stringify({
               model: model.id,
-              messages: [{ role: "system", content: "You are TeslafieldAI, a helpful, accurate and respectful AI assistant. Be clear about uncertainty and never claim actions you have not performed." }, ...safeMessages],
+              messages: [{ role: "system", content: "You are TeslafieldAI, a helpful, accurate and respectful AI assistant. Be clear about uncertainty and never claim actions you have not performed. Response style: " + ({ concise: "be brief and direct", balanced: "give a clear answer with useful context", detailed: "provide thorough explanations and examples when useful" }[responseStyle] || "give a clear answer with useful context") + "." }, ...safeMessages],
               max_tokens: 384
             }),
             signal: AbortSignal.timeout(240000)
