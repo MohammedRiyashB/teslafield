@@ -32,7 +32,7 @@ A shared Key Value store must be explicitly linked in the same region as the API
 
 ### 2. GitHub main-branch protection
 
-The repository has no rulesets in the rulesets listing. The GitHub integration used for this review cannot read the branch-protection endpoint (403) or create/update branch protection. Although the repository owner account has Admin permission, branch protection has not been enabled by this review.
+The repository's rulesets listing returned an empty list. The GitHub integration used for this review cannot read the branch-protection endpoint (403) or create/update branch protection. The owner account has Admin permission, but this integration cannot apply or independently verify a branch-protection rule. Configure it manually in repository settings.
 
 Before relying on main as a protected production branch, configure a rule for main in GitHub settings:
 - Require pull requests before merging.
@@ -43,7 +43,7 @@ Before relying on main as a protected production branch, configure a rule for ma
 
 ### 3. OAuth
 
-The code uses authorization code + PKCE S256, validates the ChatGPT Client Metadata Document, checks the exact registered redirect URI and resource, issues a short-lived resource-scoped token, and consumes authorization codes after successful exchange. Automated tests are being added for success, mismatch, replay and concurrent-consent cases.
+The code uses authorization code + PKCE S256, validates the ChatGPT Client Metadata Document, checks the exact registered redirect URI and resource, issues a short-lived resource-scoped token, and consumes authorization codes after successful exchange. The automated tests cover successful redemption, redirect mismatch, incorrect PKCE verifier, authorization-code replay, consent replay and concurrent-consent submissions.
 
 The automated tests do not replace an independent assessment of the live OAuth integration, client metadata changes, browser consent UX, token theft scenarios, or real-world abuse.
 
@@ -52,7 +52,7 @@ The automated tests do not replace an independent assessment of the live OAuth i
 - The default chat model runs in a custom public Hugging Face Space (Earthaioa/EARTH_OS_V10_DOCKER). This is not Hugging Face Inference Providers or an Inference Endpoint; those products' separate request-retention statements do not automatically apply to this custom Space.
 - Speech and voice use custom public Hugging Face Spaces. Application-level Gradio cache cleanup is best-effort and does not control infrastructure logs, backups or copies retained by the hosting provider.
 - The custom chat, speech and voice Spaces are public endpoints. Firebase authentication protects the Teslafield backend, not direct calls to a public Space URL. Direct Space access is an outstanding exposure and must be addressed with Space-level private access or equivalent backend-to-Space authentication before claiming the entire inference surface is protected by website sign-in.
-- OpenRouter receives selected chat inputs when an OpenRouter model is selected. Request flags constrain routing but do not erase all OpenRouter operational metadata or guarantee deletion by every intermediary/provider. Provider terms and eligible endpoints can change.
+- OpenRouter receives selected chat inputs when an OpenRouter model is selected. Request flags constrain routing but do not erase all OpenRouter operational metadata or guarantee deletion by every intermediary/provider. OpenRouter documents that safety-retention endpoints may remain eligible depending on account privacy settings; a per-request flag is not a substitute for an account-level ZDR-only policy. On 22 November 2026, OpenRouter announced removal of three providers and 125 endpoints from ZDR eligibility after researchers raised data-handling concerns. Provider terms and eligible endpoints can change.
 
 ### 5. External security assessment
 
