@@ -1709,7 +1709,7 @@
         const option = document.createElement("option");
         option.value = model.id;
         const formatPrice = (value) => Number(value || 0).toFixed(6).replace(/\.?0+$/, "");
-        const price = model.free ? (model.provider === "OpenRouter" && model.id !== "openrouter/free" && model.freeTier !== true ? "$0 model price · account conditions may apply" : "Free") :
+        const price = model.free ? (model.provider === "OpenRouter" && model.freeTier !== true ? "$0 model price · account conditions may apply" : "Free") :
           "$" + formatPrice(model.promptPerMillion) + " USD in / $" + formatPrice(model.completionPerMillion) + " USD out per 1M tokens";
         option.textContent = model.name + " · " + price;
         optgroup.appendChild(option);
@@ -1748,7 +1748,6 @@
     list.replaceChildren();
     const own = availableModels.filter((model) => model.id === "teslafield");
     const routerFree = availableModels.filter((model) => model.provider === "OpenRouter" && model.free);
-    if (selected && selected.provider === "OpenRouter" && selected.free && !routerFree.some((model) => model.id === selected.id)) routerFree[12] = selected;
     const routerPaid = availableModels.filter((model) => model.provider === "OpenRouter" && !model.free);
     const groups = [
       { title: "TESLAFIELD", models: own },
