@@ -6,4 +6,4 @@ accelerate
 safetensors
 sentencepiece
 protobuf
-diffusers==0.35.2
+diffusers==0.43.0
