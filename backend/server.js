@@ -694,7 +694,7 @@ const server = http.createServer(async (req, res) => {
       const upstream = await fetch(CHAT_SPACE_URL + "/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: safeMessages, max_new_tokens: 384 }),
+        body: JSON.stringify({ messages: safeMessages, max_new_tokens: 384, response_style: ["concise", "balanced", "detailed"].includes(input.response_style) ? input.response_style : "balanced" }),
         signal: AbortSignal.timeout(240000)
       });
       const data = await upstream.json().catch(() => ({}));
