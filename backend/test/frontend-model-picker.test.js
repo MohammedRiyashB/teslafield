@@ -29,7 +29,7 @@ test("model picker shows Teslafield B1 and provider-branded free models", () => 
   assert.match(app, /recursive\.ai/);
   assert.match(app, /data\.catalogError/);
   assert.match(app, /OpenRouter returned no eligible chat models/);
-  assert.match(app, /Free provider models have not loaded yet/);
+  assert.match(app, /Provider models have not loaded yet/);
   assert.doesNotMatch(app, /OPENROUTER · FREE MODELS/);
   assert.doesNotMatch(app, /https:\/\/openrouter\.ai\/favicon\.ico/);
   assert.match(app, /model\.id\.endsWith\(":free"\)/);
@@ -70,7 +70,7 @@ test("cloud sync retries for the newly selected account after an in-flight accou
 
 test("model picker renders immediately, shows loading feedback and can retry the catalogue", () => {
   assert.ok(/renderModelPicker\(\);\s*loadModelCatalog\(\);/.test(app), "Picker must render before the network catalogue request");
-  assert.ok(app.includes("Loading free models…"));
+  assert.ok(app.includes("Loading models…"));
   assert.ok(app.includes("AbortSignal.timeout(25000)"));
   assert.ok(app.includes("loadModelCatalog({ force: true })"));
 });
