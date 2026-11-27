@@ -1,7 +1,6 @@
 "use strict";
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
-const FREE_ROUTER_MODEL = "openrouter/free";
 
 function pricePerMillion(value) {
   const parsed = Number(value);
@@ -49,9 +48,8 @@ function createOpenRouterCatalog({ apiKey = "", fetchImpl = fetch, ttlMs = 10 * 
       if (!payload || !Array.isArray(payload.data)) throw new Error("OPENROUTER_CATALOG_INVALID");
       const models = payload.data.map(normalizeOpenRouterModel).filter(Boolean);
       models.sort((a, b) => Number(b.free) - Number(a.free) || a.name.localeCompare(b.name));
-      const freeModels = models.filter((model) => model.free).slice(0, 50);
-      const paidModels = models.filter((model) => !model.free).slice(0, 100);
-      cachedModels = freeModels.concat(paidModels);
+      // Keep the complete OpenRouter chat-capable catalogue; do not truncate it.
+      cachedModels = models;
       cachedAt = Date.now();
       return cachedModels;
     })();
@@ -63,10 +61,6 @@ function createOpenRouterCatalog({ apiKey = "", fetchImpl = fetch, ttlMs = 10 * 
   }
 
   async function findModel(id) {
-    if (id === FREE_ROUTER_MODEL) {
-      if (!apiKey) return null;
-      return { id: FREE_ROUTER_MODEL, name: "OpenRouter Free Auto", free: true, freeTier: true, promptPerMillion: 0, completionPerMillion: 0 };
-    }
     const models = await listModels();
     return models.find((model) => model.id === id) || null;
   }
@@ -76,7 +70,6 @@ function createOpenRouterCatalog({ apiKey = "", fetchImpl = fetch, ttlMs = 10 * 
 
 module.exports = {
   OPENROUTER_BASE_URL,
-  FREE_ROUTER_MODEL,
   normalizeOpenRouterModel,
   createOpenRouterCatalog
 };

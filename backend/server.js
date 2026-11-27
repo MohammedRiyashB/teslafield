@@ -2,7 +2,7 @@ const http = require("node:http");
 const crypto = require("node:crypto");
 const { handleOAuthMcp } = require("./oauth-mcp");
 const { IdempotencyStore } = require("./idempotency");
-const { createOpenRouterCatalog, FREE_ROUTER_MODEL } = require("./model-catalog");
+const { createOpenRouterCatalog } = require("./model-catalog");
 const { createConversationStore } = require("./conversation-store");
 
 const PORT = Number(process.env.PORT || 10000);
@@ -564,16 +564,6 @@ const server = http.createServer(async (req, res) => {
     }];
     let catalogAvailable = true;
     if (openRouterCatalog.configured) {
-      models.push({
-        id: FREE_ROUTER_MODEL,
-        name: "OpenRouter Free Auto",
-        free: true,
-        freeTier: true,
-        provider: "OpenRouter",
-        promptPerMillion: 0,
-        completionPerMillion: 0,
-        available: true
-      });
       try {
         const remoteModels = await openRouterCatalog.listModels();
         for (const model of remoteModels) {
@@ -824,6 +814,7 @@ const server = http.createServer(async (req, res) => {
               "X-Title": "TeslafieldAI"
             },
             body: JSON.stringify({
+              // Send only the user's exact selected model ID. No router or model fallback.
               model: model.id,
               messages: [{ role: "system", content: "You are TeslafieldAI, a helpful, accurate and respectful AI assistant. Be clear about uncertainty and never claim actions you have not performed. Response style: " + ({ concise: "be brief and direct", balanced: "give a clear answer with useful context", detailed: "provide thorough explanations and examples when useful" }[responseStyle] || "give a clear answer with useful context") + "." }, ...safeMessages],
               max_tokens: 384

@@ -1709,7 +1709,7 @@
         const option = document.createElement("option");
         option.value = model.id;
         const formatPrice = (value) => Number(value || 0).toFixed(6).replace(/\.?0+$/, "");
-        const price = model.free ? (model.provider === "OpenRouter" && model.id !== "openrouter/free" && model.freeTier !== true ? "$0 model price · account conditions may apply" : "Free") :
+        const price = model.free ? (model.provider === "OpenRouter" && model.freeTier !== true ? "$0 model price · account conditions may apply" : "Free") :
           "$" + formatPrice(model.promptPerMillion) + " USD in / $" + formatPrice(model.completionPerMillion) + " USD out per 1M tokens";
         option.textContent = model.name + " · " + price;
         optgroup.appendChild(option);
@@ -1727,8 +1727,8 @@
     if (hint) {
       const routerReady = availableModels.some((model) => model.provider === "OpenRouter");
       hint.textContent = routerReady
-        ? "When selected, messages are sent to OpenRouter. Paid models use your account. Some $0 models may still require account credits; :free variants are free but rate-limited. Prices are shown per 1M tokens."
-        : "TeslafieldAI Free is active. More choices require a server-side OpenRouter key.";
+        ? "Your selected OpenRouter model is used directly. No automatic model switching. :free models are rate-limited; other $0 models may have account conditions. Prices are per 1M tokens."
+        : "TeslafieldAI Free is active. Add your OpenRouter API key to the backend to load the full model catalogue.";
     }
   }
 
@@ -1747,9 +1747,7 @@
     }
     list.replaceChildren();
     const own = availableModels.filter((model) => model.id === "teslafield");
-    const allRouterFree = availableModels.filter((model) => model.provider === "OpenRouter" && model.free);
-    const routerFree = allRouterFree.slice(0, 13);
-    if (selected && selected.provider === "OpenRouter" && selected.free && !routerFree.some((model) => model.id === selected.id)) routerFree[12] = selected;
+    const routerFree = availableModels.filter((model) => model.provider === "OpenRouter" && model.free);
     const routerPaid = availableModels.filter((model) => model.provider === "OpenRouter" && !model.free);
     const groups = [
       { title: "TESLAFIELD", models: own },
@@ -1795,7 +1793,9 @@
         name.textContent = model.id === "teslafield" ? "Teslafield B1" : model.name;
         const meta = document.createElement("small");
         meta.textContent = model.free
-          ? (model.provider === "OpenRouter" ? "FREE · OpenRouter" : "FREE · TeslafieldAI")
+          ? (model.provider === "OpenRouter"
+              ? (model.freeTier ? "FREE · OpenRouter :free · rate-limited" : "$0 MODEL · OpenRouter account conditions may apply")
+              : "FREE · TeslafieldAI")
           : "PAID · $" + Number(model.promptPerMillion || 0).toFixed(4) + " in / $" + Number(model.completionPerMillion || 0).toFixed(4) + " out per 1M tokens";
         copy.append(name, meta);
         const check = document.createElement("span");

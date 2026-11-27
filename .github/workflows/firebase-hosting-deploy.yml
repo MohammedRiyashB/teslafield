@@ -48,6 +48,7 @@ jobs:
           node --check oauth.js
           node --check backend/oauth-mcp.js
           node --check backend/server.js
+          node --test backend/test/*.test.js
           node --check sw.js
           python -m py_compile huggingface/chat-space/app.py
           node - <<'NODE'
