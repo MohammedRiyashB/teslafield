@@ -222,7 +222,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p public
-          cp index.html oauth.html oauth.js styles.css app.js theme-init.js terms.html privacy.html chatgpt-privacy.html chatgpt-terms.html public/
+          cp index.html oauth.html oauth.css oauth.js styles.css app.js theme-init.js terms.html privacy.html chatgpt-privacy.html chatgpt-terms.html public/
           cp manifest.webmanifest sw.js teslafield-pwa-icon.svg teslafield-icon-192.png teslafield-icon-512.png public/
           test -s teslafieldai-logo.png
           cp teslafieldai-logo.png public/
@@ -232,6 +232,7 @@ jobs:
           if [ -f sw.js ]; then cp sw.js public/; fi
           test -s public/index.html
           test -s public/oauth.html
+          test -s public/oauth.css
           test -s public/oauth.js
           test -s public/styles.css
           test -s public/app.js
@@ -257,7 +258,7 @@ jobs:
 
       - name: Verify published TeslafieldAI UI and assets
         run: |
-          set -euo pipefail
+          set -euxo pipefail
           BASE="https://teslafieldai.web.app"
           curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-connrefused "${BASE}/?verify=${GITHUB_SHA}" -o /tmp/teslafield-home.html
           VERSION="$(sed -n 's/.*styles\.css?v=\([^"]*\).*/\1/p' /tmp/teslafield-home.html | head -n1)"
@@ -315,6 +316,8 @@ jobs:
           curl --fail --location --silent --show-error "${BASE}/oauth?verify=${GITHUB_SHA}" -o /tmp/teslafield-oauth.html
           grep -q 'id="signInButton"' /tmp/teslafield-oauth.html
           grep -q '/__/firebase/init.js' /tmp/teslafield-oauth.html
+          curl --fail --silent --show-error "${BASE}/oauth.css?v=20261127-01&verify=${GITHUB_SHA}" -o /tmp/teslafield-oauth.css
+          grep -q '.primary{' /tmp/teslafield-oauth.css
           curl --fail --silent --show-error "${BASE}/oauth.js?v=$VERSION&verify=${GITHUB_SHA}" -o /tmp/teslafield-oauth.js
           grep -q '/oauth/consent' /tmp/teslafield-oauth.js
           echo "Verified Firebase-hosted OAuth sign-in and consent assets."
