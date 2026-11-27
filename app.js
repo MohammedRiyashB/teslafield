@@ -1837,7 +1837,7 @@
       availableModels = data.models.filter((model) =>
         model && typeof model.id === "string" && typeof model.name === "string" &&
         typeof model.free === "boolean" && /^[A-Za-z0-9._:/-]{1,160}$/.test(model.id) &&
-        (model.id === "teslafield" || (model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true && model.free === true)) &&\n        (model.id === "teslafield" || (model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true && model.free === true))
+        (model.id === "teslafield" || (model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true && model.free === true))
       );
       if (!availableModels.some((model) => model.id === "teslafield")) {
         availableModels.unshift({ id: "teslafield", name: "Teslafield B1", free: true, provider: "TeslafieldAI" });
