@@ -77,18 +77,23 @@
   let pendingGuestPrompt = "";
   let guestConversationStarted = false;
   let userPreferences = { responseStyle: "balanced", textSize: "standard", reduceMotion: false, model: "teslafield" };
-  const MODEL_CATALOG_CACHE_KEY = "teslafield.openrouter.models.free.v2";
-  const LEGACY_MODEL_CATALOG_CACHE_KEY = "teslafield.openrouter.models.zdr.v1";
+  const MODEL_CATALOG_CACHE_KEY = "teslafield.openrouter.catalog.v3";
   const TESLAFIELD_MODEL = { id: "teslafield", name: "Teslafield B1", free: true, freeTier: true, provider: "TeslafieldAI" };
+  try {
+    localStorage.removeItem("teslafield.openrouter.models.free.v2");
+    localStorage.removeItem("teslafield.openrouter.models.zdr.v1");
+  } catch (error) {}
   function isEligibleCachedModel(model) {
     return !!(model && typeof model.id === "string" && typeof model.name === "string" &&
       model.free === true && model.freeTier === true && model.provider === "OpenRouter" &&
-      model.id.endsWith(":free") && /^[A-Za-z0-9._:/-]{1,160}$/.test(model.id));
+      typeof model.providerSlug === "string" && model.providerSlug === model.id.split("/")[0] &&
+      typeof model.providerName === "string" && /^[A-Za-z0-9._:/-]{1,160}$/.test(model.id) &&
+      model.id.endsWith(":free"));
   }
   function readCachedProviderModels() {
     try {
-      const cached = JSON.parse(localStorage.getItem(MODEL_CATALOG_CACHE_KEY) || localStorage.getItem(LEGACY_MODEL_CATALOG_CACHE_KEY) || "[]");
-      return Array.isArray(cached) ? cached.filter(isEligibleCachedModel).slice(0, 500) : [];
+      const cached = JSON.parse(localStorage.getItem(MODEL_CATALOG_CACHE_KEY) || "[]");
+      return Array.isArray(cached) ? cached.filter(isEligibleCachedModel).slice(0, 1000) : [];
     } catch (error) {
       return [];
     }
@@ -1869,7 +1874,8 @@
     const preferred = userPreferences.model || "teslafield";
     select.replaceChildren();
     const groups = [
-      { label: "MODELS", models: availableModels.filter((model) => model.id === "teslafield" || (model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true)) }
+      { label: "FREE MODELS", models: availableModels.filter((model) => model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true) },
+      { label: "TESLAFIELD", models: availableModels.filter((model) => model.id === "teslafield") }
     ];
     groups.forEach((group) => {
       if (!group.models.length) return;
@@ -1904,85 +1910,24 @@
       return {
         key: "teslafield",
         label: "TESLAFIELD",
-        domain: "teslafieldai.web.app",
         logo: "/teslafieldai-logo.png?v=20261127-05"
       };
     }
 
-    const slug = String(model.id || "").split("/")[0].toLowerCase();
-    const brands = {
-      "01-ai": { label: "01 AI", domain: "01.ai" },
-      ai21: { label: "AI21", domain: "ai21.com" },
-      alibaba: { label: "ALIBABA", domain: "alibabagroup.com" },
-      allenai: { label: "ALLEN AI", domain: "allenai.org" },
-      amazon: { label: "AMAZON", domain: "aboutamazon.com" },
-      anthropic: { label: "ANTHROPIC", domain: "anthropic.com" },
-      arcee: { label: "ARCEE", domain: "arcee.ai" },
-      "arcee-ai": { label: "ARCEE", domain: "arcee.ai" },
-      baichuan: { label: "BAICHUAN", domain: "baichuan-ai.com" },
-      baidu: { label: "BAIDU", domain: "baidu.com" },
-      "black-forest-labs": { label: "BLACK FOREST LABS", domain: "blackforestlabs.ai" },
-      bytedance: { label: "BYTEDANCE", domain: "bytedance.com" },
-      "bytedance-seed": { label: "BYTEDANCE", domain: "bytedance.com" },
-      cohere: { label: "COHERE", domain: "cohere.com" },
-      cognitivecomputations: { label: "COGNITIVE COMPUTATIONS", domain: "cognitivecomputations.com" },
-      databricks: { label: "DATABRICKS", domain: "databricks.com" },
-      deepcogito: { label: "DEEPCOGITO", domain: "deepcogito.com" },
-      deepseek: { label: "DEEPSEEK", domain: "deepseek.com" },
-      eleutherai: { label: "ELEUTHERAI", domain: "eleuther.ai" },
-      google: { label: "GOOGLE", domain: "google.com" },
-      gryphe: { label: "GRYPHE", domain: "gryphe.com" },
-      huggingface: { label: "HUGGING FACE", domain: "huggingface.co" },
-      ibm: { label: "IBM", domain: "ibm.com" },
-      inclusionai: { label: "INCLUSIONAI", domain: "inclusion.ai" },
-      inflection: { label: "INFLECTION", domain: "inflection.ai" },
-      internlm: { label: "INTERNLM", domain: "internlm.org" },
-      liquid: { label: "LIQUID AI", domain: "liquid.ai" },
-      meta: { label: "META", domain: "meta.com" },
-      "meta-llama": { label: "META", domain: "meta.com" },
-      microsoft: { label: "MICROSOFT", domain: "microsoft.com" },
-      minimax: { label: "MINIMAX", domain: "minimax.io" },
-      minimaxai: { label: "MINIMAX", domain: "minimax.io" },
-      mistral: { label: "MISTRAL", domain: "mistral.ai" },
-      mistralai: { label: "MISTRAL", domain: "mistral.ai" },
-      moonshot: { label: "MOONSHOT", domain: "moonshot.ai" },
-      moonshotai: { label: "MOONSHOT", domain: "moonshot.ai" },
-      morph: { label: "MORPH", domain: "morphllm.com" },
-      nous: { label: "NOUS", domain: "nousresearch.com" },
-      nousresearch: { label: "NOUS", domain: "nousresearch.com" },
-      nvidia: { label: "NVIDIA", domain: "nvidia.com" },
-      openai: { label: "OPENAI", domain: "openai.com" },
-      perplexity: { label: "PERPLEXITY", domain: "perplexity.ai" },
-      phind: { label: "PHIND", domain: "phind.com" },
-      "particle-ai": { label: "PARTICLE AI", domain: "particle.network" },
-      "prime-intellect": { label: "PRIME INTELLECT", domain: "primeintellect.ai" },
-      qwen: { label: "QWEN", domain: "qwen.ai" },
-      reka: { label: "REKA", domain: "reka.ai" },
-      recursive: { label: "RECURSIVE", domain: "recursive.ai" },
-      sao10k: { label: "SAO10K", domain: "sao10k.com" },
-      snowflake: { label: "SNOWFLAKE", domain: "snowflake.com" },
-      sophosympatheia: { label: "SOPHOSYMPATHEIA", domain: "huggingface.co" },
-      stepfun: { label: "STEPFUN", domain: "stepfun.com" },
-      tencent: { label: "TENCENT", domain: "tencent.com" },
-      "the-drummer": { label: "THE DRUMMER", domain: "thedrummer.ai" },
-      thudm: { label: "THUDM", domain: "tsinghua.edu.cn" },
-      tngtech: { label: "TNG", domain: "tngtech.com" },
-      undi95: { label: "UNDI95", domain: "huggingface.co" },
-      upstage: { label: "UPSTAGE", domain: "upstage.ai" },
-      writer: { label: "WRITER", domain: "writer.com" },
-      "x-ai": { label: "X AI", domain: "x.ai" },
-      "z-ai": { label: "Z AI", domain: "z.ai" }
-    };
-    const brand = brands[slug];
+    const slug = typeof model.providerSlug === "string"
+      ? model.providerSlug
+      : String(model.id || "").split("/")[0].toLowerCase();
+    const label = typeof model.providerName === "string" && model.providerName.trim()
+      ? model.providerName.trim()
+      : slug.replace(/[-_]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 
     return {
       key: slug || "provider",
-      label: brand ? brand.label : (slug || "AI PROVIDER").replace(/[-_]/g, " ").toUpperCase(),
-      domain: brand ? brand.domain : "",
-      // Use the provider's own website favicon as its official brand mark.
-      // Unknown providers stay logo-less instead of receiving a fabricated initials badge.
-      logo: brand
-        ? API + "/api/v1/providers/logo/" + encodeURIComponent(slug)
+      label: label.toUpperCase(),
+      // OpenRouter supplies the provider icon URL. Teslafield proxies only
+      // that registry URL; no company-domain logo guessing or favicon map.
+      logo: model.providerLogoAvailable
+        ? API + "/api/v1/openrouter/providers/" + encodeURIComponent(slug) + "/logo"
         : ""
     };
   }
@@ -2012,16 +1957,26 @@
       status.textContent = modelCatalogStatus;
     }
     const groups = [];
+    const freeProviders = availableModels.filter((model) =>
+      model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true
+    );
+    const providerGroups = new Map();
+    freeProviders.forEach((model) => {
+      const brand = getModelBrand(model);
+      if (!providerGroups.has(brand.key)) {
+        providerGroups.set(brand.key, { key: brand.key, title: brand.label, brand, models: [] });
+      }
+      providerGroups.get(brand.key).models.push(model);
+    });
+    if (freeProviders.length) {
+      const freeHeading = document.createElement("div");
+      freeHeading.className = "model-picker-group-title";
+      freeHeading.textContent = "FREE MODELS";
+      list.appendChild(freeHeading);
+    }
+    groups.push(...Array.from(providerGroups.values()).sort((a, b) => a.title.localeCompare(b.title)));
     const own = availableModels.filter((model) => model.id === "teslafield");
     if (own.length) groups.push({ key: "teslafield", title: "TESLAFIELD", models: own });
-    const providerGroups = new Map();
-    availableModels.filter((model) => model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true)
-      .forEach((model) => {
-        const brand = getModelBrand(model);
-        if (!providerGroups.has(brand.key)) providerGroups.set(brand.key, { key: brand.key, title: brand.label, brand, models: [] });
-        providerGroups.get(brand.key).models.push(model);
-      });
-    groups.push(...Array.from(providerGroups.values()).sort((a, b) => a.title.localeCompare(b.title)));
     groups.forEach((group) => {
       if (!group.models.length) return;
       const heading = document.createElement("div");
@@ -2060,7 +2015,7 @@
         const name = document.createElement("strong");
         name.textContent = model.id === "teslafield" ? "Teslafield B1" : model.name;
         const meta = document.createElement("small");
-        meta.textContent = model.provider === "OpenRouter" ? "Rate-limited" : "TeslafieldAI";
+        meta.textContent = model.provider === "OpenRouter" ? "FREE · Rate-limited" : "FREE · TeslafieldAI";
         copy.append(name, meta);
         const check = document.createElement("span");
         check.className = "model-option-check";
@@ -2146,7 +2101,7 @@
           modelCatalogStatus = "OpenRouter model catalogue failed: " + String(data.catalogError || "unknown error") + ". Retrying automatically…";
           retryCatalog = true;
         } else if (Number(data.openRouterModelCount || 0) === 0) {
-          modelCatalogStatus = "OpenRouter returned no eligible chat models. Retrying automatically…";
+          modelCatalogStatus = "OpenRouter has no free chat models available right now. Retrying automatically…";
           retryCatalog = true;
         } else {
           modelCatalogStatus = "";
@@ -2158,7 +2113,7 @@
         if (data.catalogAvailable !== false && fetchedProviderModels.length > 0) {
           availableModels = [TESLAFIELD_MODEL, ...fetchedProviderModels];
           try {
-            localStorage.setItem(MODEL_CATALOG_CACHE_KEY, JSON.stringify(fetchedProviderModels.slice(0, 500)));
+            localStorage.setItem(MODEL_CATALOG_CACHE_KEY, JSON.stringify(fetchedProviderModels.slice(0, 1000)));
           } catch (error) {}
         } else if (!hasProviderModels && Number(data.openRouterModelCount || 0) === 0) {
           availableModels = [TESLAFIELD_MODEL];
