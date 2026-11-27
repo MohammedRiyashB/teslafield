@@ -4,6 +4,7 @@ const { handleOAuthMcp } = require("./oauth-mcp");
 const { IdempotencyStore } = require("./idempotency");
 const { createOpenRouterCatalog } = require("./model-catalog");
 const { createConversationStore } = require("./conversation-store");
+const { clientOptions: hfClientOptions, requestHeaders: hfRequestHeaders } = require("./huggingface-auth");
 const { pruneExpiredEntries, hasCapacity } = require("./security-collections");
 
 const PORT = Number(process.env.PORT || 10000);
@@ -320,7 +321,7 @@ async function generateWithHuggingFaceImage(input) {
   const file = result.data && result.data[0];
   const fileUrl = typeof file === "string" ? file : file && (file.url || file.path);
   if (!fileUrl) throw new Error("HUGGINGFACE_IMAGE_EMPTY_RESULT");
-  const response = await fetch(fileUrl, { signal: AbortSignal.timeout(120000) });
+  const response = await fetch(fileUrl, { headers: hfRequestHeaders(fileUrl, process.env.HF_TOKEN), signal: AbortSignal.timeout(120000) });
   if (!response.ok) throw new Error("HUGGINGFACE_IMAGE_DOWNLOAD_FAILED");
   const bytes = Buffer.from(await response.arrayBuffer());
   if (!bytes.length || bytes.length > 15 * 1024 * 1024) throw new Error("HUGGINGFACE_IMAGE_SIZE_INVALID");
@@ -366,7 +367,7 @@ async function generateWithHuggingFaceVideo(prompt) {
   const file = result.data && result.data[0];
   const fileUrl = typeof file === "string" ? file : file && (file.url || file.path);
   if (!fileUrl) throw new Error("HUGGINGFACE_VIDEO_EMPTY_RESULT");
-  const response = await fetch(fileUrl, { signal: AbortSignal.timeout(300000) });
+  const response = await fetch(fileUrl, { headers: hfRequestHeaders(fileUrl, process.env.HF_TOKEN), signal: AbortSignal.timeout(300000) });
   if (!response.ok) throw new Error("HUGGINGFACE_VIDEO_DOWNLOAD_FAILED");
   const bytes = Buffer.from(await response.arrayBuffer());
   if (!bytes.length || bytes.length > 20 * 1024 * 1024) throw new Error("HUGGINGFACE_VIDEO_SIZE_INVALID");
@@ -381,7 +382,8 @@ const SPEECH_SPACE_URL = trimTrailingSlashes(process.env.HF_SPEECH_SPACE_URL || 
 const VOICE_SPACE_URL = trimTrailingSlashes(process.env.HF_VOICE_SPACE_URL || "https://earthaioa-earthaioa-kokoro-tts.hf.space");
 async function endpointReady(baseUrl, path) {
   try {
-    const response = await fetch(baseUrl + path, { signal: AbortSignal.timeout(12000) });
+    const target = baseUrl + path;
+    const response = await fetch(target, { headers: hfRequestHeaders(target, process.env.HF_TOKEN), signal: AbortSignal.timeout(12000) });
     return response.ok;
   } catch { return false; }
 }
@@ -390,7 +392,7 @@ async function transcribeWithSpace(audioBase64, mimeType, language) {
   const { Client, handle_file } = require("@gradio/client");
   const audio = Buffer.from(audioBase64, "base64");
   if (!audio.length || audio.length > 8 * 1024 * 1024) throw new Error("AUDIO_SIZE_INVALID");
-  const client = await Client.connect(SPEECH_SPACE_ID);
+  const client = await Client.connect(SPEECH_SPACE_ID, hfClientOptions(process.env.HF_TOKEN));
   const result = await client.predict("/predict", [
     handle_file(new Blob([audio], { type: mimeType || "audio/webm" })),
     language || "Auto detect"
@@ -402,7 +404,7 @@ async function transcribeWithSpace(audioBase64, mimeType, language) {
 
 async function synthesizeWithSpace(text, language, voice) {
   const { Client } = require("@gradio/client");
-  const client = await Client.connect(VOICE_SPACE_ID);
+  const client = await Client.connect(VOICE_SPACE_ID, hfClientOptions(process.env.HF_TOKEN));
   const result = await client.predict("/predict", [
     text,
     language || "Tamil",
@@ -412,7 +414,7 @@ async function synthesizeWithSpace(text, language, voice) {
   const fileUrl = typeof file === "string" ? file : file && (file.url || file.path);
   if (!fileUrl) throw new Error("VOICE_EMPTY_RESULT");
   const target = fileUrl.startsWith("http") ? fileUrl : new URL(fileUrl, VOICE_SPACE_URL).toString();
-  const response = await fetch(target, { signal: AbortSignal.timeout(60000) });
+  const response = await fetch(target, { headers: hfRequestHeaders(target, process.env.HF_TOKEN), signal: AbortSignal.timeout(60000) });
   if (!response.ok) throw new Error("VOICE_DOWNLOAD_FAILED");
   const bytes = Buffer.from(await response.arrayBuffer());
   if (!bytes.length || bytes.length > 12 * 1024 * 1024) throw new Error("VOICE_SIZE_INVALID");
@@ -872,7 +874,7 @@ const server = http.createServer(async (req, res) => {
         }
         const upstream = await fetch(CHAT_SPACE_URL + "/chat", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...hfRequestHeaders(CHAT_SPACE_URL, process.env.HF_TOKEN) },
           body: JSON.stringify({ messages: safeMessages, max_new_tokens: 384, response_style: responseStyle }),
           signal: AbortSignal.timeout(240000)
         });
@@ -959,7 +961,7 @@ const server = http.createServer(async (req, res) => {
       const responseStyle = ["concise", "balanced", "detailed"].includes(input.response_style) ? input.response_style : "balanced";
       const upstream = await fetch(CHAT_SPACE_URL + "/stream", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "text/plain" },
+        headers: { "Content-Type": "application/json", "Accept": "text/plain", ...hfRequestHeaders(CHAT_SPACE_URL, process.env.HF_TOKEN) },
         body: JSON.stringify({ messages: safeMessages, max_new_tokens: 384, response_style: responseStyle }),
         signal: upstreamController.signal
       });
