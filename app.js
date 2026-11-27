@@ -73,6 +73,8 @@
   let mediaRecorder = null;
   let mediaRecorderStream = null;
   let recordingTimer = null;
+  let voiceStartPending = false;
+  let voiceStartAttempt = 0;
   let selectedFiles = [];
   let toastTimer = null;
   let healthRequest = null;
@@ -985,6 +987,7 @@
   }
 
   async function startVoiceRecording() {
+    if (voiceStartPending || (mediaRecorder && mediaRecorder.state !== "inactive")) return;
     if (!currentUser) {
       toast("Sign in to use voice input.");
       return;
@@ -993,10 +996,19 @@
       toast("Voice recording is not supported by this browser. Try Chrome on Android.");
       return;
     }
+    const attempt = ++voiceStartAttempt;
+    voiceStartPending = true;
+    let acquiredStream = null;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
       });
+      acquiredStream = stream;
+      // Permission prompts cannot be cancelled by the browser. Ignore stale grants.
+      if (attempt !== voiceStartAttempt || !currentUser) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       const supportedTypes = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
       const mimeType = supportedTypes.find((type) => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(type));
       const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
@@ -1005,7 +1017,10 @@
         if (event.data && event.data.size) chunks.push(event.data);
       };
       recorder.onerror = () => {
+        clearTimeout(recordingTimer);
         stream.getTracks().forEach((track) => track.stop());
+        if (mediaRecorder === recorder) mediaRecorder = null;
+        if (mediaRecorderStream === stream) mediaRecorderStream = null;
         resetMicButton();
         toast("The microphone recording failed. Please try again.");
       };
@@ -1048,6 +1063,7 @@
       recordingTimer = setTimeout(() => stopVoiceRecording(), 45000);
       toast("Listening… tap the waveform to finish, or × to cancel.");
     } catch (error) {
+      if (acquiredStream) acquiredStream.getTracks().forEach((track) => track.stop());
       if (mediaRecorderStream) mediaRecorderStream.getTracks().forEach((track) => track.stop());
       mediaRecorder = null;
       mediaRecorderStream = null;
@@ -1056,6 +1072,8 @@
         ? "Allow microphone access in your browser settings, then try again."
         : "TeslafieldAI could not start the microphone. Please try again.";
       toast(message);
+    } finally {
+      if (attempt === voiceStartAttempt) voiceStartPending = false;
     }
   }
 
@@ -1081,6 +1099,9 @@
   }
 
   function cancelVoiceRecording() {
+    // Invalidate an unresolved permission prompt so a late grant cannot start recording.
+    voiceStartAttempt += 1;
+    voiceStartPending = false;
     clearTimeout(recordingTimer);
     const recorder = mediaRecorder;
     if (recorder && recorder.state !== "inactive") {
