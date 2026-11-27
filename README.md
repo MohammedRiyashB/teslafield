@@ -80,11 +80,11 @@ See backend/README.md and the connector legal pages for details.
 - Hugging Face Spaces and free hosting tiers may sleep, queue requests, impose limits or change availability.
 - A successful health check does not prove that a model is loaded or that inference will succeed.
 - The local TeslafieldAI model remains the default and does not require an OpenRouter key.
-- Optional OpenRouter routing is disabled until `OPENROUTER_API_KEY` is configured on the backend. Free models are rate-limited and provider availability varies; paid models are opt-in, display per-million-token prices, and can incur charges from the user's OpenRouter account.
+- Optional OpenRouter routing is disabled until `OPENROUTER_API_KEY` is configured on the backend. Only explicitly `:free` model IDs are accepted; paid model IDs are rejected and no model/provider fallback is used. Requests require ZDR-eligible endpoints and deny non-transient data collection, so they can fail when no eligible free endpoint is available.
 - Model preferences are saved in this browser. The composer now uses a branded Teslafield B1 capsule and an upward-opening model catalogue. Provider keys are never stored in the frontend. No automatic paid-model fallback is performed.
 - No paid provider should be enabled without an explicit budget decision.
 - Stage 6 adds authenticated Firestore cloud-history endpoints and local-cache synchronization. Cloud sync remains inactive until the owner creates the default Firestore database and deploys `firestore.rules`; see backend/README.md. Browser-local history remains the fallback.
-- OAuth authorization requests and one-time codes are held in process memory. Keep the API to one instance until this state is moved to shared storage.
+- The current Render Free API is a single instance. Rate-limit buckets, OAuth authorization state/codes and idempotency results are process-local; do not scale horizontally until all of these stores are migrated to a shared, same-region store and verified.
 - The current text chat uses a non-streaming response contract in the browser, even though the model Space and API retain a separate stream endpoint.
 - The current microphone workflow is speech capture/transcription, not a full low-latency, interruptible duplex voice conversation.
 
@@ -97,7 +97,7 @@ See docs/ENGINEERING_UPGRADE.md for the repository audit, verified limitations, 
 - Protected API routes require a verified Firebase ID token.
 - Keep CORS origins restricted to trusted frontend origins.
 - Keep secrets in Render/Hugging Face/GitHub secret settings, never in source files.
-- Review provider privacy, terms, licensing, retention and rate limits before enabling any external model.
+- Read `privacy.html` and `docs/PRODUCTION_SECURITY_REVIEW_2026-11-27.md` for provider data flows, retention limits and unresolved production risks. Request-level OpenRouter privacy controls are not a blanket no-logging guarantee.
 - Do not claim uptime, latency, model quality or global scale without measurements.
 
 ## Licence
