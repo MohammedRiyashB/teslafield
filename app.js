@@ -1726,7 +1726,6 @@
   } catch (error) { applyTheme("dark"); }
   renderHistory();
   readPersonalization();
-  renderModelSelector();
   loadModelCatalog();
   let connectionTimer = null;
   function startConnectionMonitor() {
