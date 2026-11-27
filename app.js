@@ -2,7 +2,6 @@
   "use strict";
   const API = "https://teslafield-api.onrender.com";
   const $ = (id) => document.getElementById(id);
-  const root = document.documentElement;
   let connectReturnFocus = null;
   let gmailAccessToken = null;
   // Protect TeslafieldAI brand artwork only; regular website images remain downloadable.
@@ -17,13 +16,6 @@
     }
   }, true);
 
-  const syncVisualViewport = () => {
-    const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    root.style.setProperty("--visual-viewport-height", Math.round(viewportHeight) + "px");
-  };
-  syncVisualViewport();
-  window.addEventListener("resize", syncVisualViewport, { passive: true });
-  if (window.visualViewport) window.visualViewport.addEventListener("resize", syncVisualViewport, { passive: true });
   const promptInput = $("promptInput");
   const messageList = $("messageList");
   const welcome = $("welcomeScreen");
@@ -442,7 +434,6 @@
       authClient = window.firebase.auth();
 
       // Attach the auth observer immediately. Never expose the guest welcome
-      // screen while Firebase is still restoring a remembered signed-in user.
       authClient.onAuthStateChanged(
         (user) => {
           applyFirebaseUser(user);
@@ -949,7 +940,6 @@
         } catch (error) {}
       }
       const id = Array.from(crypto.getRandomValues(new Uint8Array(18)), (v, i) => String(i === 0 ? (v % 9) + 1 : v % 10)).join("");
-      // Keep response data in a query parameter; messaging apps often discard URL fragments.
       const shareUrl = location.origin + "/share/" + id + "?data=" + encodeURIComponent(encoded);
       if (navigator.share) {
         try {
@@ -1161,7 +1151,6 @@
     messageList.innerHTML = "";
     welcome.hidden = false;
     promptInput.value = "";
-    promptInput.style.height = "auto";
     selectedFiles = [];
     renderAttachments();
     renderHistory();
@@ -1517,7 +1506,6 @@
         messageList.appendChild(row);
         showGuestContinueCard();
         promptInput.value = "";
-        promptInput.style.height = "auto";
         return;
       }
       if (!(await requireAuthentication(text))) return;
@@ -1534,7 +1522,6 @@
       chat.messages.push({ role: "user", content: text });
       chat.updated = Date.now();
       promptInput.value = "";
-      promptInput.style.height = "auto";
       welcome.hidden = true;
       saveStore();
       renderConversation();
@@ -1972,10 +1959,6 @@
   $("composer").onsubmit = (event) => { event.preventDefault(); if (generating) stopGeneration(); else sendMessage(); };
   $("micButton").onclick = () => { if (mediaRecorder && mediaRecorder.state !== "inactive") stopVoiceRecording(); else startVoiceRecording(); };
   $("sendButton").onclick = (event) => { if (generating) { event.preventDefault(); stopGeneration(); } };
-  promptInput.oninput = () => {
-    promptInput.style.height = "auto";
-    promptInput.style.height = Math.min(promptInput.scrollHeight, 185) + "px";
-  };
   promptInput.onkeydown = (event) => {
     if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
       event.preventDefault();
