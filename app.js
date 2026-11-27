@@ -77,7 +77,22 @@
   let pendingGuestPrompt = "";
   let guestConversationStarted = false;
   let userPreferences = { responseStyle: "balanced", textSize: "standard", reduceMotion: false, model: "teslafield" };
-  let availableModels = [{ id: "teslafield", name: "Teslafield B1", free: true, freeTier: true, provider: "TeslafieldAI" }];
+  const MODEL_CATALOG_CACHE_KEY = "teslafield.openrouter.models.zdr.v1";
+  const TESLAFIELD_MODEL = { id: "teslafield", name: "Teslafield B1", free: true, freeTier: true, provider: "TeslafieldAI" };
+  function isEligibleCachedModel(model) {
+    return !!(model && typeof model.id === "string" && typeof model.name === "string" &&
+      model.free === true && model.freeTier === true && model.provider === "OpenRouter" &&
+      model.id.endsWith(":free") && /^[A-Za-z0-9._:/-]{1,160}$/.test(model.id));
+  }
+  function readCachedProviderModels() {
+    try {
+      const cached = JSON.parse(localStorage.getItem(MODEL_CATALOG_CACHE_KEY) || "[]");
+      return Array.isArray(cached) ? cached.filter(isEligibleCachedModel).slice(0, 500) : [];
+    } catch (error) {
+      return [];
+    }
+  }
+  let availableModels = [TESLAFIELD_MODEL, ...readCachedProviderModels()];
   let modelCatalogStatus = "";
   let modelCatalogLoading = false;
   let modelCatalogLastAttemptAt = 0;
@@ -1966,7 +1981,7 @@
       // Use the provider's own website favicon as its official brand mark.
       // Unknown providers stay logo-less instead of receiving a fabricated initials badge.
       logo: brand
-        ? "https://www.google.com/s2/favicons?domain=" + encodeURIComponent(brand.domain) + "&sz=64"
+        ? API + "/api/v1/providers/logo/" + encodeURIComponent(slug)
         : ""
     };
   }
@@ -2107,7 +2122,8 @@
     if (!force && !hasProviderModels && modelCatalogLastAttemptAt && Date.now() - modelCatalogLastAttemptAt < 15000) return;
 
     modelCatalogLoading = true;
-    modelCatalogStatus = hasProviderModels ? "Refreshing models…" : "Loading models…";
+    // Keep the last-known-good model list visible and refresh quietly in the background.
+    modelCatalogStatus = "";
     renderModelSelector();
     renderModelPicker();
 
@@ -2136,18 +2152,23 @@
           modelCatalogRetryCount = 0;
         }
 
-        availableModels = data.models.filter((model) =>
-          model && typeof model.id === "string" && typeof model.name === "string" &&
-          typeof model.free === "boolean" && /^[A-Za-z0-9._:/-]{1,160}$/.test(model.id) &&
-          (model.id === "teslafield" || (model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true && model.free === true))
-        );
+        const fetchedProviderModels = data.models.filter(isEligibleCachedModel);
+        // Only replace the last-known-good cache after a non-empty, healthy ZDR-filtered refresh.
+        if (data.catalogAvailable !== false && fetchedProviderModels.length > 0) {
+          availableModels = [TESLAFIELD_MODEL, ...fetchedProviderModels];
+          try {
+            localStorage.setItem(MODEL_CATALOG_CACHE_KEY, JSON.stringify(fetchedProviderModels.slice(0, 500)));
+          } catch (error) {}
+        } else if (!hasProviderModels && Number(data.openRouterModelCount || 0) === 0) {
+          availableModels = [TESLAFIELD_MODEL];
+        }
       } catch (error) {
         modelCatalogStatus = "Could not reach the TeslafieldAI model catalogue. Retrying automatically…";
         retryCatalog = true;
       } finally {
         modelCatalogLastAttemptAt = Date.now();
         if (!availableModels.some((model) => model.id === "teslafield")) {
-          availableModels.unshift({ id: "teslafield", name: "Teslafield B1", free: true, freeTier: true, provider: "TeslafieldAI" });
+          availableModels.unshift(TESLAFIELD_MODEL);
         }
         modelCatalogLoading = false;
         renderModelSelector();
