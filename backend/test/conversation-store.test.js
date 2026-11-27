@@ -69,23 +69,23 @@ test("cloud history store scopes conversations and deletion tombstones to the au
   const deleted = await store.listDeleted("user_123", "firebase-id-token");
   assert.equal(listed[0].id, "chat_1");
   assert.deepEqual(deleted, [{ id: "chat_old", deletedAt: 99 }]);
-  assert.match(calls[0].url, /users\\/user_123\\/conversations/);
+  assert.ok(calls[0].url.includes("/users/user_123/conversations"));
   assert.equal(calls[0].options.headers.Authorization, "Bearer firebase-id-token");
-  assert.match(calls[1].url, /users\\/user_123\\/deletedConversations/);
+  assert.ok(calls[1].url.includes("/users/user_123/deletedConversations"));
 
   await store.upsert("user_123", "firebase-id-token", {
     id: "chat_2", title: "Second", created: 30, updated: 40, messages: [{ role: "user", content: "Hi" }]
   });
   assert.equal(calls[2].options.method, "PATCH");
-  assert.match(calls[2].url, /users\\/user_123\\/conversations\\/chat_2/);
+  assert.ok(calls[2].url.includes("/users/user_123/conversations/chat_2"));
   assert.equal(calls[3].options.method, "DELETE");
-  assert.match(calls[3].url, /deletedConversations\\/chat_2$/);
+  assert.ok(calls[3].url.endsWith("/deletedConversations/chat_2"));
 
   await store.remove("user_123", "firebase-id-token", "chat_2");
   assert.equal(calls[4].options.method, "PATCH");
-  assert.match(calls[4].url, /deletedConversations\\/chat_2$/);
+  assert.ok(calls[4].url.endsWith("/deletedConversations/chat_2"));
   assert.equal(calls[5].options.method, "DELETE");
-  assert.match(calls[5].url, /conversations\\/chat_2$/);
+  assert.ok(calls[5].url.endsWith("/conversations/chat_2"));
 });
 
 test("cloud history rejects unsafe UID and conversation IDs before network access", async () => {
