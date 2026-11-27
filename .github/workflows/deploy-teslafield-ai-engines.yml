@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout TESLAFIELD
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout TESLAFIELD
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Sync Chat Engine
         uses: huggingface/hub-sync@v0.3.0
         with:
@@ -53,7 +53,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout TESLAFIELD
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Sync Speech Engine
         uses: huggingface/hub-sync@v0.3.0
         with:
@@ -70,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout TESLAFIELD
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Sync Voice Engine
         uses: huggingface/hub-sync@v0.3.0
         with:
