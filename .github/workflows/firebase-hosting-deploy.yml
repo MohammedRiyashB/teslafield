@@ -70,7 +70,7 @@ jobs:
           const styleSrc = csp.split(';').map((directive) => directive.trim()).find((directive) => directive.startsWith('style-src '));
           assert.ok(styleSrc && !styleSrc.includes("'unsafe-inline'") && csp.includes("style-src-elem 'self'") && csp.includes("style-src-attr 'unsafe-inline'"), 'CSP must disallow inline style elements and scope compatibility styles to attributes');
           assert.ok(!csp.includes('https:;') && !csp.includes('https://*.'), 'CSP must not permit broad HTTPS wildcards');
-          assert.ok(!/<style\\b|\\sstyle\\s*=/.test(oauthPage), 'OAuth page must not use inline styles');
+          assert.ok(!/<style\b|\sstyle\s*=/.test(oauthPage), 'OAuth page must not use inline styles');
           assert.ok(oauthCss.includes('.primary{'), 'OAuth page external stylesheet must exist');
           assert.ok(!app.includes('.style.') && !app.includes('visual-viewport-height'), 'Frontend must not mutate inline styles');
           assert.ok(fs.readFileSync('styles.css', 'utf8').includes('field-sizing:content'), 'Composer textarea must use CSS-native content sizing');
