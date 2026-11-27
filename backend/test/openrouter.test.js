@@ -212,3 +212,36 @@ test("provider registry failure does not hide free chat models", async () => {
   assert.equal(models[0].providerLogoAvailable, false);
   assert.equal(models[0].providerName, "Nvidia");
 });
+
+
+test("model catalogue serves the last known-good list during a temporary upstream 503", async () => {
+  let modelStatus = 200;
+  let modelCalls = 0;
+  const catalogItems = [model("nvidia/nemotron-3.5-lightning:free")];
+  const integration = createOpenRouterIntegration({
+    apiKey: "server-only-test-key",
+    modelTtlMs: 1,
+    providerTtlMs: 60000,
+    fetchImpl: async (url) => {
+      if (url.startsWith(OPENROUTER_API + "/models?")) {
+        modelCalls += 1;
+        return modelStatus === 200
+          ? response({ data: catalogItems })
+          : response("Error 503 No healthy backends", 503, "text/plain");
+      }
+      if (url === OPENROUTER_FRONTEND_API + "/all-providers") return response(registryPayload);
+      throw new Error("Unexpected URL: " + url);
+    }
+  });
+  const first = await integration.listFreeChatModels();
+  assert.equal(first.length, 1);
+  modelStatus = 503;
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  const stale = await integration.listFreeChatModels();
+  assert.equal(stale.length, 1);
+  assert.equal(stale[0].id, "nvidia/nemotron-3.5-lightning:free");
+  assert.equal(modelCalls, 2);
+  const again = await integration.listFreeChatModels();
+  assert.equal(again.length, 1);
+  assert.equal(modelCalls, 2);
+});
