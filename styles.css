@@ -1712,19 +1712,19 @@ body.guest-mode .composer-actions{column-gap:16px!important;gap:16px!important}
 .composer-actions #micButton{margin:0!important;flex-shrink:0!important}
 .composer-actions{gap:0!important}
 
-/* Voice recording mode: animated live waveform and morphing plus-to-cancel control. */
+/* Voice recording mode: animated live waveform and morphing paperclip-to-cancel control. */
 .plus-button{position:relative;overflow:hidden}
-.plus-button .plus-icon,.plus-button .cancel-icon{
+.attachment-button .attachment-icon,.attachment-button .cancel-icon{
   position:absolute;inset:0;width:19px;height:19px;margin:auto;
   transition:opacity .22s cubic-bezier(.2,.8,.2,1),transform .32s cubic-bezier(.2,.9,.2,1);
 }
-.plus-button .plus-icon{opacity:1;transform:rotate(0deg) scale(1)}
-.plus-button .cancel-icon{opacity:0;transform:rotate(-110deg) scale(.45)}
+.attachment-button .attachment-icon{opacity:1;transform:rotate(0deg) scale(1)}
+.attachment-button .cancel-icon{opacity:0;transform:rotate(-110deg) scale(.45)}
 .composer.voice-recording .plus-button{
   border-color:var(--text);background:var(--surface-2);color:var(--text);
 }
-.composer.voice-recording .plus-button .plus-icon{opacity:0;transform:rotate(135deg) scale(.45)}
-.composer.voice-recording .plus-button .cancel-icon{opacity:1;transform:rotate(0deg) scale(1)}
+.composer.voice-recording .attachment-button .attachment-icon{opacity:0;transform:rotate(135deg) scale(.45)}
+.composer.voice-recording .attachment-button .cancel-icon{opacity:1;transform:rotate(0deg) scale(1)}
 .mic-button .voice-wave{display:none;width:25px;height:25px;align-items:center;justify-content:center;gap:2px}
 .mic-button .voice-wave i{
   display:block;width:2.5px;height:5px;border-radius:4px;background:currentColor;
@@ -1748,7 +1748,7 @@ body.guest-mode .composer-actions{column-gap:16px!important;gap:16px!important}
 @keyframes voice-wave-live{0%{height:4px;transform:scaleY(.55)}100%{height:21px;transform:scaleY(1)}}
 @media(prefers-reduced-motion:reduce){
   .composer.voice-recording .mic-button .voice-wave i{animation:none;height:10px}
-  .plus-button .plus-icon,.plus-button .cancel-icon{transition:none}
+  .attachment-button .attachment-icon,.attachment-button .cancel-icon{transition:none}
 }
 @media(max-width:380px){
   .composer.voice-recording .mic-button{width:42px;height:38px}
