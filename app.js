@@ -1490,7 +1490,7 @@
       group.models.forEach((model) => {
         const option = document.createElement("option");
         option.value = model.id;
-        const formatPrice = (value) => Number(value || 0).toFixed(6).replace(/\\.?0+$/, "");
+        const formatPrice = (value) => Number(value || 0).toFixed(6).replace(/\.?0+$/, "");
         const price = model.free ? "Free" :
           "$" + formatPrice(model.promptPerMillion) + " USD in / $" + formatPrice(model.completionPerMillion) + " USD out per 1M tokens";
         option.textContent = model.name + " · " + price;
