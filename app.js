@@ -68,6 +68,7 @@
   let chats = [];
   let activeId = null;
   let generating = false;
+  let sendPending = false;
   let controller = null;
   let mediaRecorder = null;
   let mediaRecorderStream = null;
@@ -1219,58 +1220,68 @@
 
   async function sendMessage(value) {
     const text = safeText(value === undefined ? promptInput.value : value).trim();
-    if (!text || generating) return;
-    if (!currentUser) {
-      savePendingGuestPrompt(text);
-      guestConversationStarted = true;
-      welcome.hidden = true;
-      setGuestLayout(true);
-      messageList.innerHTML = "";
-      const row = document.createElement("article");
-      row.className = "message-row user guest-pending-message";
-      const body = document.createElement("div");
-      body.className = "message-content";
-      body.textContent = text;
-      row.appendChild(body);
-      messageList.appendChild(row);
-      showGuestContinueCard();
+    if (!text || generating || sendPending) return;
+    sendPending = true;
+    try {
+      if (!currentUser) {
+        savePendingGuestPrompt(text);
+        guestConversationStarted = true;
+        welcome.hidden = true;
+        setGuestLayout(true);
+        messageList.innerHTML = "";
+        const row = document.createElement("article");
+        row.className = "message-row user guest-pending-message";
+        const body = document.createElement("div");
+        body.className = "message-content";
+        body.textContent = text;
+        row.appendChild(body);
+        messageList.appendChild(row);
+        showGuestContinueCard();
+        promptInput.value = "";
+        promptInput.style.height = "auto";
+        return;
+      }
+      if (!(await requireAuthentication(text))) return;
+      if (selectedFiles.length) {
+        toast("File reading is not connected yet. Remove attachments and send text only.");
+        return;
+      }
+      let chat = activeChat();
+      if (!chat) {
+        chat = { id: makeId(), title: text.replace(/\s+/g, " ").slice(0, 48), messages: [], created: Date.now(), updated: Date.now() };
+        chats.unshift(chat);
+        activeId = chat.id;
+      }
+      chat.messages.push({ role: "user", content: text });
+      chat.updated = Date.now();
       promptInput.value = "";
       promptInput.style.height = "auto";
-      return;
+      welcome.hidden = true;
+      saveStore();
+      renderConversation();
+      closeSidebar();
+      await requestReply(chat);
+    } finally {
+      sendPending = false;
     }
-    if (!(await requireAuthentication(text))) return;
-    if (selectedFiles.length) {
-      toast("File reading is not connected yet. Remove attachments and send text only.");
-      return;
-    }
-    let chat = activeChat();
-    if (!chat) {
-      chat = { id: makeId(), title: text.replace(/\s+/g, " ").slice(0, 48), messages: [], created: Date.now(), updated: Date.now() };
-      chats.unshift(chat);
-      activeId = chat.id;
-    }
-    chat.messages.push({ role: "user", content: text });
-    chat.updated = Date.now();
-    promptInput.value = "";
-    promptInput.style.height = "auto";
-    welcome.hidden = true;
-    saveStore();
-    renderConversation();
-    closeSidebar();
-    await requestReply(chat);
   }
   async function regenerateLast() {
     const chat = activeChat();
-    if (!chat || generating) return;
-    if (!(await requireAuthentication())) return;
-    if (chat.messages.length && chat.messages[chat.messages.length - 1].role === "assistant") chat.messages.pop();
-    if (!chat.messages.length || chat.messages[chat.messages.length - 1].role !== "user") {
-      toast("There is no user message to regenerate.");
-      return;
+    if (!chat || generating || sendPending) return;
+    sendPending = true;
+    try {
+      if (!(await requireAuthentication())) return;
+      if (chat.messages.length && chat.messages[chat.messages.length - 1].role === "assistant") chat.messages.pop();
+      if (!chat.messages.length || chat.messages[chat.messages.length - 1].role !== "user") {
+        toast("There is no user message to regenerate.");
+        return;
+      }
+      saveStore();
+      renderConversation();
+      await requestReply(chat);
+    } finally {
+      sendPending = false;
     }
-    saveStore();
-    renderConversation();
-    await requestReply(chat);
   }
   function renderAttachments() {
     const strip = $("attachmentStrip");
