@@ -40,7 +40,7 @@ test("catalog caches only exact :free models", async () => {
     apiKey: "server-only-test-key",
     fetchImpl: async (url, options) => {
       calls += 1;
-      assert.match(url, /openrouter\.ai\/api\/v1\/models$/);
+      assert.match(url, /openrouter\.ai\/api\/v1\/models\?endpoints=%2Fapi%2Fv1%2Fchat%2Fcompletions$/);
       assert.equal(options.headers.Authorization, "Bearer server-only-test-key");
       return {
         ok: true,
