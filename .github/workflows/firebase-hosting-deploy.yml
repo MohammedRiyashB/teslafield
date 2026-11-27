@@ -71,9 +71,9 @@ jobs:
           assert.ok(app.includes("attachmentControl.hidden = !signedIn"), "Attachment control must follow Firebase sign-in state");
           assert.match(fs.readFileSync("styles.css", "utf8"), /body\.signed-in \.composer-model-row\s*\{\s*margin-bottom:\s*19px !important;/);
           const uiCss = fs.readFileSync("styles.css", "utf8");
-          assert.ok(uiCss.includes(".topbar .icon-button") && uiCss.includes("background:transparent!important"), "Topbar menu control must stay transparent");
-          assert.ok(uiCss.includes("body.signed-in .connect-entry-button") && uiCss.includes("color:var(--text)!important"), "CONNECTO icon must be visible in both themes on a transparent control");
-          assert.ok(uiCss.includes(".composer-model-row .model-picker-button") && uiCss.includes("background:transparent!important"), "Model selector must use a transparent ChatGPT-style control");
+          assert.ok(uiCss.includes("body.signed-in:not(.guest-mode) .topbar .icon-button") && uiCss.includes("--tf-control-bg:"), "Signed-in top controls must use the refined grey palette");
+          assert.ok(uiCss.includes("body.signed-in:not(.guest-mode) .connect-entry-button") && uiCss.includes("color:var(--tf-control-text)!important"), "CONNECTO must use the visible grey control palette");
+          assert.ok(uiCss.includes("body.signed-in:not(.guest-mode) .composer-model-row .model-picker-button") && uiCss.includes("background:var(--tf-control-bg)!important"), "Model selector must use the grey capsule palette");
           assert.ok(uiCss.includes(".message-row.user .message-content") && uiCss.includes("background:var(--surface-2)!important"), "User messages must use theme-aware ChatGPT-style bubbles");
           assert.ok(app.includes('document.body.classList.toggle("sidebar-collapsed")'), "Desktop menu must toggle the sidebar");
           assert.ok(uiCss.includes(".composer-shell") && uiCss.includes("max-width:768px!important"), "Composer must use a centered ChatGPT-style width");
@@ -254,7 +254,7 @@ jobs:
           curl --fail --silent --show-error "${BASE}/manifest.webmanifest" -o /tmp/teslafield-manifest.json
           node -e "const m=JSON.parse(require('node:fs').readFileSync('/tmp/teslafield-manifest.json','utf8')); if(m.id!=='/' || m.display!=='standalone') process.exit(1)"
           curl --fail --silent --show-error "${BASE}/sw.js?verify=${GITHUB_SHA}" -o /tmp/teslafield-sw.js
-          grep -q "teslafield-pwa-shell-v11" /tmp/teslafield-sw.js
+          grep -q "teslafield-pwa-shell-v12" /tmp/teslafield-sw.js
           curl --fail --silent --show-error "${BASE}/teslafield-pwa-icon.svg" -o /tmp/teslafield-icon.svg
           grep -q "<svg" /tmp/teslafield-icon.svg
           curl --fail --silent --show-error "${BASE}/teslafield-icon-192.png" -o /tmp/teslafield-icon-192.png
@@ -286,6 +286,9 @@ jobs:
           grep -q "backdrop-filter:blur(22px) saturate(150%)!important" /tmp/teslafield-styles.css
           grep -q "border-radius:999px!important" /tmp/teslafield-styles.css
           grep -q "inset:auto 0 0 0!important" /tmp/teslafield-styles.css
+          grep -q -- "--tf-control-bg:" /tmp/teslafield-styles.css
+          grep -q -- "--tf-composer-bg:" /tmp/teslafield-styles.css
+          grep -q "background:var(--tf-send-bg)!important" /tmp/teslafield-styles.css
           grep -q 'classList.toggle("sidebar-collapsed")' /tmp/teslafield-app.js
           curl --fail --location --silent --show-error "${BASE}/terms" -o /tmp/teslafield-terms.html
           grep -q "Terms of Use" /tmp/teslafield-terms.html
