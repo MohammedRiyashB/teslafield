@@ -84,6 +84,9 @@ jobs:
           assert.ok(uiCss.includes("body.signed-in:not(.guest-mode) .composer-area") && uiCss.includes("inset:auto 0 0 0!important"), "Composer must be fixed as a floating bottom dock");
           assert.ok(uiCss.includes("backdrop-filter:blur(22px) saturate(150%)!important"), "Composer must have a translucent glass surface");
           assert.ok(uiCss.includes("body.signed-in:not(.guest-mode) .guest-legal{display:none!important}"), "No extra footer line should appear below the signed-in dock");
+          assert.ok(uiCss.includes("scrollbar-width:none!important"), "All browser scrollbars must be hidden without disabling scrolling");
+          assert.ok(uiCss.includes("*::-webkit-scrollbar") && uiCss.includes("display:none!important"), "WebKit scrollbars must be fully hidden on every edge");
+          assert.ok(uiCss.includes("scrollbar-gutter:auto!important"), "No reserved scrollbar gutter should remain");
           assert.match(html, /id="personalizeModal"/);
           assert.ok(app.includes('/api/v1/chat/completions'), 'Frontend must call the complete-response model endpoint');
           assert.ok(!app.includes('/api/v1/chat/stream'), 'Frontend must not render token-by-token streaming');
@@ -124,7 +127,7 @@ jobs:
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-icon-192.png' && icon.sizes === '192x192'));
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-icon-512.png' && icon.sizes === '512x512'));
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-pwa-icon.svg'));
-          assert.ok(fs.readFileSync('sw.js', 'utf8').includes('teslafield-pwa-shell-v12'));
+          assert.ok(fs.readFileSync('sw.js', 'utf8').includes('teslafield-pwa-shell-v13'));
           assert.ok(fs.readFileSync('theme-init.js', 'utf8').includes('teslafield.appearance.v2'));
           const chatEngine = fs.readFileSync('huggingface/chat-space/app.py', 'utf8');
           assert.ok(chatEngine.includes('MODEL_ID = "Qwen/Qwen3-0.6B"'));
@@ -254,7 +257,7 @@ jobs:
           curl --fail --silent --show-error "${BASE}/manifest.webmanifest" -o /tmp/teslafield-manifest.json
           node -e "const m=JSON.parse(require('node:fs').readFileSync('/tmp/teslafield-manifest.json','utf8')); if(m.id!=='/' || m.display!=='standalone') process.exit(1)"
           curl --fail --silent --show-error "${BASE}/sw.js?verify=${GITHUB_SHA}" -o /tmp/teslafield-sw.js
-          grep -q "teslafield-pwa-shell-v12" /tmp/teslafield-sw.js
+          grep -q "teslafield-pwa-shell-v13" /tmp/teslafield-sw.js
           curl --fail --silent --show-error "${BASE}/teslafield-pwa-icon.svg" -o /tmp/teslafield-icon.svg
           grep -q "<svg" /tmp/teslafield-icon.svg
           curl --fail --silent --show-error "${BASE}/teslafield-icon-192.png" -o /tmp/teslafield-icon-192.png
