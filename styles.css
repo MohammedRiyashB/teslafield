@@ -2503,3 +2503,50 @@ body.signed-in:not(.guest-mode) .composer .send-button:active{
     min-height:36px!important;
   }
 }
+
+
+/* TESLAFIELD — hide every browser scrollbar without disabling touch/trackpad scrolling.
+   Applied globally so no vertical, horizontal, top, bottom, left or right scrollbar is painted. */
+html,
+body,
+*,
+*::before,
+*::after{
+  scrollbar-width:none!important;
+  -ms-overflow-style:none!important;
+}
+*::-webkit-scrollbar,
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-corner,
+*::-webkit-resizer{
+  display:none!important;
+  width:0!important;
+  height:0!important;
+  min-width:0!important;
+  min-height:0!important;
+  background:transparent!important;
+  border:0!important;
+}
+html,
+body{
+  scrollbar-gutter:auto!important;
+}
+.conversation-scroll,
+.history-list,
+.model-picker-list,
+.account-menu,
+.tool-menu,
+.shared-message-page,
+.connect-page,
+.table-scroll,
+.message-content pre,
+.shared-message-content pre,
+.composer textarea{
+  scrollbar-width:none!important;
+  -ms-overflow-style:none!important;
+  -webkit-overflow-scrolling:touch;
+}
+body.signed-in:not(.guest-mode) .conversation-scroll{
+  scrollbar-gutter:auto!important;
+}
