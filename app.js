@@ -1637,6 +1637,7 @@
     const typingIndicator = showTyping();
     let streamingBubble = null;
     let completedMessage = null;
+    let streamedPartialText = "";
     setGenerating(true);
     try {
       await waitForApiReady(90000, requestSignal);
@@ -1644,6 +1645,7 @@
       const token = await getAuthToken();
       if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
       const baseMessages = chat.messages.slice(-27);
+      while (baseMessages.length > 1 && baseMessages.reduce((total, message) => total + String(message.content || "").length, 0) > 24000) baseMessages.shift();
       let outgoingMessages = baseMessages;
       let accumulatedText = "";
       let continuationCount = 0;
@@ -1716,6 +1718,7 @@
           scrollBottom();
         });
         accumulatedText += segment.text;
+        streamedPartialText = accumulatedText;
         streamingBubble.body.textContent = accumulatedText;
         scrollBottom();
         if (!accumulatedText.trim()) throw new Error("The selected model ended the stream without returning text.");
@@ -1746,17 +1749,30 @@
       saveStore();
       if (typeof window.showBannerWhenDue === "function") window.showBannerWhenDue(chat);
     } catch (error) {
-      if (streamingBubble && streamingBubble.row.isConnected) streamingBubble.row.remove();
-      if (error.name !== "AbortError" && !requestSignal.aborted) {
-        const message = error.message || "The AI service could not complete this request.";
-        chat.messages.push({
-          role: "assistant",
-          content: "**TeslafieldAI service notice**\n\n" + message + "\n\nYour prompt is saved in this conversation. You can retry after the service is connected."
-        });
+      const message = error.message || "The AI service could not complete this request.";
+      if (error.name !== "AbortError" && !requestSignal.aborted && streamedPartialText.trim()) {
+        const preserved = streamedPartialText + "\n\n**Continuation interrupted:** " + message + " You can ask the same model to continue from here.";
+        if (streamingBubble && streamingBubble.row.isConnected) {
+          streamingBubble.body.textContent = preserved;
+          streamingBubble.body.classList.remove("is-revealing");
+        }
+        chat.messages.push({ role: "assistant", content: preserved });
         completedMessage = chat.messages[chat.messages.length - 1];
         chat.updated = Date.now();
         saveStore();
-        toast(message);
+        toast("The connection stopped. The text already received has been saved.");
+      } else {
+        if (streamingBubble && streamingBubble.row.isConnected) streamingBubble.row.remove();
+        if (error.name !== "AbortError" && !requestSignal.aborted) {
+          chat.messages.push({
+            role: "assistant",
+            content: "**TeslafieldAI service notice**\n\n" + message + "\n\nYour prompt is saved in this conversation. You can retry after the service is connected."
+          });
+          completedMessage = chat.messages[chat.messages.length - 1];
+          chat.updated = Date.now();
+          saveStore();
+          toast(message);
+        }
       }
     } finally {
       typingIndicator.remove();
