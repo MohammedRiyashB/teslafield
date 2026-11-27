@@ -48,7 +48,7 @@ jobs:
           node --check backend/oauth-mcp.js
           node --check sw.js
           python -m py_compile huggingface/chat-space/app.py huggingface/chat-space/response_style.py
-          python -m unittest discover -s huggingface/chat-space/tests -v
+          PYTHONPATH=huggingface/chat-space python -m unittest discover -s huggingface/chat-space/tests -v
 
       - name: Run backend API regression tests
         run: npm test --prefix backend
