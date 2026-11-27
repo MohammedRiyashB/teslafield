@@ -1794,3 +1794,23 @@ body.guest-mode .composer-actions{column-gap:16px!important;gap:16px!important}
 .dark .model-picker-popup{box-shadow:0 16px 44px #000b}
 
 .history-actions{display:inline-flex;align-items:center;gap:10px}
+
+
+/* Model selector capsule sits just above the message input, with attachment beside it. */
+.composer-model-row{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:8px;
+  min-height:34px;
+  margin:0 0 5px;
+  padding:0 1px;
+}
+.composer-model-row .model-picker-button{height:32px}
+.composer-model-row .attachment-button{width:32px;height:32px;min-width:32px;min-height:32px}
+.composer-model-row .attachment-button svg{width:17px;height:17px}
+.composer textarea{text-align:left}
+@media(max-width:480px){
+  .composer-model-row{gap:7px;margin-bottom:4px}
+  .composer-model-row .model-picker-button{height:32px;max-width:48vw}
+}
