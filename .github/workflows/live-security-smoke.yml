@@ -1,0 +1,36 @@
+name: Teslafield production security smoke tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/server.js"
+      - "backend/oauth-mcp.js"
+      - "backend/test/live-security-smoke.js"
+      - ".github/workflows/live-security-smoke.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: teslafield-live-security-smoke
+  cancel-in-progress: false
+
+jobs:
+  safe-production-probes:
+    name: Non-destructive production security probes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      TESLAFIELD_LIVE_API_BASE: https://teslafield-api.onrender.com
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Probe production API without user credentials
+        run: node backend/test/live-security-smoke.js
