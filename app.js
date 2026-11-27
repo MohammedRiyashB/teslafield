@@ -762,7 +762,11 @@
       try { localStorage.setItem(conversationStoreKey(), JSON.stringify(chats)); } catch (error) {}
       cloudSyncFingerprints = new Map(liveRemote.map((chat) => [chat.id, cloudConversationFingerprint(chat)]));
       cloudSyncReady = true;
-      renderConversation();
+      // A cloud-history refresh must not rebuild the visible message list while
+      // the active response is streaming. The current chat is newer than the
+      // fetched snapshot because sendMessage updates its timestamp before sync.
+      if (generating) renderHistory();
+      else renderConversation();
       cloudSyncBusy = false;
       await pushCloudHistoryChanges();
     } catch (error) {
@@ -970,7 +974,7 @@
     }
     stack.appendChild(actions);
     row.appendChild(stack);
-    messageList.appendChild(row);
+    return row;
   }
   async function shareAssistantMessage(content) {
     try {
@@ -1083,7 +1087,7 @@
     messageList.innerHTML = "";
     // Keep the starter screen visible for a signed-in account with no messages yet.
     welcome.hidden = !!(chat && chat.messages.length);
-    if (chat) chat.messages.forEach((message, index) => renderMessage(message, index, chat));
+    if (chat) chat.messages.forEach((message, index) => messageList.appendChild(renderMessage(message, index, chat)));
     scrollBottom();
     renderHistory();
   }
@@ -1553,6 +1557,7 @@
     controller = requestController;
     const typingIndicator = showTyping();
     let streamingBubble = null;
+    let completedMessage = null;
     setGenerating(true);
     try {
       await waitForApiReady(90000, requestSignal);
@@ -1626,6 +1631,7 @@
       if (!replyText.trim()) throw new Error("The selected model ended the stream without returning text.");
       if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
       chat.messages.push({ role: "assistant", content: replyText.trim() });
+      completedMessage = chat.messages[chat.messages.length - 1];
       chat.updated = Date.now();
       saveStore();
       if (typeof window.showBannerWhenDue === "function") window.showBannerWhenDue(chat);
@@ -1637,6 +1643,7 @@
           role: "assistant",
           content: "**TeslafieldAI service notice**\n\n" + message + "\n\nYour prompt is saved in this conversation. You can retry after the service is connected."
         });
+        completedMessage = chat.messages[chat.messages.length - 1];
         chat.updated = Date.now();
         saveStore();
         toast(message);
@@ -1646,8 +1653,22 @@
       if (controller === requestController) {
         controller = null;
         setGenerating(false);
-        if (activeChat() === chat) renderConversation();
-        else renderHistory();
+        if (activeChat() === chat) {
+          // Replace only the live streaming bubble with its formatted final
+          // message. Do not clear and reconstruct the existing conversation.
+          if (completedMessage) {
+            const finalRow = renderMessage(completedMessage, chat.messages.length - 1, chat);
+            if (streamingBubble && streamingBubble.row.isConnected) {
+              streamingBubble.row.replaceWith(finalRow);
+            } else {
+              messageList.appendChild(finalRow);
+            }
+            scrollBottom();
+          }
+          renderHistory();
+        } else {
+          renderHistory();
+        }
       }
     }
   }
