@@ -8,6 +8,12 @@ const PROVIDER_CACHE_TTL_MS = 60 * 60 * 1000;
 const PROVIDER_FAILURE_RETRY_MS = 5 * 60 * 1000;
 const MAX_LOGO_BYTES = 256 * 1024;
 const ALLOWED_LOGO_HOSTS = new Set(["openrouter.ai", "t0.gstatic.com"]);
+const REMOVED_FREE_CHAT_MODEL_IDS = new Set([
+  "google/gemma-4-26b-a4b-it:free",
+  "google/gemma-4-31b-it:free",
+  "inclusionai/ling-3.2-flash:free",
+  "recursive/flint-v1.0:free"
+]);
 
 function asText(value) {
   return typeof value === "string" ? value.trim() : "";
