@@ -272,6 +272,10 @@ jobs:
           grep -q "welcome.hidden = !!(chat && chat.messages.length);" /tmp/teslafield-app.js
           grep -q "guest-mode" /tmp/teslafield-styles.css
           grep -q "cookie-banner" /tmp/teslafield-styles.css
+          grep -q "body.signed-in .connect-entry-button" /tmp/teslafield-styles.css
+          grep -q "background:var(--surface-2)!important" /tmp/teslafield-styles.css
+          grep -q "max-width:768px!important" /tmp/teslafield-styles.css
+          grep -q 'classList.toggle("sidebar-collapsed")' /tmp/teslafield-app.js
           curl --fail --location --silent --show-error "${BASE}/terms" -o /tmp/teslafield-terms.html
           grep -q "Terms of Use" /tmp/teslafield-terms.html
           echo "Verified clean /terms page."
