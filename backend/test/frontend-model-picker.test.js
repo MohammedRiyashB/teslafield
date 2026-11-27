@@ -178,3 +178,12 @@ test("Pro locked catalogue is UI-only and does not modify chat request routing",
   assert.match(reply, /model: userPreferences\.model/);
   assert.doesNotMatch(reply, /LOCKED_OPENROUTER_MODELS/);
 });
+
+test("share links support legacy query and fragment payloads and expose actionable failure diagnostics", () => {
+  assert.match(app, /const hashValue = location\.hash\.slice\(1\)/);
+  assert.match(app, /hashValue\.startsWith\("data="\) \? new URLSearchParams\(hashValue\)\.get\("data"\) : hashValue/);
+  assert.match(app, /legacyPayload = query\.get\("data"\)/);
+  assert.match(app, /console\.warn\("TeslafieldAI share could not be opened:"/);
+  assert.match(app, /"This share could not be opened \("/);
+  assert.match(app, /\/api\/v1\/shares\//);
+});
