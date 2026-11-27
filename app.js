@@ -1846,7 +1846,7 @@
       if (!data || !Array.isArray(data.models)) throw new Error("MODEL_CATALOG_INVALID");
       availableModels = data.models.filter((model) =>
         model && typeof model.id === "string" && typeof model.name === "string" &&
-        typeof model.free === "boolean" && /^[A-Za-z0-9._:/-]{1,160}$/.test(model.id)
+        typeof model.free === "boolean" && /^[A-Za-z0-9._:/-]{1,160}$/.test(model.id) &&\n        (model.id === "teslafield" || (model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true && model.free === true))
       );
       if (!availableModels.some((model) => model.id === "teslafield")) {
         availableModels.unshift({ id: "teslafield", name: "Teslafield B1", free: true, provider: "TeslafieldAI" });
@@ -1866,7 +1866,7 @@
     renderModelPicker();
     const model = availableModels.find((item) => item.id === selected);
     if (model.provider === "OpenRouter") {
-      toast(model.free ? "OpenRouter $0 model selected. Your messages go to OpenRouter; provider limits and account conditions apply." : "Paid OpenRouter model selected. Your messages go to OpenRouter and usage charges may apply.");
+      toast("OpenRouter :free model selected. Free-tier limits and availability apply.");
     } else {
       toast("Preferred model: " + model.name);
     }
