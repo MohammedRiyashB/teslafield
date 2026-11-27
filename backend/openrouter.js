@@ -24,7 +24,7 @@ function safeProviderLogoUrl(value) {
     return null;
   }
 
-  if (url.protocol !== "https:" || !ALLOWED_LOGO_HOSTS.has(url.hostname.toLowerCase())) return null;
+  if (url.protocol !== "https:" || (url.port && url.port !== "443") || !ALLOWED_LOGO_HOSTS.has(url.hostname.toLowerCase())) return null;
   if (url.hostname.toLowerCase() === "openrouter.ai" &&
       !/^\/images\/(icons|models)\//.test(url.pathname)) return null;
   if (url.hostname.toLowerCase() === "t0.gstatic.com" && !url.pathname.startsWith("/faviconV2")) return null;
