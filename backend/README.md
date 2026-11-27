@@ -18,6 +18,9 @@ Node.js API for the TESLAFIELD web app and ChatGPT MCP connection.
 - `GET /api/v1/status` — integration status
 - `GET /api/v1/models` — available free and paid text models; paid catalogue requires OpenRouter configuration
 - `GET /api/v1/warmup` — warmup checks for the AI integrations
+- `GET /api/v1/conversations` — Firebase-authenticated list of the signed-in user's cloud conversations
+- `PUT /api/v1/conversations` — Firebase-authenticated create/update of one owned conversation
+- `DELETE /api/v1/conversations?id=<conversation-id>` — delete one owned cloud conversation
 - `POST /api/v1/chat/completions` — Firebase-authenticated TeslafieldAI chat
 - `POST /api/v1/chat/stream` — Firebase-authenticated chat stream
 - `POST /api/v1/speech/transcribe` — Firebase-authenticated speech transcription
@@ -65,3 +68,17 @@ Do not add model provider keys, OAuth signing secrets, Firebase service-account 
 ## Model selection
 
 The browser model selector defaults to the existing TeslafieldAI Qwen3-0.6B Space. If `OPENROUTER_API_KEY` is configured, the API loads the current OpenRouter text-chat catalogue, separates zero-priced models from paid models, and returns price-per-million-token metadata for the UI. The browser sends only the selected model ID; the provider key remains on the server. The API validates model IDs against the live provider catalogue before making a request and includes the selected model in the idempotency fingerprint. Free provider models can still be rate-limited or unavailable. Paid models are never selected automatically; users must explicitly choose one.
+
+
+## Cloud conversation history (Stage 6)
+
+The API stores conversations in the existing Firebase project's default Cloud Firestore database. It uses the caller's Firebase ID token with the Firestore REST API, so Firestore Security Rules enforce ownership; no service-account private key or paid database is added to the backend.
+
+Before cloud sync can work, the project owner must:
+1. Open the Firebase console for project `teslafieldai` and create/enable the default Cloud Firestore database (choose a region after reviewing data-residency needs).
+2. From a trusted local checkout with Firebase CLI authenticated as a project administrator, run `firebase deploy --only firestore:rules --project teslafieldai`. The repository's `firestore.rules` allows a signed-in user to access only `users/{their-uid}/conversations/*`.
+3. Confirm the Firestore API is enabled for the project. The app will continue using browser-local history if Firestore is not ready.
+
+The web client keeps its localStorage cache for offline resilience, merges remote and local conversations by their `updated` timestamp on sign-in and refreshes when the page regains focus. Changes are uploaded through the authenticated API. Cloud sync is not a realtime Firestore listener; it refreshes on sign-in, page focus and local edits. A failed cloud request never deletes the local copy.
+
+Each conversation is validated (safe document ID, message role/content limits and a 400 KiB serialized size cap). API user identity always comes from the verified Firebase token, never from a client-supplied UID. Cloud data is not automatically erased when a Firebase account is deleted; account deletion/export lifecycle and conflict/tombstone handling remain follow-up work before public release.
