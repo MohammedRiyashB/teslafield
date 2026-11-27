@@ -3,12 +3,14 @@ const crypto = require("node:crypto");
 const { handleOAuthMcp } = require("./oauth-mcp");
 const { IdempotencyStore } = require("./idempotency");
 const { createOpenRouterCatalog, FREE_ROUTER_MODEL } = require("./model-catalog");
+const { createConversationStore } = require("./conversation-store");
 
 const PORT = Number(process.env.PORT || 10000);
 const SERVICE_NAME = "teslafield-api";
 const API_VERSION = "v1";
 const chatIdempotencyStore = new IdempotencyStore({ ttlMs: 5 * 60 * 1000, maxEntries: 1000 });
 const openRouterCatalog = createOpenRouterCatalog({ apiKey: process.env.OPENROUTER_API_KEY || "" });
+const conversationStore = createConversationStore({ projectId: FIREBASE_PROJECT_ID });
 const allowedOrigins = (process.env.CORS_ORIGIN || "https://teslafieldai.web.app,https://teslafieldai.firebaseapp.com")
   .split(",")
   .map((value) => value.trim())
@@ -463,7 +465,7 @@ const server = http.createServer(async (req, res) => {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
   }
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, Idempotency-Key, MCP-Protocol-Version, Mcp-Session-Id, Last-Event-ID");
   res.setHeader("Access-Control-Max-Age", "600");
 
@@ -492,6 +494,44 @@ const server = http.createServer(async (req, res) => {
     if (!allowRate(req, res, protectedApiRoutes.get(url.pathname), "user:" + authUser.uid)) return;
     req.authUser = authUser;
     audit("api.request_authorized", authUser.uid, url.pathname);
+  }
+
+  if (["GET", "PUT", "DELETE"].includes(req.method) && url.pathname === "/api/v1/conversations") {
+    if (!allowRate(req, res, "history")) return;
+    if (req.method === "PUT" && !/^application\\/json(?:;|$)/i.test(req.headers["content-type"] || "")) {
+      sendJson(res, 415, { error: "UNSUPPORTED_MEDIA_TYPE" });
+      return;
+    }
+    const authUser = await authenticateFirebase(req, res);
+    if (!authUser) return;
+    if (!allowRate(req, res, "history", "user:" + authUser.uid)) return;
+    req.authUser = authUser;
+    req.firebaseIdToken = (req.headers.authorization || "").slice(7);
+    audit("api.request_authorized", authUser.uid, url.pathname);
+    try {
+      if (req.method === "GET") {
+        const conversations = await conversationStore.list(authUser.uid, req.firebaseIdToken);
+        return sendJson(res, 200, { ok: true, conversations });
+      }
+      if (req.method === "PUT") {
+        const input = await readJson(req, 512 * 1024);
+        const conversation = await conversationStore.upsert(authUser.uid, req.firebaseIdToken, input.conversation);
+        audit("conversation.saved", authUser.uid, url.pathname);
+        return sendJson(res, 200, { ok: true, conversation });
+      }
+      const id = url.searchParams.get("id") || "";
+      await conversationStore.remove(authUser.uid, req.firebaseIdToken, id);
+      audit("conversation.deleted", authUser.uid, url.pathname);
+      return sendJson(res, 200, { ok: true, deleted: id });
+    } catch (error) {
+      if (["INVALID_CONVERSATION", "INVALID_CONVERSATION_ID", "INVALID_CONVERSATION_MESSAGES", "INVALID_CONVERSATION_MESSAGE", "CONVERSATION_TOO_LARGE", "INVALID_USER_ID"].includes(error.message)) {
+        return sendJson(res, 400, { error: error.message });
+      }
+      if (error.status === 404 || error.status === 403) {
+        return sendJson(res, 503, { error: "FIRESTORE_NOT_READY", message: "Cloud history needs the TeslafieldAI Firestore database and owner-only security rules to be enabled." });
+      }
+      return sendJson(res, 503, { error: "CLOUD_HISTORY_UNAVAILABLE", message: "Cloud history is temporarily unavailable. Your local conversation is still saved on this device." });
+    }
   }
 
   if (req.method === "GET" && url.pathname === "/") {
