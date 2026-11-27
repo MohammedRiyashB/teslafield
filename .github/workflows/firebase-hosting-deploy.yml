@@ -100,9 +100,10 @@ jobs:
           assert.ok(uiCss.includes("*::-webkit-scrollbar") && uiCss.includes("display:none!important"), "WebKit scrollbars must be fully hidden on every edge");
           assert.ok(uiCss.includes("scrollbar-gutter:auto!important"), "No reserved scrollbar gutter should remain");
           assert.match(html, /id="personalizeModal"/);
-          assert.ok(app.includes('/api/v1/chat/completions'), 'Frontend must call the complete-response model endpoint');
-          assert.ok(!app.includes('/api/v1/chat/stream'), 'Frontend must not render token-by-token streaming');
-          assert.ok(app.includes('Thinking…'), 'Chat must show a thinking-only indicator');
+          assert.ok(app.includes('/api/v1/chat/stream'), 'Frontend must use the authenticated streaming endpoint');
+          assert.ok(!app.includes('/api/v1/chat/completions'), 'Frontend must not wait for a complete non-streaming reply');
+          assert.ok(app.includes('consumeChatStream') && app.includes('text/event-stream'), 'Frontend must decode and display streamed provider tokens');
+          assert.ok(backend.includes('stream: true') && backend.includes('allow_fallbacks: true'), 'OpenRouter must stream while provider failover stays on the exact selected model');
           assert.ok(app.includes('async function transcribeVoiceRecording'));
           assert.ok(app.includes('/api/v1/speech/transcribe'));
           assert.ok(app.includes('new MediaRecorder'));
