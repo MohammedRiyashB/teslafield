@@ -6,6 +6,7 @@ on:
     paths:
       - "index.html"
       - "oauth.html"
+      - "oauth.css"
       - "oauth.js"
       - "terms.html"
       - "privacy.html"
@@ -63,6 +64,16 @@ jobs:
           const app = fs.readFileSync('app.js', 'utf8');
           const backend = fs.readFileSync('backend/server.js', 'utf8');
           const oauthPage = fs.readFileSync('oauth.html', 'utf8');
+          const oauthCss = fs.readFileSync('oauth.css', 'utf8');
+          const hostingConfig = JSON.parse(fs.readFileSync('firebase.json', 'utf8'));
+          const csp = hostingConfig.hosting.headers.find((entry) => entry.source === '**').headers.find((entry) => entry.key === 'Content-Security-Policy').value;
+          const styleSrc = csp.split(';').map((directive) => directive.trim()).find((directive) => directive.startsWith('style-src '));
+          assert.ok(styleSrc && !styleSrc.includes("'unsafe-inline'") && csp.includes("style-src-elem 'self'") && csp.includes("style-src-attr 'unsafe-inline'"), 'CSP must disallow inline style elements and scope compatibility styles to attributes');
+          assert.ok(!csp.includes('https:;') && !csp.includes('https://*.'), 'CSP must not permit broad HTTPS wildcards');
+          assert.ok(!/<style\b|\sstyle\s*=/.test(oauthPage), 'OAuth page must not use inline styles');
+          assert.ok(oauthCss.includes('.primary{'), 'OAuth page external stylesheet must exist');
+          assert.ok(!app.includes('.style.') && !app.includes('visual-viewport-height'), 'Frontend must not mutate inline styles');
+          assert.ok(fs.readFileSync('styles.css', 'utf8').includes('field-sizing:content'), 'Composer textarea must use CSS-native content sizing');
           const oauthClient = fs.readFileSync('oauth.js', 'utf8');
           const mcpBridge = fs.readFileSync('backend/oauth-mcp.js', 'utf8');
           assert.match(html, /id="historySearch"/);
