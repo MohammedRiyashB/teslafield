@@ -86,3 +86,25 @@ test("catalog keeps every eligible :free model without truncation", async () => 
   assert.ok(models.some((item) => item.id === "provider/free-124:free"));
   assert.equal(await catalog.findModel("provider/paid"), null);
 });
+
+
+test("catalog does not cache a transient empty response", async () => {
+  let calls = 0;
+  const catalog = createOpenRouterCatalog({
+    apiKey: "test-key",
+    ttlMs: 60000,
+    fetchImpl: async () => {
+      calls += 1;
+      return {
+        ok: true,
+        json: async () => ({ data: calls === 1 ? [] : [model("provider/recovered:free")] })
+      };
+    }
+  });
+
+  assert.deepEqual(await catalog.listModels(), []);
+  const recovered = await catalog.listModels();
+  assert.equal(recovered.length, 1);
+  assert.equal(recovered[0].id, "provider/recovered:free");
+  assert.equal(calls, 2);
+});
