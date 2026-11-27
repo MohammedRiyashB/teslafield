@@ -7,8 +7,10 @@ const { test } = require("node:test");
 
 const serverSource = fs.readFileSync(path.join(__dirname, "..", "server.js"), "utf8");
 
-test("OpenRouter requests enforce ZDR, deny non-transient collection and disable provider fallback", () => {
-  assert.match(serverSource, /provider:\s*\{[\s\S]*?zdr:\s*true[\s\S]*?data_collection:\s*"deny"[\s\S]*?allow_fallbacks:\s*false[\s\S]*?\}/);
+test("OpenRouter requests retain ZDR and data-collection denial while allowing same-model provider failover", () => {
+  assert.match(serverSource, /provider:\s*\{[\s\S]*?zdr:\s*true[\s\S]*?data_collection:\s*"deny"[\s\S]*?allow_fallbacks:\s*true[\s\S]*?\}/);
+  assert.doesNotMatch(serverSource, /allow_fallbacks:\s*false/);
+  assert.match(serverSource, /stream:\s*true/);
 });
 
 test("OpenRouter model requests pass the exact selected model ID", () => {
