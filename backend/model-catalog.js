@@ -41,11 +41,13 @@ function getCatalogDiagnostics(items, normalizedModels) {
   });
   return {
     textOutputCatalogCount: list.length,
+    chatEndpointCatalogCount: list.length,
     freeVariantCount: freeVariants.length,
     freeChatEndpointCount: freeChatVariants.length,
     freeTextChatCandidateCount: freeTextChatVariants.length,
     excludedKnownModelCount: freeTextChatVariants.length - normalizedModels.length,
-    eligibleModelCount: normalizedModels.length
+    eligibleModelCount: normalizedModels.length,
+    freeChatModelIds: normalizedModels.map((model) => model.id)
   };
 }
 
@@ -63,7 +65,7 @@ function createOpenRouterCatalog({ apiKey = "", fetchImpl = fetch, ttlMs = 10 * 
       // Ask OpenRouter to filter models by the chat-completions endpoint.
       // Do not require item.endpoints locally: the normal /models record can
       // omit that array; endpoint details are a separate API representation.
-      const response = await fetchImpl(OPENROUTER_BASE_URL + "/models?endpoints=%2Fapi%2Fv1%2Fchat%2Fcompletions", {
+      const response = await fetchImpl(OPENROUTER_BASE_URL + "/models?endpoints=" + encodeURIComponent(CHAT_COMPLETIONS_ENDPOINT), {
         headers: { Authorization: "Bearer " + apiKey, Accept: "application/json" },
         signal: AbortSignal.timeout(15000)
       });
