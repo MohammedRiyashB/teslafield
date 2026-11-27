@@ -18,6 +18,7 @@
 7. The backend has speech transcription and voice synthesis endpoints, but there is no end-to-end WebRTC duplex voice session, barge-in or live audio synchronization.
 8. The current model identifier is Qwen/Qwen3-0.6B. A 0.6B model is a lightweight baseline, not evidence of frontier-level reasoning.
 9. The latest Firebase Hosting workflow run on the audited main commit succeeded. Earlier failed runs stopped in the MCP/OAuth security smoke test at a strict WWW-Authenticate header grep; the current workflow accepts the quoted/unquoted parameter form and the later run passed.
+10. The frontend originally acquired its send lock only after awaiting Firebase authentication. Two rapid submissions during that wait could both pass the initial guard and append duplicate user turns. The current upgrade branch now locks send and regenerate operations before the authentication await.
 
 ## Nine engineering categories and acceptance criteria
 
@@ -115,5 +116,11 @@
 9. **Release readiness:** run all checks on a review branch/PR; deploy only after explicit review.
 
 ## Current status
+
+- **Stage 1 complete on the upgrade branch:** corrected the root README and added this audit/roadmap document.
+- **Stage 2 complete on the upgrade branch:** added a non-deploying GitHub Actions validation workflow, seven backend API smoke tests, five response-style unit tests, and two frontend concurrency regression checks.
+- **Functional fixes on the upgrade branch:** the selected response style now reaches the Qwen system prompt for both chat routes; send and regenerate now share a lock acquired before waiting for Firebase authentication.
+- **Latest branch validation:** GitHub Actions run 45934332849 completed successfully; JavaScript/Python syntax checks and all 14 automated tests passed.
+- **Not deployed:** all changes remain isolated on the engineering branch. The production main branch and existing deployments were not changed.
 
 This document is a measured engineering roadmap, not a claim that every category is already complete or that a 10/10 score can be guaranteed. A category is complete only when its acceptance criteria are tested against the actual deployed system.
