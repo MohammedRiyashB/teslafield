@@ -128,7 +128,7 @@
 This document is a measured engineering roadmap, not a claim that every category is already complete or that a 10/10 score can be guaranteed. A category is complete only when its acceptance criteria are tested against the actual deployed system.
 
 
-### Stage 4 — voice capture reliability (implemented; CI verification pending)
+### Stage 4 — voice capture reliability (implemented; CI verified)
 
 - Prevent duplicate microphone permission requests while a permission prompt is pending or a recorder is active.
 - Invalidate pending permission requests when the user cancels; if the browser grants permission later, stop every returned media track instead of starting a recording.
@@ -140,7 +140,7 @@ This document is a measured engineering roadmap, not a claim that every category
 **Still not claimed:** physical-device microphone testing, end-to-end speech provider availability, full-duplex WebRTC, barge-in or peer-to-peer inference. These require live browser/device and provider tests; no production deployment is part of this stage.
 
 
-### Stage 5 — free and paid model choice (implemented; CI verification pending)
+### Stage 5 — free and paid model choice (implemented; CI verified)
 
 - Preserve the existing TeslafieldAI Qwen3-0.6B Space as the default free model.
 - Add an optional OpenRouter catalogue that dynamically lists text-chat models and their prompt/completion price per million tokens.
@@ -153,3 +153,11 @@ This document is a measured engineering roadmap, not a claim that every category
 - Add unit and API tests for catalogue filtering, pricing normalization, provider credential gating and browser preference/request propagation.
 
 **Configuration not yet applied:** OpenRouter remains disabled until the owner adds `OPENROUTER_API_KEY` to Render's private environment. This implementation does not create an account, purchase credits, add secrets or deploy. The existing local Qwen model remains available as the default.
+
+
+### Latest validation snapshot
+
+- GitHub Actions run [45936659749](https://github.com/MohammedRiyashB/teslafield/actions/runs/45936659749) completed successfully on code commit `c4f076726204d780276e90d7cc83eb9e9649922a`.
+- JavaScript syntax checks (including `backend/model-catalog.js`) and Python compilation passed.
+- **34 Node.js tests and 5 Python tests passed; zero failures.**
+- This validates code in the engineering branch only; no production deployment or merge was performed.
