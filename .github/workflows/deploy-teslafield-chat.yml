@@ -27,12 +27,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m py_compile huggingface/chat-space/app.py
+          python -m py_compile huggingface/chat-space/app.py huggingface/chat-space/stream_utils.py
           test -s huggingface/chat-space/README.md
           test -s huggingface/chat-space/Dockerfile
           test -s huggingface/chat-space/requirements.txt
           grep -q 'MODEL_ID = "Qwen/Qwen3-0.6B"' huggingface/chat-space/app.py
           grep -q 'TextIteratorStreamer' huggingface/chat-space/app.py
+          grep -q 'media_type="text/event-stream; charset=utf-8"' huggingface/chat-space/app.py
           ! grep -q 'llama_cpp' huggingface/chat-space/app.py
           ! grep -qi 'llama-cpp-python' huggingface/chat-space/requirements.txt
           grep -q '^title: Teslafield Chat Engine$' huggingface/chat-space/README.md
