@@ -15,6 +15,21 @@ service cloud.firestore {
         && request.resource.data.id == conversationId;
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
+    match /sharedResponses/{shareId} {
+      // Anyone with the unguessable share URL can read one response; listing is never allowed.
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['id', 'ownerUid', 'content', 'createdAt'])
+        && request.resource.data.keys().hasAll(['id', 'ownerUid', 'content', 'createdAt'])
+        && request.resource.data.id == shareId
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.content is string
+        && request.resource.data.content.size() > 0
+        && request.resource.data.content.size() <= 700000
+        && request.resource.data.createdAt is int;
+      allow update, delete: if false;
+    }
     match /{document=**} {
       allow read, write: if false;
     }
