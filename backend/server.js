@@ -551,7 +551,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/v1/models") {
     const models = [{
       id: "teslafield",
-      name: "TeslafieldAI — Qwen3 0.6B",
+      name: "Teslafield B1",
       free: true,
       freeTier: true,
       provider: "TeslafieldAI",
