@@ -1722,7 +1722,7 @@
     const preferred = userPreferences.model || "teslafield";
     select.replaceChildren();
     const groups = [
-      { label: "FREE MODELS", models: availableModels.filter((model) => model.id === "teslafield" || (model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true)) }
+      { label: "MODELS", models: availableModels.filter((model) => model.id === "teslafield" || (model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true)) }
     ];
     groups.forEach((group) => {
       if (!group.models.length) return;
@@ -1731,7 +1731,7 @@
       group.models.forEach((model) => {
         const option = document.createElement("option");
         option.value = model.id;
-        option.textContent = model.name + " · FREE";
+        option.textContent = model.name;
         optgroup.appendChild(option);
       });
       select.appendChild(optgroup);
@@ -1747,8 +1747,8 @@
     if (hint) {
       const routerReady = availableModels.some((model) => model.provider === "OpenRouter");
       hint.textContent = modelCatalogStatus || (routerReady
-        ? "Free models only. Your selected model is sent directly; no automatic model switching or paid fallback. Provider rate limits and availability apply."
-        : "Teslafield B1 is available. Free provider models have not loaded yet.");
+        ? "Your selected model is sent directly; no automatic model switching or paid fallback. OpenRouter provider rate limits and availability apply."
+        : "Teslafield B1 is available. Provider models have not loaded yet.");
     }
   }
 
@@ -1836,7 +1836,7 @@
         const name = document.createElement("strong");
         name.textContent = model.id === "teslafield" ? "Teslafield B1" : model.name;
         const meta = document.createElement("small");
-        meta.textContent = model.provider === "OpenRouter" ? "FREE · Rate-limited" : "FREE · TeslafieldAI";
+        meta.textContent = model.provider === "OpenRouter" ? "Rate-limited" : "TeslafieldAI";
         copy.append(name, meta);
         const check = document.createElement("span");
         check.className = "model-option-check";
@@ -1886,7 +1886,7 @@
     if (!force && !hasProviderModels && modelCatalogLastAttemptAt && Date.now() - modelCatalogLastAttemptAt < 15000) return;
 
     modelCatalogLoading = true;
-    modelCatalogStatus = hasProviderModels ? "Refreshing free models…" : "Loading free models…";
+    modelCatalogStatus = hasProviderModels ? "Refreshing models…" : "Loading models…";
     renderModelSelector();
     renderModelPicker();
 
@@ -1906,7 +1906,7 @@
         } else if (data.catalogAvailable === false) {
           modelCatalogStatus = "OpenRouter model catalogue failed: " + String(data.catalogError || "unknown error") + ".";
         } else if (Number(data.openRouterModelCount || 0) === 0) {
-          modelCatalogStatus = "OpenRouter responded, but returned no eligible :free chat models.";
+          modelCatalogStatus = "OpenRouter returned no eligible chat models.";
         } else {
           modelCatalogStatus = "";
         }
@@ -1945,7 +1945,7 @@
     renderModelPicker();
     const model = availableModels.find((item) => item.id === selected);
     if (model.provider === "OpenRouter") {
-      toast("OpenRouter :free model selected. Free-tier limits and availability apply.");
+      toast("OpenRouter model selected. Rate limits and availability apply.");
     } else {
       toast("Preferred model: " + model.name);
     }
