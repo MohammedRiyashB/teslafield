@@ -165,7 +165,7 @@ This document is a measured engineering roadmap, not a claim that every category
 
 ### Stage 5 UX refinement — branded model capsule (implementation in progress)
 
-- Replace the native select appearance with a compact capsule in the composer.
+- Replace the file-plus control position with a compact model capsule; retain file selection through a paperclip control immediately beside it. The paperclip morphs to the cancel X during microphone recording.\n- Keep the native select hidden as the existing model-selection contract so preference persistence and request routing remain compatible.
 - Open an anchored popup above the capsule, with Teslafield B1 and its own brand logo first, followed by OpenRouter free and paid models with the OpenRouter mark and provider-supplied model names.
 - Keep the native select hidden as the existing model-selection contract so preference persistence and request routing remain compatible.
 - The OpenRouter free section is capped at 13 displayed catalogue entries; the catalogue is dynamic and can return fewer than 13 when fewer compatible free text models are available. Paid models remain in their own section.
