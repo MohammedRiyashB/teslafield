@@ -46,8 +46,8 @@ test("backend rejects non-free models and streams the exact OpenRouter model wit
   assert.match(backend, /model\.freeTier !== true \|\| !model\.id\.endsWith\(":free"\)/);
   assert.match(backend, /Only OpenRouter models explicitly marked :free are allowed/);
   assert.match(backend, /stream: true/);
-  assert.match(backend, /zdr: true/);
-  assert.match(backend, /data_collection: "deny"/);
+  assert.doesNotMatch(backend, /zdr: true/);
+  assert.match(backend, /data_collection: "allow"/);
   assert.match(backend, /allow_fallbacks: true/);
   assert.match(backend, /serveProviderLogo/);
 });
@@ -104,6 +104,6 @@ test("model picker displays the official provider logo beside each model and kee
 
 test("frontend posts the exact selected model ID and keeps cached models on catalogue errors", () => {
   assert.match(app, /model: userPreferences\.model/);
-  assert.match(app, /Only replace the last-known-good cache after a non-empty, healthy ZDR-filtered refresh/);
+  assert.match(app, /Only replace the last-known-good cache after a non-empty, healthy free-model refresh/);
   assert.match(app, /if \(data\.catalogAvailable !== false && fetchedProviderModels\.length > 0\)/);
 });
