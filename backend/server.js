@@ -847,13 +847,11 @@ const server = http.createServer(async (req, res) => {
               // Send only the user's exact selected model ID. No router or model fallback.
               model: model.id,
               messages: [{ role: "system", content: "You are TeslafieldAI, a helpful, accurate and respectful AI assistant. Be clear about uncertainty and never claim actions you have not performed. Response style: " + ({ concise: "be brief and direct", balanced: "give a clear answer with useful context", detailed: "provide thorough explanations and examples when useful" }[responseStyle] || "give a clear answer with useful context") + "." }, ...safeMessages],
-              // Enforce the strictest provider-side privacy route available.
-              // If no eligible endpoint exists, the request fails rather than falling back.
+              // User explicitly approved providers that may retain data or train on prompts.
+              // This broadens provider eligibility without changing the selected model ID.
               provider: {
-                zdr: true,
-                data_collection: "deny",
-                // Allow another serving endpoint for this same exact model only.
-                // The model ID never changes, and strict ZDR / data-collection rules remain active.
+                data_collection: "allow",
+                // Fallbacks remain limited to another endpoint for this same exact model.
                 allow_fallbacks: true
               },
               max_tokens: 384
@@ -1026,11 +1024,11 @@ const server = http.createServer(async (req, res) => {
                   detailed: "provide thorough explanations and examples when useful"
                 }[responseStyle] || "give a clear answer with useful context") + "."
               }, ...safeMessages],
+              // User explicitly approved providers that may retain data or train on prompts.
               provider: {
-                zdr: true,
-                data_collection: "deny",
+                data_collection: "allow",
                 // Provider-level failover may serve the SAME model ID only.
-                // This never switches to another model and never relaxes privacy filters.
+                // This never switches to another model.
                 allow_fallbacks: true
               },
               max_tokens: 384,
