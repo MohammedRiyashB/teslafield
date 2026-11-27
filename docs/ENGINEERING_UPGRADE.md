@@ -126,3 +126,15 @@
 - **Not deployed:** all changes remain isolated on the engineering branch. The production main branch and existing deployments were not changed.
 
 This document is a measured engineering roadmap, not a claim that every category is already complete or that a 10/10 score can be guaranteed. A category is complete only when its acceptance criteria are tested against the actual deployed system.
+
+
+### Stage 4 — voice capture reliability (implemented; CI verification pending)
+
+- Prevent duplicate microphone permission requests while a permission prompt is pending or a recorder is active.
+- Invalidate pending permission requests when the user cancels; if the browser grants permission later, stop every returned media track instead of starting a recording.
+- Release media tracks and clear recorder state after recorder errors.
+- Mark failed recordings so the stop callback cannot mistakenly submit damaged or partial audio for transcription.
+- Preserve the existing record → transcribe → review → send flow and the current 45-second / 8 MiB capture limits.
+- Add source-level regression tests for duplicate permission requests, late permission grants after cancellation, recorder cleanup and failed-recording handling.
+
+**Still not claimed:** physical-device microphone testing, end-to-end speech provider availability, full-duplex WebRTC, barge-in or peer-to-peer inference. These require live browser/device and provider tests; no production deployment is part of this stage.
