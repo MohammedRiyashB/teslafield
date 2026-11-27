@@ -1,4 +1,4 @@
-const CACHE_NAME = "teslafield-pwa-shell-v14";
+const CACHE_NAME = "teslafield-pwa-shell-v13";
 const SHELL_ASSETS = [
   "/",
   "/index.html",
