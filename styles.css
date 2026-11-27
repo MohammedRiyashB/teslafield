@@ -1863,3 +1863,15 @@ body:not(.signed-in) .composer-model-row{display:none!important}
   .composer{padding:7px 9px 6px!important;border-radius:18px!important}
   .composer textarea{min-height:24px!important;max-height:112px!important;font-size:14px!important}
 }
+
+
+/* Guest welcome: hide model selection and file attachment until Google sign-in. */
+body:not(.signed-in) .composer-model-row,
+body:not(.signed-in) .composer .attachment-button {
+  display: none !important;
+}
+
+/* Give the signed-in model capsule a little more breathing room above the composer. */
+body.signed-in .composer-model-row {
+  margin-bottom: 13px !important;
+}
