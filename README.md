@@ -90,7 +90,7 @@ See backend/README.md and the connector legal pages for details.
 
 ## Engineering upgrade
 
-See docs/ENGINEERING_UPGRADE.md for the repository audit, verified limitations, staged roadmap and acceptance criteria across the nine engineering categories.
+See docs/ENGINEERING_UPGRADE.md for the repository audit, verified limitations, staged roadmap and acceptance criteria across the nine engineering categories. See docs/PRODUCTION_SECURITY_REVIEW_2026-11-27.md for the current security review, production smoke-test scope and remaining go-live gates.
 
 ## Security
 
