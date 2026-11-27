@@ -8,6 +8,7 @@ const { test } = require("node:test");
 const root = path.resolve(__dirname, "../..");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const app = fs.readFileSync(path.join(root, "app.js"), "utf8");
+const backend = fs.readFileSync(path.join(root, "backend/server.js"), "utf8");
 const css = fs.readFileSync(path.join(root, "styles.css"), "utf8");
 
 test("composer exposes the compact branded model capsule and accessible popup", () => {
@@ -20,12 +21,19 @@ test("composer exposes the compact branded model capsule and accessible popup", 
   assert.ok(!html.includes('id="plusButton"'), "Model capsule replaces the plus control");
 });
 
-test("model picker puts Teslafield B1 first and shows OpenRouter branding and model names", () => {
+test("model picker shows Teslafield B1 and OpenRouter :free models only", () => {
   assert.match(app, /model\.id === "teslafield" \? "Teslafield B1"/);
   assert.match(app, /https:\/\/openrouter\.ai\/favicon\.ico/);
   assert.match(app, /OPENROUTER · FREE MODELS/);
-  assert.match(app, /OPENROUTER · PAID MODELS/);
-  assert.match(app, /\.slice\(0, 13\)/);
+  assert.doesNotMatch(app, /OPENROUTER · PAID MODELS/);
+  assert.match(app, /model\.id\.endsWith\(":free"\)/);
+  assert.match(app, /FREE · OpenRouter :free · rate-limited/);
+  assert.doesNotMatch(app, /\.slice\(0, 13\)/);
+});
+
+test("backend rejects any OpenRouter model not explicitly marked :free", () => {
+  assert.match(backend, /model\.freeTier !== true \|\| !model\.id\.endsWith\(":free"\)/);
+  assert.match(backend, /Only OpenRouter models explicitly marked :free are allowed/);
 });
 
 test("model picker popup opens above the capsule and supports Escape dismissal", () => {
