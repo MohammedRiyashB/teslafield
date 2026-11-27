@@ -9,7 +9,7 @@ TeslafieldAI is an independent AI assistant project with a browser-based chat in
 | Web client | Static HTML, CSS and JavaScript; installable PWA shell | Implemented |
 | Authentication | Firebase Authentication with Google sign-in; API verifies Firebase ID tokens | Implemented |
 | Chat API | Node.js HTTP service on Render | Implemented |
-| Chat model | Qwen/Qwen3-0.6B through the Hugging Face Chat Space | Connected through provider adapter |
+| Chat model | TeslafieldAI Qwen3-0.6B; optional OpenRouter free and paid chat models | Local free model is default; OpenRouter is opt-in |
 | Response UX | Complete-response chat with a thinking indicator; token-by-token rendering is intentionally not used by the current web client | Implemented |
 | Speech input | Browser MediaRecorder + speech transcription endpoint | Implemented; provider availability varies |
 | Voice output | Text-to-speech endpoint | Implemented; provider availability varies |
@@ -28,6 +28,7 @@ The project is an AI chat assistant. It is not the unrelated static creative-stu
 - theme-init.js, manifest.webmanifest, sw.js — theme initialization and PWA support.
 - oauth.html, oauth.js — Firebase sign-in and consent page for the ChatGPT connector.
 - backend/server.js — API, Firebase token verification, rate limiting, chat, speech and voice routes.
+- backend/model-catalog.js — server-side OpenRouter text-model catalogue and pricing metadata.
 - backend/oauth-mcp.js — OAuth and MCP resource/authorization endpoints.
 - huggingface/chat-space/ — Qwen3-0.6B chat Space.
 - huggingface/speech-space/, huggingface/voice-space/ — speech and voice Space integrations.
@@ -78,6 +79,9 @@ See backend/README.md and the connector legal pages for details.
 
 - Hugging Face Spaces and free hosting tiers may sleep, queue requests, impose limits or change availability.
 - A successful health check does not prove that a model is loaded or that inference will succeed.
+- The local TeslafieldAI model remains the default and does not require an OpenRouter key.
+- Optional OpenRouter routing is disabled until `OPENROUTER_API_KEY` is configured on the backend. Free models are rate-limited and provider availability varies; paid models are opt-in, display per-million-token prices, and can incur charges from the user's OpenRouter account.
+- Model preferences are saved in this browser. Provider keys are never stored in the frontend. No automatic paid-model fallback is performed.
 - No paid provider should be enabled without an explicit budget decision.
 - The API currently reports that no database is configured. Browser-local history is not a substitute for durable, cross-device account storage.
 - OAuth authorization requests and one-time codes are held in process memory. Keep the API to one instance until this state is moved to shared storage.
