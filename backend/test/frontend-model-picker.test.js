@@ -25,6 +25,9 @@ test("model picker shows Teslafield B1 and OpenRouter :free models only", () => 
   assert.match(app, /model\.id === "teslafield" \? "Teslafield B1"/);
   assert.match(app, /https:\/\/openrouter\.ai\/favicon\.ico/);
   assert.match(app, /OPENROUTER · FREE MODELS/);
+  assert.match(app, /OPENROUTER_CATALOG_HTTP_/);
+  assert.match(app, /OpenRouter responded, but returned no eligible/);
+  assert.match(app, /No OpenRouter :free models have loaded yet/);
   assert.doesNotMatch(app, /OPENROUTER · PAID MODELS/);
   assert.match(app, /model\.id\.endsWith\(":free"\)/);
   assert.match(app, /FREE · OpenRouter :free · rate-limited/);
