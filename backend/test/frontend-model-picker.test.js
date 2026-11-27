@@ -123,3 +123,20 @@ test("frontend posts the exact selected model ID and keeps cached models on cata
   assert.match(app, /Only replace the last-known-good cache after a non-empty, healthy free-model refresh/);
   assert.match(app, /if \(data\.catalogAvailable !== false && fetchedProviderModels\.length > 0\)/);
 });
+
+
+test("completed streaming replies replace only the live bubble without rebuilding chat history", () => {
+  const renderer = app.slice(app.indexOf("function renderMessage("), app.indexOf("async function shareAssistantMessage("));
+  assert.match(renderer, /return row;/);
+  assert.doesNotMatch(renderer, /messageList\.appendChild\(row\)/);
+
+  const conversationRenderer = app.slice(app.indexOf("function renderConversation()"), app.indexOf("function dateGroup("));
+  assert.match(conversationRenderer, /messageList\.appendChild\(renderMessage\(message, index, chat\)\)/);
+
+  const reply = app.slice(app.indexOf("async function requestReply(chat)"), app.indexOf("function showGuestContinueCard()"));
+  assert.match(reply, /streamingBubble\.row\.replaceWith\(finalRow\)/);
+  assert.doesNotMatch(reply, /renderConversation\(\)/);
+
+  const cloudSync = app.slice(app.indexOf("async function syncCloudHistory()"), app.indexOf("function queueCloudHistorySync()"));
+  assert.match(cloudSync, /if \(generating\) renderHistory\(\);\s*else renderConversation\(\);/);
+});
