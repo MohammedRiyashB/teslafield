@@ -2,8 +2,7 @@ const http = require("node:http");
 const crypto = require("node:crypto");
 const { handleOAuthMcp } = require("./oauth-mcp");
 const { IdempotencyStore } = require("./idempotency");
-const { createOpenRouterCatalog } = require("./model-catalog");
-const { serveProviderLogo } = require("./provider-logos");
+const { createOpenRouterIntegration } = require("./openrouter");
 const { createConversationStore } = require("./conversation-store");
 const { clientOptions: hfClientOptions, requestHeaders: hfRequestHeaders } = require("./huggingface-auth");
 const { pruneExpiredEntries, hasCapacity } = require("./security-collections");
@@ -12,7 +11,7 @@ const PORT = Number(process.env.PORT || 10000);
 const SERVICE_NAME = "teslafield-api";
 const API_VERSION = "v1";
 const chatIdempotencyStore = new IdempotencyStore({ ttlMs: 5 * 60 * 1000, maxEntries: 1000 });
-const openRouterCatalog = createOpenRouterCatalog({ apiKey: process.env.OPENROUTER_API_KEY || "" });
+const openRouter = createOpenRouterIntegration({ apiKey: process.env.OPENROUTER_API_KEY || "" });
 const allowedOrigins = (process.env.CORS_ORIGIN || "https://teslafieldai.web.app,https://teslafieldai.firebaseapp.com")
   .split(",")
   .map((value) => value.trim())
@@ -569,10 +568,10 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  const providerLogoMatch = req.method === "GET" && url.pathname.match(/^\/api\/v1\/providers\/logo\/([a-z0-9-]{1,64})$/);
+  const providerLogoMatch = req.method === "GET" && url.pathname.match(/^\/api\/v1\/openrouter\/providers\/([a-z0-9-]{1,64})\/logo$/);
   if (providerLogoMatch) {
-    const served = await serveProviderLogo(res, providerLogoMatch[1]);
-    if (!served) sendJson(res, 404, { error: "PROVIDER_LOGO_NOT_FOUND" });
+    const served = await openRouter.serveProviderLogo(res, providerLogoMatch[1]);
+    if (!served) sendJson(res, 404, { error: "OPENROUTER_PROVIDER_LOGO_NOT_FOUND" });
     return;
   }
 
@@ -588,27 +587,29 @@ const server = http.createServer(async (req, res) => {
       available: true
     }];
     let catalogAvailable = true;
-    let catalogError = openRouterCatalog.configured ? null : "OPENROUTER_API_KEY_MISSING";
-    if (openRouterCatalog.configured) {
-      try {
-        const remoteModels = await openRouterCatalog.listModels();
-        for (const model of remoteModels) {
-          models.push({ ...model, provider: "OpenRouter", available: true });
-        }
-      } catch (error) {
-        catalogAvailable = false;
-        catalogError = typeof error.code === "string" ? error.code : "OPENROUTER_CATALOG_REQUEST_FAILED";
-        console.warn(JSON.stringify({ type: "openrouter_catalog_error", code: catalogError }));
+    let catalogError = null;
+
+    // The model directory and provider logos are public OpenRouter metadata.
+    // The API key is required only when sending chat completions.
+    try {
+      const remoteModels = await openRouter.listFreeChatModels();
+      for (const model of remoteModels) {
+        models.push({ ...model, available: true });
       }
+    } catch (error) {
+      catalogAvailable = false;
+      catalogError = typeof error.code === "string" ? error.code : "OPENROUTER_CATALOG_REQUEST_FAILED";
+      console.warn(JSON.stringify({ type: "openrouter_catalog_error", code: catalogError }));
     }
+
     sendJson(res, 200, {
       ok: true,
       defaultModel: "teslafield",
-      openRouterConfigured: openRouterCatalog.configured,
+      openRouterConfigured: openRouter.configured,
       catalogAvailable,
       catalogError,
       openRouterModelCount: models.filter((model) => model.provider === "OpenRouter").length,
-      openRouterCatalogDiagnostics: openRouterCatalog.getDiagnostics(),
+      openRouterCatalogDiagnostics: openRouter.getDiagnostics(),
       models
     });
     return;
@@ -821,7 +822,7 @@ const server = http.createServer(async (req, res) => {
             throw error;
           }
           let model;
-          try { model = await openRouterCatalog.findModel(selectedModel); }
+          try { model = await openRouter.findFreeChatModel(selectedModel); }
           catch (catalogError) {
             const error = new Error("The OpenRouter model catalogue is temporarily unavailable. Try again or choose TeslafieldAI Free.");
             error.statusCode = 503;
@@ -1076,7 +1077,7 @@ const server = http.createServer(async (req, res) => {
           } else if (upstream.status === 404) {
             statusCode = 503;
             errorCode = "MODEL_ENDPOINT_UNAVAILABLE";
-            message = "OpenRouter has no eligible endpoint for this exact model under TeslafieldAI's Zero Data Retention and data-collection privacy rules. Choose another :free model.";
+            message = "OpenRouter has no currently available chat endpoint for this exact free model. No other model was substituted.";
           } else if (upstream.status === 400) {
             statusCode = 400;
             errorCode = "MODEL_REQUEST_REJECTED";
