@@ -1,10 +1,12 @@
 const http = require("node:http");
 const crypto = require("node:crypto");
 const { handleOAuthMcp } = require("./oauth-mcp");
+const { IdempotencyStore } = require("./idempotency");
 
 const PORT = Number(process.env.PORT || 10000);
 const SERVICE_NAME = "teslafield-api";
 const API_VERSION = "v1";
+const chatIdempotencyStore = new IdempotencyStore({ ttlMs: 5 * 60 * 1000, maxEntries: 1000 });
 const allowedOrigins = (process.env.CORS_ORIGIN || "https://teslafieldai.web.app,https://teslafieldai.firebaseapp.com")
   .split(",")
   .map((value) => value.trim())
@@ -691,21 +693,71 @@ const server = http.createServer(async (req, res) => {
       if (safeMessages.reduce((total, message) => total + message.content.length, 0) > 36000) {
         return sendJson(res, 413, { error: "CHAT_CONTEXT_TOO_LARGE", message: "Reduce the conversation length and try again." });
       }
-      const upstream = await fetch(CHAT_SPACE_URL + "/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: safeMessages, max_new_tokens: 384, response_style: ["concise", "balanced", "detailed"].includes(input.response_style) ? input.response_style : "balanced" }),
-        signal: AbortSignal.timeout(240000)
-      });
-      const data = await upstream.json().catch(() => ({}));
-      if (!upstream.ok) return sendJson(res, upstream.status === 429 ? 429 : 502, { error: "CHAT_SPACE_ERROR", message: data.detail || "The TESLAFIELD Chat Space could not complete this request. It may still be waking up or loading its model." });
-      const reply = data.response;
-      if (typeof reply !== "string" || !reply.trim()) return sendJson(res, 502, { error: "EMPTY_CHAT_RESPONSE", message: "The Chat Space returned no text." });
+
+      const idempotencyKey = req.headers["idempotency-key"] || "";
+      if (idempotencyKey && (typeof idempotencyKey !== "string" || !/^[A-Za-z0-9._:-]{16,128}$/.test(idempotencyKey))) {
+        return sendJson(res, 400, { error: "INVALID_IDEMPOTENCY_KEY", message: "Use a request id between 16 and 128 safe characters." });
+      }
+      const responseStyle = ["concise", "balanced", "detailed"].includes(input.response_style) ? input.response_style : "balanced";
+
+      const createCompletion = async () => {
+        const upstream = await fetch(CHAT_SPACE_URL + "/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: safeMessages, max_new_tokens: 384, response_style: responseStyle }),
+          signal: AbortSignal.timeout(240000)
+        });
+        const data = await upstream.json().catch(() => ({}));
+        if (!upstream.ok) {
+          const error = new Error(
+            typeof data.detail === "string" && data.detail
+              ? data.detail
+              : "The TESLAFIELD Chat Space could not complete this request. It may still be waking up or loading its model."
+          );
+          error.statusCode = upstream.status === 429 ? 429 : 502;
+          error.errorCode = "CHAT_SPACE_ERROR";
+          throw error;
+        }
+        const reply = data.response;
+        if (typeof reply !== "string" || !reply.trim()) {
+          const error = new Error("The Chat Space returned no text.");
+          error.statusCode = 502;
+          error.errorCode = "EMPTY_CHAT_RESPONSE";
+          throw error;
+        }
+        return {
+          ok: true,
+          model: data.model || "TeslafieldAI",
+          model_id: data.model_id || "Qwen/Qwen3-0.6B",
+          reply
+        };
+      };
+
+      let result;
+      if (idempotencyKey) {
+        const fingerprint = crypto.createHash("sha256")
+          .update(JSON.stringify({ messages: safeMessages, response_style: responseStyle }))
+          .digest("hex");
+        const scopedKey = String(req.authUser && req.authUser.uid || "unknown") + ":" + idempotencyKey;
+        result = await chatIdempotencyStore.run(scopedKey, fingerprint, createCompletion);
+      } else {
+        result = await createCompletion();
+      }
+
       audit("chat.completed", req.authUser && req.authUser.uid, url.pathname);
-      return sendJson(res, 200, { ok: true, model: data.model || "TeslafieldAI", model_id: data.model_id || "Qwen/Qwen3-0.6B", reply });
+      return sendJson(res, 200, result);
     } catch (error) {
+      if (error.code === "IDEMPOTENCY_KEY_CONFLICT") {
+        return sendJson(res, 409, { error: error.code, message: error.message });
+      }
+      if (error.code === "IDEMPOTENCY_STORE_FULL") {
+        return sendJson(res, 503, { error: error.code, message: error.message });
+      }
       if (error.message === "BODY_TOO_LARGE") return sendJson(res, 413, { error: "REQUEST_TOO_LARGE" });
       if (error.message === "INVALID_JSON") return sendJson(res, 400, { error: "INVALID_JSON" });
+      if (Number.isInteger(error.statusCode)) {
+        return sendJson(res, error.statusCode, { error: error.errorCode || "CHAT_SPACE_ERROR", message: error.message });
+      }
       return sendJson(res, 504, { error: "CHAT_REQUEST_FAILED", message: "The Chat Space timed out or is still loading. Please retry in a moment." });
     }
   }
