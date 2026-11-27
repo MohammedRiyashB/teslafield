@@ -289,7 +289,7 @@
     }
     setGuestLayout(!signedIn);
     $("accountStatus").textContent = signedIn
-      ? "Signed in securely. Your chat history stays on this device."
+      ? "Signed in securely. Your chats are saved locally and sync when cloud history is enabled."
       : "Sign in with Google to use TeslafieldAI securely.";
     $("accountSignUp").hidden = signedIn;
     $("accountLogIn").hidden = signedIn;
@@ -540,7 +540,7 @@
   async function deleteAccountAndLocalData() {
     if (!currentUser) return;
     const uid = currentUser.uid;
-    if (!window.confirm("Permanently delete this TeslafieldAI sign-in account and its locally saved chats on this device? This cannot be undone. This does not erase records that external AI providers may retain under their own policies.")) return;
+    if (!window.confirm("Permanently delete this TeslafieldAI sign-in account and its locally saved chats on this device? Cloud Firestore conversations are not bulk-deleted by this action; delete them individually first. This does not erase records external AI providers may retain. This cannot be undone.")) return;
     try {
       await currentUser.delete();
       localStorage.removeItem("teslafield.conversations.v4." + uid);
