@@ -162,11 +162,20 @@ function createOpenRouterIntegration({
     if (catalogPending) return catalogPending;
 
     catalogPending = (async () => {
-      // Model discovery is intentionally public and independent of the account key.
-      // The API key is used only when the user actually sends a chat request.
+      if (!asText(apiKey)) {
+        const error = new Error("OPENROUTER_API_KEY_MISSING");
+        error.code = error.message;
+        throw error;
+      }
+      // Use the standard catalogue, not /models/user: the latter applies
+      // account privacy preferences and guardrails to model discovery.
+      // The credential remains server-side and is never sent to the browser.
       const url = OPENROUTER_API + "/models?output_modalities=text&sort=top-weekly";
       const response = await fetchImpl(url, {
-        headers: { Accept: "application/json" },
+        headers: {
+          Authorization: "Bearer " + apiKey,
+          Accept: "application/json"
+        },
         signal: AbortSignal.timeout(20000)
       });
       if (!response.ok) {
