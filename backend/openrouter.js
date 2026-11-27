@@ -237,6 +237,12 @@ function createOpenRouterIntegration({
   }
 
   async function listFreeChatModels() {
+    if (!asText(apiKey)) {
+      const error = new Error("OPENROUTER_API_KEY_MISSING");
+      error.code = error.message;
+      throw error;
+    }
+
     const [items, providers] = await Promise.all([
       loadPublicModelCatalog(),
       loadProviderRegistry()
@@ -248,7 +254,8 @@ function createOpenRouterIntegration({
 
     // The upstream API's top-weekly ordering is retained so popular free models,
     // including active NVIDIA Nemotron variants, appear near the top.
-    diagnostics = buildCatalogDiagnostics(items, models, providers.size);
+    const uniqueProviders = new Set(Array.from(providers.values(), (provider) => provider.slug));
+    diagnostics = buildCatalogDiagnostics(items, models, uniqueProviders.size);
     return models;
   }
 
