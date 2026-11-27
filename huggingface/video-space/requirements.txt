@@ -7,4 +7,4 @@ safetensors
 ftfy
 imageio
 imageio-ffmpeg
-diffusers==0.35.2
+diffusers==0.43.0
