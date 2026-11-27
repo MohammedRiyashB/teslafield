@@ -47,13 +47,13 @@ test("catalog excludes the five reported non-working free models", () => {
   assert.ok(normalizeOpenRouterModel(model("recursive/flint-v1.0:free")));
 });
 
-test("catalog caches only exact :free models", async () => {
+test("catalog caches every exact :free model without requiring ZDR", async () => {
   let calls = 0;
   const catalog = createOpenRouterCatalog({
     apiKey: "server-only-test-key",
     fetchImpl: async (url, options) => {
       calls += 1;
-      assert.match(url, /openrouter\.ai\/api\/v1\/models\?endpoints=%2Fapi%2Fv1%2Fchat%2Fcompletions&zdr=true$/);
+      assert.match(url, /openrouter\.ai\/api\/v1\/models\?endpoints=%2Fapi%2Fv1%2Fchat%2Fcompletions$/);
       assert.equal(options.headers.Authorization, "Bearer server-only-test-key");
       return {
         ok: true,
