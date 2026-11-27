@@ -15,7 +15,7 @@ TeslafieldAI is an independent AI assistant project with a browser-based chat in
 | Voice output | Text-to-speech endpoint | Implemented; provider availability varies |
 | MCP connector | OAuth authorization-code flow with PKCE and teslafield:chat scope | Implemented |
 | Hosting | Firebase Hosting for the web client; Render for the API; Hugging Face Spaces for model services | Configured in repository |
-| Persistence | Browser-side conversation storage; no server database is configured | Limitation |
+| Persistence | Browser cache plus optional Firebase Cloud Firestore conversation storage | Stage 6 implementation; Firestore setup required |
 | Live duplex voice | No end-to-end WebRTC conversational voice session is currently implemented | Not implemented |
 | File understanding | Attachments are selected locally but file analysis/upload is not enabled | Not implemented |
 | Billing / credits | No payment processor or durable credit ledger is configured | Not implemented |
@@ -28,7 +28,7 @@ The project is an AI chat assistant. It is not the unrelated static creative-stu
 - theme-init.js, manifest.webmanifest, sw.js — theme initialization and PWA support.
 - oauth.html, oauth.js — Firebase sign-in and consent page for the ChatGPT connector.
 - backend/server.js — API, Firebase token verification, rate limiting, chat, speech and voice routes.
-- backend/model-catalog.js — server-side OpenRouter text-model catalogue and pricing metadata.
+- backend/model-catalog.js — server-side OpenRouter text-model catalogue and pricing metadata.\n- backend/conversation-store.js and firestore.rules — owner-scoped Firestore conversation storage and security rules.
 - backend/oauth-mcp.js — OAuth and MCP resource/authorization endpoints.
 - huggingface/chat-space/ — Qwen3-0.6B chat Space.
 - huggingface/speech-space/, huggingface/voice-space/ — speech and voice Space integrations.
@@ -81,9 +81,9 @@ See backend/README.md and the connector legal pages for details.
 - A successful health check does not prove that a model is loaded or that inference will succeed.
 - The local TeslafieldAI model remains the default and does not require an OpenRouter key.
 - Optional OpenRouter routing is disabled until `OPENROUTER_API_KEY` is configured on the backend. Free models are rate-limited and provider availability varies; paid models are opt-in, display per-million-token prices, and can incur charges from the user's OpenRouter account.
-- Model preferences are saved in this browser. Provider keys are never stored in the frontend. No automatic paid-model fallback is performed.
+- Model preferences are saved in this browser. The composer now uses a branded Teslafield B1 capsule and an upward-opening model catalogue. Provider keys are never stored in the frontend. No automatic paid-model fallback is performed.
 - No paid provider should be enabled without an explicit budget decision.
-- The API currently reports that no database is configured. Browser-local history is not a substitute for durable, cross-device account storage.
+- Stage 6 adds authenticated Firestore cloud-history endpoints and local-cache synchronization. Cloud sync remains inactive until the owner creates the default Firestore database and deploys `firestore.rules`; see backend/README.md. Browser-local history remains the fallback.
 - OAuth authorization requests and one-time codes are held in process memory. Keep the API to one instance until this state is moved to shared storage.
 - The current text chat uses a non-streaming response contract in the browser, even though the model Space and API retain a separate stream endpoint.
 - The current microphone workflow is speech capture/transcription, not a full low-latency, interruptible duplex voice conversation.
