@@ -498,7 +498,7 @@ const server = http.createServer(async (req, res) => {
 
   if (["GET", "PUT", "DELETE"].includes(req.method) && url.pathname === "/api/v1/conversations") {
     if (!allowRate(req, res, "history")) return;
-    if (req.method === "PUT" && !/^application\\/json(?:;|$)/i.test(req.headers["content-type"] || "")) {
+    if (req.method === "PUT" && !/^application\/json(?:;|$)/i.test(req.headers["content-type"] || "")) {
       sendJson(res, 415, { error: "UNSUPPORTED_MEDIA_TYPE" });
       return;
     }
