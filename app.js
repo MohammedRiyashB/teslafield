@@ -1134,7 +1134,12 @@
     $("sharedMessagePage").hidden = false;
     try {
       const query = new URLSearchParams(location.search);
-      const legacyPayload = query.get("data") || location.hash.slice(1);
+      const hashValue = location.hash.slice(1);
+      // Older share URLs have appeared with the payload in either ?data=,
+      // #<payload>, or #data=<payload>. Accept all three without changing
+      // the payload bytes (URLSearchParams performs the one required decode).
+      const legacyPayload = query.get("data") ||
+        (hashValue.startsWith("data=") ? new URLSearchParams(hashValue).get("data") : hashValue);
       let data;
       if (legacyPayload) {
         // Continue supporting previously generated long /share/{id}?data=... links.
@@ -1169,8 +1174,14 @@
       $("sharedMessageTitle").textContent = "A response shared from TeslafieldAI";
       document.title = "Shared response | TeslafieldAI AI";
     } catch (error) {
+      // Keep the public message calm, but retain the actual failure in the
+      // console so storage/rules, malformed legacy payloads and browser
+      // decompression failures can be distinguished during diagnosis.
+      console.warn("TeslafieldAI share could not be opened:", error && error.message ? error.message : "UNKNOWN_SHARE_ERROR");
       $("sharedMessageTitle").textContent = "This shared response is unavailable";
-      $("sharedMessageContent").textContent = "The link is incomplete or its response data was removed. Ask the sender to create a fresh share link.";
+      const detail = error && error.message ? String(error.message) : "Unknown share error";
+      $("sharedMessageContent").textContent =
+        "This share could not be opened (" + detail + "). The original response may still be available to the sender; ask them to create a fresh share link if needed.";
       $("copySharedMessage").hidden = true;
     }
     return true;
