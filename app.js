@@ -1743,6 +1743,11 @@
       selectedLogo.alt = "";
     }
     list.replaceChildren();
+    const status = $("modelPickerStatus");
+    if (status) {
+      status.hidden = !modelCatalogStatus;
+      status.textContent = modelCatalogStatus;
+    }
     const own = availableModels.filter((model) => model.id === "teslafield");
     const routerFree = availableModels.filter((model) => model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true);
     const groups = [
