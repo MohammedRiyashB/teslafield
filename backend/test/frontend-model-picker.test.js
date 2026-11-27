@@ -33,7 +33,7 @@ test("model picker uses OpenRouter's provider registry icons and puts free provi
   assert.doesNotMatch(brandResolver, /nvidia\.com|google\.com|deepseek\.com|qwen\.ai|anthropic\.com/);
   assert.doesNotMatch(brandResolver, /google\.com\/s2\/favicons|\/api\/v1\/providers\/logo\//);
   assert.match(app, /selectedLogo\.hidden = !brand\.logo/);
-  assert.match(app, /logo\.onerror = \(\) => \{ logo\.hidden = true; \}/);
+  assert.match(app, /setProviderLogoSource\(logo, modelBrand\)/);
   assert.match(app, /modelBrand\.logo/);
   assert.match(app, /data\.catalogError/);
   assert.match(app, /FREE · Rate-limited/);
