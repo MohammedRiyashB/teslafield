@@ -566,7 +566,7 @@ const server = http.createServer(async (req, res) => {
       }
       const shareId = crypto.randomBytes(12).toString("hex");
       const token = (req.headers.authorization || "").slice(7);
-      const saved = await sharedResponseStore.create(shareId, req.authUser.uid, token, input.content);
+      const saved = await sharedResponseStore.create(shareId, token, input.content);
       audit("share.created", req.authUser.uid, url.pathname);
       return sendJson(res, 201, { ok: true, id: saved.id, createdAt: saved.createdAt });
     } catch (error) {
