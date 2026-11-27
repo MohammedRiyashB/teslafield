@@ -40,6 +40,11 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Check backend dependency vulnerabilities
+        run: |
+          npm install --package-lock-only --ignore-scripts --prefix backend
+          npm audit --prefix backend --audit-level=high
+
       - name: Check JavaScript and Python syntax
         run: |
           node --check app.js

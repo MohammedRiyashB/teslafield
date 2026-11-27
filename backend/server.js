@@ -4,6 +4,7 @@ const { handleOAuthMcp } = require("./oauth-mcp");
 const { IdempotencyStore } = require("./idempotency");
 const { createOpenRouterCatalog } = require("./model-catalog");
 const { createConversationStore } = require("./conversation-store");
+const { pruneExpiredEntries, hasCapacity } = require("./security-collections");
 
 const PORT = Number(process.env.PORT || 10000);
 const SERVICE_NAME = "teslafield-api";
@@ -88,6 +89,7 @@ const RATE_LIMITS = {
   image: { limit: 3, windowMs: 60_000 },
   video: { limit: 2, windowMs: 60_000 }
 };
+const MAX_RATE_BUCKETS = 10_000;
 const rateBuckets = new Map();
 
 function requestClientKey(req) {
@@ -104,6 +106,15 @@ function allowRate(req, res, bucketName, actorKey) {
   const now = Date.now();
   let bucket = rateBuckets.get(key);
   if (!bucket || now >= bucket.resetAt) {
+    if (!bucket) {
+      pruneExpiredEntries(rateBuckets, now, "resetAt");
+      // Fail closed at capacity; never clear active limits to make room for new keys.
+      if (!hasCapacity(rateBuckets, MAX_RATE_BUCKETS)) {
+        res.setHeader("Retry-After", "60");
+        sendJson(res, 503, { error: "RATE_LIMIT_CAPACITY", message: "The request limiter is temporarily at capacity. Please retry shortly." });
+        return false;
+      }
+    }
     bucket = { count: 0, resetAt: now + policy.windowMs };
     rateBuckets.set(key, bucket);
   }
@@ -161,11 +172,7 @@ const protectedApiRoutes = new Map([
 ]);
 
 const rateCleanup = setInterval(() => {
-  const now = Date.now();
-  for (const [key, bucket] of rateBuckets) {
-    if (now >= bucket.resetAt) rateBuckets.delete(key);
-  }
-  if (rateBuckets.size > 10_000) rateBuckets.clear();
+  pruneExpiredEntries(rateBuckets, Date.now(), "resetAt");
 }, 60_000);
 if (typeof rateCleanup.unref === "function") rateCleanup.unref();
 
@@ -202,6 +209,13 @@ function sendJson(res, statusCode, payload) {
 
 function readJson(req, maxBytes = 32 * 1024) {
   return new Promise((resolve, reject) => {
+    const contentLength = req.headers["content-length"];
+    if (contentLength !== undefined &&
+        (!/^[0-9]+$/.test(String(contentLength)) || Number(contentLength) > maxBytes)) {
+      req.resume();
+      reject(new Error("BODY_TOO_LARGE"));
+      return;
+    }
     let body = "";
     let size = 0;
     let tooLarge = false;
@@ -220,6 +234,7 @@ function readJson(req, maxBytes = 32 * 1024) {
       try { resolve(JSON.parse(body)); }
       catch { reject(new Error("INVALID_JSON")); }
     });
+    req.on("aborted", () => reject(new Error("REQUEST_ABORTED")));
     req.on("error", reject);
   });
 }

@@ -1,11 +1,11 @@
 // The legacy teslafield-pwa-shell-v14 and v15 caches are removed by activation cleanup below.
-const CACHE_NAME = "teslafield-pwa-shell-v19";
+const CACHE_NAME = "teslafield-pwa-shell-v20";
 const SHELL_ASSETS = [
   "/",
   "/index.html",
-  "/styles.css?v=20261127-18",
-  "/app.js?v=20261127-18",
-  "/theme-init.js?v=20261127-18",
+  "/styles.css?v=20261127-19",
+  "/app.js?v=20261127-19",
+  "/theme-init.js?v=20261127-19",
   "/manifest.webmanifest",
   "/teslafield-icon-192.png",
   "/teslafield-icon-512.png",
