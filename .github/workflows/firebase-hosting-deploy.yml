@@ -54,6 +54,8 @@ jobs:
           const fs = require('node:fs');
           const assert = require('node:assert/strict');
           const html = fs.readFileSync('index.html', 'utf8');
+          assert.match(html, /^<body class="auth-pending" aria-busy="true">/m, "The app must start behind the Firebase auth gate");
+          assert.ok(html.includes("Loading TeslafieldAI..."), "A neutral loading screen must cover the app during auth restore");
           assert.match(html, /href="\/styles\.css\?v=/);
           assert.match(html, /src="\/app\.js\?v=/);
           assert.match(html, /src="\/theme-init\.js\?v=/);
@@ -86,6 +88,10 @@ jobs:
           assert.ok(authInit.includes('Auth.Persistence.SESSION'), 'SESSION persistence fallback is required');
           assert.ok(authInit.includes('Auth.Persistence.NONE'), 'memory persistence fallback is required');
           assert.ok(authInit.indexOf('onAuthStateChanged') >= 0);
+          assert.ok(authInit.indexOf('onAuthStateChanged') < authInit.indexOf('await authClient.setPersistence'), 'Attach the auth observer before persistence work');
+          assert.ok(authInit.includes('initialAuthStateReceived') && authInit.includes('redirectResultProcessed'), 'Wait for initial auth and redirect restoration before revealing the app');
+          assert.ok(app.includes('function markAuthReady()') && app.includes('classList.remove("auth-pending")'), 'Only reveal the app after auth state is resolved');
+          assert.ok(fs.readFileSync("styles.css", "utf8").includes("body.auth-pending .app-shell{visibility:hidden!important}"), 'Hide the app shell until Firebase auth is resolved');
           assert.ok(authInit.indexOf('getRedirectResult') > authInit.indexOf('onAuthStateChanged'), 'Attach auth observer before reading redirect result');
           const signInStart = app.indexOf('async function accountEntry()');
           const signInEnd = app.indexOf('async function deleteAccountAndLocalData', signInStart);
@@ -104,7 +110,7 @@ jobs:
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-icon-192.png' && icon.sizes === '192x192'));
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-icon-512.png' && icon.sizes === '512x512'));
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-pwa-icon.svg'));
-          assert.ok(fs.readFileSync('sw.js', 'utf8').includes('teslafield-pwa-shell-v8'));
+          assert.ok(fs.readFileSync('sw.js', 'utf8').includes('teslafield-pwa-shell-v9'));
           assert.ok(fs.readFileSync('theme-init.js', 'utf8').includes('teslafield.appearance.v2'));
           const chatEngine = fs.readFileSync('huggingface/chat-space/app.py', 'utf8');
           assert.ok(chatEngine.includes('MODEL_ID = "Qwen/Qwen3-0.6B"'));
@@ -234,7 +240,7 @@ jobs:
           curl --fail --silent --show-error "${BASE}/manifest.webmanifest" -o /tmp/teslafield-manifest.json
           node -e "const m=JSON.parse(require('node:fs').readFileSync('/tmp/teslafield-manifest.json','utf8')); if(m.id!=='/' || m.display!=='standalone') process.exit(1)"
           curl --fail --silent --show-error "${BASE}/sw.js?verify=${GITHUB_SHA}" -o /tmp/teslafield-sw.js
-          grep -q "teslafield-pwa-shell-v8" /tmp/teslafield-sw.js
+          grep -q "teslafield-pwa-shell-v9" /tmp/teslafield-sw.js
           curl --fail --silent --show-error "${BASE}/teslafield-pwa-icon.svg" -o /tmp/teslafield-icon.svg
           grep -q "<svg" /tmp/teslafield-icon.svg
           curl --fail --silent --show-error "${BASE}/teslafield-icon-192.png" -o /tmp/teslafield-icon-192.png
