@@ -1,89 +1,101 @@
-# TESLAFIELD Studio
+# TeslafieldAI
 
-An original, responsive AI creative-production workspace prototype.
+TeslafieldAI is an independent AI assistant project with a browser-based chat interface, Google sign-in, a Node.js API, a Hugging Face-hosted Qwen chat engine, speech/voice integrations, and a ChatGPT MCP/OAuth connector.
 
-TESLAFIELD is inspired by the broader product category demonstrated by modern AI creative suites. It does **not** copy another company's source code, private product screens, brand assets, or proprietary design files.
+## Current architecture
 
-## Current status
+| Layer | Current implementation | Status |
+|---|---|---|
+| Web client | Static HTML, CSS and JavaScript; installable PWA shell | Implemented |
+| Authentication | Firebase Authentication with Google sign-in; API verifies Firebase ID tokens | Implemented |
+| Chat API | Node.js HTTP service on Render | Implemented |
+| Chat model | Qwen/Qwen3-0.6B through the Hugging Face Chat Space | Connected through provider adapter |
+| Response UX | Complete-response chat with a thinking indicator; token-by-token rendering is intentionally not used by the current web client | Implemented |
+| Speech input | Browser MediaRecorder + speech transcription endpoint | Implemented; provider availability varies |
+| Voice output | Text-to-speech endpoint | Implemented; provider availability varies |
+| MCP connector | OAuth authorization-code flow with PKCE and teslafield:chat scope | Implemented |
+| Hosting | Firebase Hosting for the web client; Render for the API; Hugging Face Spaces for model services | Configured in repository |
+| Persistence | Browser-side conversation storage; no server database is configured | Limitation |
+| Live duplex voice | No end-to-end WebRTC conversational voice session is currently implemented | Not implemented |
+| File understanding | Attachments are selected locally but file analysis/upload is not enabled | Not implemented |
+| Billing / credits | No payment processor or durable credit ledger is configured | Not implemented |
 
-**Version:** 0.1.0 — Front-end prototype  
-**Runtime:** Static HTML, CSS and JavaScript  
-**Backend:** Not connected  
-**AI providers:** Not connected  
-**Authentication / payments / storage:** Not connected
+The project is an AI chat assistant. It is not the unrelated static creative-studio prototype described in an earlier version of this README.
 
-The interface is intentionally honest about its current state. Generate actions create local demo entries only. They do not call an AI model, upload user files, spend credits, or create actual video/audio/image outputs.
+## Repository layout
 
-## Included workspaces
+- index.html, styles.css, app.js — TeslafieldAI web application.
+- theme-init.js, manifest.webmanifest, sw.js — theme initialization and PWA support.
+- oauth.html, oauth.js — Firebase sign-in and consent page for the ChatGPT connector.
+- backend/server.js — API, Firebase token verification, rate limiting, chat, speech and voice routes.
+- backend/oauth-mcp.js — OAuth and MCP resource/authorization endpoints.
+- huggingface/chat-space/ — Qwen3-0.6B chat Space.
+- huggingface/speech-space/, huggingface/voice-space/ — speech and voice Space integrations.
+- huggingface/image-space/, huggingface/video-space/ — optional media-generation Space projects.
+- .github/workflows/ — validation and deployment workflows.
+- chatgpt-privacy.html, chatgpt-terms.html — legal pages for the ChatGPT connector.
 
-- Overview dashboard
-- Explore presets with ready-to-use creative directions
-- Video Studio
-- Image Studio
-- Cinema Director with editable starter shot list
-- Ad Studio with a local campaign-outline template
-- AI Director planning demonstration
-- Characters & Assets reference organiser
-- Creative Canvas with addable workflow nodes
-- Audio Studio planning interface
-- Motion Editor layout preview
-- Generations library for local demo jobs
+## Run the web client locally
 
-## Run locally
+The web client is static and does not require a root-level package installation.
 
-No build system or package installation is required.
+1. Clone this repository.
+2. Run a static server from the repository root, for example:
 
-1. Download or clone this repository.
-2. Open the index.html file in a modern browser.
-3. For a local web server, use any static server, for example:
-   - Python: python -m http.server 8000
-   - Node: npx serve .
-4. Visit http://localhost:8000.
+   ```bash
+   python -m http.server 8000
+   ```
 
-The app uses Google Fonts and a few Unsplash preview images. The rest of the application is plain HTML, CSS and JavaScript.
+3. Open http://localhost:8000.
 
-## Publish with GitHub Pages
+The Firebase web configuration and authorized domains must match the deployed project for sign-in to work.
 
-1. Open the repository on GitHub.
-2. Go to **Settings → Pages**.
-3. Under **Build and deployment**, choose **Deploy from a branch**.
-4. Select branch main and folder / (root).
-5. Save. GitHub will provide the published Pages URL after deployment.
+## Run the API locally
 
-GitHub Pages is a static host. It can publish this prototype, but it cannot securely run private API keys, background video-generation jobs, payment processing or a production database.
+Requirements: Node.js 20 or newer.
 
-## Before production
+```bash
+cd backend
+npm install
+npm start
+```
 
-A production release needs, at minimum:
+Set the required environment variables before using protected features. See backend/README.md for Render configuration, OAuth secret handling, provider settings and API routes.
 
-1. A secure backend that keeps provider API keys server-side.
-2. An authenticated user and project model.
-3. A generation-job queue, provider adapters, status polling and failure handling.
-4. Per-model cost estimation, credit ledger and billing safeguards.
-5. Object storage for user uploads and generated media.
-6. Consent, moderation, copyright, privacy and retention controls.
-7. Media processing and export infrastructure.
-8. Monitoring, rate limits, abuse controls and support tooling.
+Never put model-provider API keys, Firebase service-account credentials, OAuth signing secrets or user tokens in browser files or public GitHub commits.
 
-Never place provider secrets in app.js, index.html, browser storage or public GitHub files.
+## ChatGPT connector
 
-## Product and UX research
+The MCP endpoint is:
 
-Read PRODUCT_BLUEPRINT.md for the public product analysis, information architecture, interaction principles, user journeys, implementation status and next roadmap.
+https://teslafield-api.onrender.com/mcp
 
-Public references consulted:
-- https://higgsfield.ai/
-- https://higgsfield.ai/creator-hub/help-center/getting-started/what-is-higgsfield
-- https://higgsfield.ai/creator-hub/help-center/tools/which-higgsfield-tool-should-i-use
-- https://higgsfield.ai/creator-hub/help-center/tools/how-do-i-use-cinema-studio
-- https://higgsfield.ai/creator-hub/help-center/tools/how-do-i-use-canvas
-- https://higgsfield.ai/creator-hub/help-center/tools/how-do-i-use-supercomputer
-- https://higgsfield.ai/creator-hub/help-center/ai-models/how-do-i-create-and-use-a-soul-id-character
-- https://higgsfield.ai/pricing
-- https://higgsfield.ai/creator-hub/changelog
+The connector uses Firebase/Google sign-in on the TeslafieldAI consent page and an OAuth authorization-code flow with PKCE. It requests the teslafield:chat scope. The backend must have a strong TESLAFIELD_OAUTH_SECRET configured in its private environment.
 
-The public website and feature set change frequently. Re-check provider availability, features, pricing and terms before implementing integrations.
+See backend/README.md and the connector legal pages for details.
+
+## Free-tier and reliability notes
+
+- Hugging Face Spaces and free hosting tiers may sleep, queue requests, impose limits or change availability.
+- A successful health check does not prove that a model is loaded or that inference will succeed.
+- No paid provider should be enabled without an explicit budget decision.
+- The API currently reports that no database is configured. Browser-local history is not a substitute for durable, cross-device account storage.
+- OAuth authorization requests and one-time codes are held in process memory. Keep the API to one instance until this state is moved to shared storage.
+- The current text chat uses a non-streaming response contract in the browser, even though the model Space and API retain a separate stream endpoint.
+- The current microphone workflow is speech capture/transcription, not a full low-latency, interruptible duplex voice conversation.
+
+## Engineering upgrade
+
+See docs/ENGINEERING_UPGRADE.md for the repository audit, verified limitations, staged roadmap and acceptance criteria across the nine engineering categories.
+
+## Security
+
+- Protected API routes require a verified Firebase ID token.
+- Keep CORS origins restricted to trusted frontend origins.
+- Keep secrets in Render/Hugging Face/GitHub secret settings, never in source files.
+- Review provider privacy, terms, licensing, retention and rate limits before enabling any external model.
+- Do not claim uptime, latency, model quality or global scale without measurements.
 
 ## Licence
 
-This repository's prototype code is original project code. Add a project licence before accepting outside contributions or distributing it as a commercial product.
+No root-level licence file is currently present. Add and review a licence before accepting external contributions or granting broad reuse rights.
