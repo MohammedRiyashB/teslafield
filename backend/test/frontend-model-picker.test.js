@@ -108,7 +108,7 @@ test("model picker displays the official provider logo beside each model and kee
   assert.doesNotMatch(app, /"Free models only\./);
   assert.match(app, /model\.id\.endsWith\(":free"\)/);
   const rowRenderer = app.slice(app.indexOf("function renderModelPicker"), app.indexOf("function openModelPicker"));
-  assert.ok(rowRenderer.indexOf("option.append(logo)") < rowRenderer.indexOf("option.append(copy, check)"), "Round provider logo must appear to the left of the model name");
+  assert.ok(rowRenderer.indexOf("option.appendChild(logo)") < rowRenderer.indexOf("option.appendChild(copy)"), "Round provider logo must appear to the left of the model name");
   for (const id of [
     "google/gemma-4-26b-a4b-it:free",
     "google/gemma-4-31b-it:free",
