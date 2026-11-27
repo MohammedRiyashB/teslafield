@@ -83,6 +83,20 @@ test("CORS allows the configured TeslafieldAI web origin", async () => {
   assert.equal(response.headers.get("access-control-allow-origin"), trustedOrigin);
 });
 
+test("CORS preflight allows the browser idempotency request header", async () => {
+  const response = await fetch(baseUrl + "/api/v1/chat/completions", {
+    method: "OPTIONS",
+    headers: {
+      Origin: trustedOrigin,
+      "Access-Control-Request-Method": "POST",
+      "Access-Control-Request-Headers": "content-type,authorization,idempotency-key"
+    }
+  });
+  assert.equal(response.status, 204);
+  const allowedHeaders = response.headers.get("access-control-allow-headers") || "";
+  assert.match(allowedHeaders.toLowerCase(), /idempotency-key/);
+});
+
 test("CORS rejects an untrusted origin", async () => {
   const response = await fetch(baseUrl + "/health", {
     headers: { Origin: "https://attacker.invalid" }
