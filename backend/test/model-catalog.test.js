@@ -49,14 +49,14 @@ test("catalog requires chat endpoint and text input/output", () => {
   }), null);
 });
 
-test("catalog excludes the five models previously reported as non-working", () => {
+test("catalog no longer blocks free chat variants through a stale hard-coded denylist", () => {
   for (const id of [
     "google/gemma-4-26b-a4b-it:free",
     "google/gemma-4-31b-it:free",
     "inclusionai/ling-3.2-flash:free",
     "liquid/lfm-3.1-1.7b:free",
     "particle-ai/particle-1:free"
-  ]) assert.equal(normalizeOpenRouterModel(model(id)), null, id);
+  ]) assert.ok(normalizeOpenRouterModel(model(id)), id);
   assert.ok(normalizeOpenRouterModel(model("baidu/ernie-5.5-flash-preview:free")));
   assert.ok(normalizeOpenRouterModel(model("nvidia/nemotron-3-ultra:free")));
   assert.ok(normalizeOpenRouterModel(model("recursive/flint-v1.0:free")));
@@ -113,14 +113,14 @@ test("catalog exposes diagnostic counts when no eligible models remain", async (
     apiKey: "test-key",
     fetchImpl: async () => ({ ok: true, json: async () => ({ data }) })
   });
-  assert.deepEqual(await catalog.listModels(), []);
+  assert.equal((await catalog.listModels()).length, 1);
   assert.deepEqual(catalog.getDiagnostics(), {
     textOutputCatalogCount: 1,
     freeVariantCount: 1,
     freeChatEndpointCount: 1,
     freeTextChatCandidateCount: 1,
-    excludedKnownModelCount: 1,
-    eligibleModelCount: 0
+    excludedKnownModelCount: 0,
+    eligibleModelCount: 1
   });
 });
 
