@@ -16,6 +16,8 @@ test("composer exposes the compact branded model capsule and accessible popup", 
   assert.match(html, /id="modelPickerPopup"[^>]*hidden/);
   assert.match(html, /id="modelPickerCurrentName">Teslafield B1</);
   assert.match(html, /id="modelSelector"/);
+  assert.ok(html.indexOf('id="modelPickerWrap"') < html.indexOf('id="attachmentButton"'));
+  assert.ok(!html.includes('id="plusButton"'), "Model capsule replaces the plus control");
 });
 
 test("model picker puts Teslafield B1 first and shows OpenRouter branding and model names", () => {
