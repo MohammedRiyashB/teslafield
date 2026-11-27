@@ -2,11 +2,13 @@ const http = require("node:http");
 const crypto = require("node:crypto");
 const { handleOAuthMcp } = require("./oauth-mcp");
 const { IdempotencyStore } = require("./idempotency");
+const { createOpenRouterCatalog, FREE_ROUTER_MODEL } = require("./model-catalog");
 
 const PORT = Number(process.env.PORT || 10000);
 const SERVICE_NAME = "teslafield-api";
 const API_VERSION = "v1";
 const chatIdempotencyStore = new IdempotencyStore({ ttlMs: 5 * 60 * 1000, maxEntries: 1000 });
+const openRouterCatalog = createOpenRouterCatalog({ apiKey: process.env.OPENROUTER_API_KEY || "" });
 const allowedOrigins = (process.env.CORS_ORIGIN || "https://teslafieldai.web.app,https://teslafieldai.firebaseapp.com")
   .split(",")
   .map((value) => value.trim())
@@ -506,6 +508,46 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === "GET" && url.pathname === "/api/v1/models") {
+    const models = [{
+      id: "teslafield",
+      name: "TeslafieldAI — Qwen3 0.6B",
+      free: true,
+      provider: "TeslafieldAI",
+      promptPerMillion: 0,
+      completionPerMillion: 0,
+      available: true
+    }];
+    let catalogAvailable = true;
+    if (openRouterCatalog.configured) {
+      models.push({
+        id: FREE_ROUTER_MODEL,
+        name: "OpenRouter Free Auto",
+        free: true,
+        provider: "OpenRouter",
+        promptPerMillion: 0,
+        completionPerMillion: 0,
+        available: true
+      });
+      try {
+        const remoteModels = await openRouterCatalog.listModels();
+        for (const model of remoteModels) {
+          models.push({ ...model, provider: "OpenRouter", available: true });
+        }
+      } catch (error) {
+        catalogAvailable = false;
+      }
+    }
+    sendJson(res, 200, {
+      ok: true,
+      defaultModel: "teslafield",
+      openRouterConfigured: openRouterCatalog.configured,
+      catalogAvailable,
+      models
+    });
+    return;
+  }
+
   if (req.method === "GET" && (url.pathname === "/api/v1/status" || url.pathname === "/api/v1/warmup")) {
     const provider = getImageProvider();
     const [chatReady, speechReady, voiceReady] = await Promise.all([
@@ -699,8 +741,64 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { error: "INVALID_IDEMPOTENCY_KEY", message: "Use a request id between 16 and 128 safe characters." });
       }
       const responseStyle = ["concise", "balanced", "detailed"].includes(input.response_style) ? input.response_style : "balanced";
+      const selectedModel = typeof input.model === "string" && input.model.trim() ? input.model.trim() : "teslafield";
+      if (selectedModel.length > 160 || !/^[A-Za-z0-9._:/-]+$/.test(selectedModel)) {
+        return sendJson(res, 400, { error: "INVALID_MODEL", message: "Choose a model from the TeslafieldAI model selector." });
+      }
 
       const createCompletion = async () => {
+        if (selectedModel !== "teslafield") {
+          if (!openRouterCatalog.configured) {
+            const error = new Error("OpenRouter is not connected. Add OPENROUTER_API_KEY to the backend environment to enable these models.");
+            error.statusCode = 503;
+            error.errorCode = "MODEL_PROVIDER_NOT_CONFIGURED";
+            throw error;
+          }
+          let model;
+          try { model = await openRouterCatalog.findModel(selectedModel); }
+          catch (catalogError) {
+            const error = new Error("The OpenRouter model catalogue is temporarily unavailable. Try again or choose TeslafieldAI Free.");
+            error.statusCode = 503;
+            error.errorCode = "MODEL_CATALOG_UNAVAILABLE";
+            throw error;
+          }
+          if (!model) {
+            const error = new Error("That model is no longer available. Refresh the model list and choose another.");
+            error.statusCode = 400;
+            error.errorCode = "MODEL_NOT_AVAILABLE";
+            throw error;
+          }
+          const upstream = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": "Bearer " + process.env.OPENROUTER_API_KEY,
+              "Content-Type": "application/json",
+              "HTTP-Referer": "https://teslafieldai.web.app",
+              "X-Title": "TeslafieldAI"
+            },
+            body: JSON.stringify({
+              model: model.id,
+              messages: [{ role: "system", content: "You are TeslafieldAI, a helpful, accurate and respectful AI assistant. Be clear about uncertainty and never claim actions you have not performed." }, ...safeMessages],
+              max_tokens: 384
+            }),
+            signal: AbortSignal.timeout(240000)
+          });
+          const data = await upstream.json().catch(() => ({}));
+          if (!upstream.ok) {
+            const error = new Error("OpenRouter could not complete this request. Check provider access, account limits and model availability.");
+            error.statusCode = upstream.status === 429 ? 429 : upstream.status === 402 ? 402 : 502;
+            error.errorCode = upstream.status === 402 ? "MODEL_CREDITS_REQUIRED" : upstream.status === 429 ? "MODEL_RATE_LIMITED" : "MODEL_PROVIDER_ERROR";
+            throw error;
+          }
+          const reply = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+          if (typeof reply !== "string" || !reply.trim()) {
+            const error = new Error("The selected model returned no text.");
+            error.statusCode = 502;
+            error.errorCode = "EMPTY_MODEL_RESPONSE";
+            throw error;
+          }
+          return { ok: true, model: model.name, model_id: model.id, provider: "OpenRouter", free: model.free, reply: reply.trim() };
+        }
         const upstream = await fetch(CHAT_SPACE_URL + "/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -736,7 +834,7 @@ const server = http.createServer(async (req, res) => {
       let result;
       if (idempotencyKey) {
         const fingerprint = crypto.createHash("sha256")
-          .update(JSON.stringify({ messages: safeMessages, response_style: responseStyle }))
+          .update(JSON.stringify({ messages: safeMessages, response_style: responseStyle, model: selectedModel }))
           .digest("hex");
         const scopedKey = String(req.authUser && req.authUser.uid || "unknown") + ":" + idempotencyKey;
         result = await chatIdempotencyStore.run(scopedKey, fingerprint, createCompletion);
