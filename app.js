@@ -373,12 +373,18 @@
     window.setTimeout(() => $("closeCookieSettings").focus(), 40);
   }
 
+  function markAuthReady() {
+    if (authReady) return;
+    authReady = true;
+    document.body.classList.remove("auth-pending");
+    document.body.removeAttribute("aria-busy");
+    resolveAuthReady();
+  }
+
   function applyFirebaseUser(user) {
     const previousUid = currentUser && currentUser.uid;
     const nextUid = user && user.uid;
     currentUser = user || null;
-    authReady = true;
-    resolveAuthReady();
     updateAccountUI();
     if (previousUid !== nextUid) {
       if (generating) stopGeneration();
@@ -419,17 +425,40 @@
 
   async function initializeFirebaseAuth() {
     if (!window.firebase || !window.firebase.apps || !window.firebase.apps.length) {
-      authReady = true;
-      resolveAuthReady();
       updateAccountUI();
+      markAuthReady();
       toast("Firebase Authentication is unavailable. Reload TeslafieldAI and try again.");
       return;
     }
+
+    let initialAuthStateReceived = false;
+    let redirectResultProcessed = false;
+    const finishIfAuthIsResolved = () => {
+      if (initialAuthStateReceived && redirectResultProcessed) markAuthReady();
+    };
+
     try {
       authClient = window.firebase.auth();
 
-      // Prefer a remembered session, but do not let unsupported browser storage
-      // prevent the auth listener or Google sign-in from starting.
+      // Attach the auth observer immediately. Never expose the guest welcome
+      // screen while Firebase is still restoring a remembered signed-in user.
+      authClient.onAuthStateChanged(
+        (user) => {
+          applyFirebaseUser(user);
+          initialAuthStateReceived = true;
+          finishIfAuthIsResolved();
+        },
+        (error) => {
+          initialAuthStateReceived = true;
+          if (authClient && authClient.currentUser) applyFirebaseUser(authClient.currentUser);
+          else updateAccountUI();
+          finishIfAuthIsResolved();
+          toast("TeslafieldAI could not restore your sign-in session. Please sign in again.");
+        }
+      );
+
+      // Keep the existing persistence preference and fallbacks, but do not
+      // delay registration of the auth observer behind these async calls.
       try {
         await authClient.setPersistence(window.firebase.auth.Auth.Persistence.LOCAL);
       } catch (localError) {
@@ -444,23 +473,14 @@
         }
       }
 
-      // Always attach the observer before consuming a possible redirect result.
-      authClient.onAuthStateChanged(
-        (user) => applyFirebaseUser(user),
-        (error) => {
-          authReady = true;
-          resolveAuthReady();
-          updateAccountUI();
-          toast("TeslafieldAI could not restore your sign-in session. Please sign in again.");
-        }
-      );
-
+      // Wait for redirect processing as well as the initial auth callback:
+      // a redirect return must not briefly render the guest screen either.
       try {
         const result = await authClient.getRedirectResult();
         if (result && result.user) applyFirebaseUser(result.user);
         else if (authClient.currentUser) applyFirebaseUser(authClient.currentUser);
       } catch (error) {
-        if (authClient.currentUser) applyFirebaseUser(authClient.currentUser);
+        if (authClient && authClient.currentUser) applyFirebaseUser(authClient.currentUser);
         const code = error && error.code;
         if (code && code !== "auth/no-auth-event") {
           const messages = {
@@ -471,16 +491,19 @@
           };
           toast(messages[code] || ("Google sign-in could not finish (" + code + "). Please try again."));
         }
+      } finally {
+        redirectResultProcessed = true;
+        finishIfAuthIsResolved();
       }
     } catch (error) {
-      if (authClient && authClient.currentUser) {
-        applyFirebaseUser(authClient.currentUser);
-        return;
+      if (authClient && authClient.currentUser) applyFirebaseUser(authClient.currentUser);
+      else {
+        authClient = null;
+        updateAccountUI();
       }
-      authReady = true;
-      resolveAuthReady();
-      authClient = null;
-      updateAccountUI();
+      initialAuthStateReceived = true;
+      redirectResultProcessed = true;
+      markAuthReady();
       toast("TeslafieldAI could not initialize Google sign-in. Reload and try again.");
     }
   }
@@ -2042,6 +2065,8 @@
   window.addEventListener("popstate", () => { if (location.pathname !== "/connect" && !$("connectPage").hidden) closeConnectPage(true); else if (location.pathname === "/connect" && $("connectPage").hidden) openConnectPage(); });
   if (location.pathname === "/connect") openConnectPage();
   if (location.pathname.startsWith("/share/")) {
+    document.body.classList.remove("auth-pending");
+    document.body.removeAttribute("aria-busy");
     openSharedMessagePage();
     return;
   }
