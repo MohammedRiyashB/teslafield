@@ -21,19 +21,19 @@ test("composer exposes the compact branded model capsule and accessible popup", 
   assert.ok(!html.includes('id="plusButton"'), "Model capsule replaces the plus control");
 });
 
-test("model picker shows Teslafield B1 and provider-branded free models", () => {
+test("model picker shows Teslafield B1 and provider branding", () => {
   assert.match(app, /model\.id === "teslafield" \? "Teslafield B1"/);
   assert.match(app, /function getModelBrand\(model\)/);
   assert.match(app, /nvidia\.com/);
   assert.match(app, /baidu\.com/);
   assert.match(app, /recursive\.ai/);
   assert.match(app, /data\.catalogError/);
-  assert.match(app, /OpenRouter responded, but returned no eligible/);
-  assert.match(app, /Free provider models have not loaded yet/);
+  assert.match(app, /OpenRouter returned no eligible chat models/);
+  assert.match(app, /Provider models have not loaded yet/);
   assert.doesNotMatch(app, /OPENROUTER · FREE MODELS/);
   assert.doesNotMatch(app, /https:\/\/openrouter\.ai\/favicon\.ico/);
   assert.match(app, /model\.id\.endsWith\(":free"\)/);
-  assert.match(app, /FREE · Rate-limited/);
+  assert.match(app, /"Rate-limited"/);
   assert.doesNotMatch(app, /\.slice\(0, 13\)/);
 });
 
@@ -70,7 +70,17 @@ test("cloud sync retries for the newly selected account after an in-flight accou
 
 test("model picker renders immediately, shows loading feedback and can retry the catalogue", () => {
   assert.ok(/renderModelPicker\(\);\s*loadModelCatalog\(\);/.test(app), "Picker must render before the network catalogue request");
-  assert.ok(app.includes("Loading free models…"));
+  assert.ok(app.includes("Loading models…"));
   assert.ok(app.includes("AbortSignal.timeout(25000)"));
   assert.ok(app.includes("loadModelCatalog({ force: true })"));
+});
+
+
+test("model picker shows provider logos and rate-limit text without FREE badges", () => {
+  assert.match(app, /className = "model-option-logo"/);
+  assert.match(app, /modelBrand\.logo/);
+  assert.match(app, /meta\.textContent = model\.provider === "OpenRouter" \? "Rate-limited" : "TeslafieldAI"/);
+  assert.doesNotMatch(app, /FREE · Rate-limited|FREE · TeslafieldAI|option\.textContent = model\.name \+ " · FREE"/);
+  assert.doesNotMatch(app, /"Free models only\./);
+  assert.match(app, /model\.id\.endsWith\(":free"\)/);
 });
