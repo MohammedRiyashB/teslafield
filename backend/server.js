@@ -586,7 +586,11 @@ const server = http.createServer(async (req, res) => {
   if (sharedResponseMatch) {
     try {
       const shared = await sharedResponseStore.get(sharedResponseMatch[1]);
-      if (!shared) return sendJson(res, 404, { error: "SHARE_NOT_FOUND", message: "This shared response is unavailable." });
+      if (!shared) {
+        audit("share.read_not_found", null, url.pathname);
+        return sendJson(res, 404, { error: "SHARE_NOT_FOUND", message: "This shared response is unavailable." });
+      }
+      audit("share.read_succeeded", null, "/api/v1/shares");
       const body = JSON.stringify({ ok: true, id: shared.id, content: shared.content, createdAt: shared.createdAt });
       res.writeHead(200, {
         "Content-Type": "application/json; charset=utf-8",
