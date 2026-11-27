@@ -13,19 +13,19 @@
     <a class="legal-brand" href="./"><img src="./teslafieldai-logo.png" alt=""> Teslafield</a>
     <p class="legal-eyebrow">Teslafield · LEGAL</p>
     <h1>Privacy Policy</h1>
-    <p class="legal-updated">Effective November 26, 2026</p>
+    <p class="legal-updated">Effective November 27, 2026</p>
     <p>This policy describes what Teslafield currently handles in the website and connected chat experience. It is intended to explain the actual product behaviour, not to promise that third-party providers follow the same practices.</p>
 
     <h2>1. Information used for sign-in</h2>
-    <p>When you sign in with Google, Firebase Authentication verifies your identity. Teslafield uses your Firebase user ID to keep locally saved conversation history separated between accounts in the same browser. Teslafield does not need your Google password.</p>
+    <p>When you sign in with Google, Firebase Authentication verifies your identity. Teslafield uses your Firebase user ID to keep conversations separated between accounts. Teslafield does not need your Google password.</p>
 
     <h2>2. Conversation history</h2>
-    <p>Current chat history is saved in your browser's local storage under an account-specific key. It is not currently synced to a Teslafield cloud chat database. Anyone with access to your unlocked browser profile may be able to access that browser storage. It is not encrypted separately by Teslafield.</p>
-    <p>You can delete an individual conversation or clear the saved history from the sidebar. Clearing browser data may also remove locally stored conversations.</p>
+    <p>Chat history is cached in your browser's local storage under an account-specific key. The Stage 6 cloud-history feature can also sync conversations to the default Cloud Firestore database in the Teslafield Firebase project when the project owner has created that database and deployed the repository's owner-only security rules. Cloud sync is not a realtime listener; it synchronizes on sign-in, page focus and local changes. Until the database and rules are configured, conversations remain browser-local. Anyone with access to your unlocked browser profile may be able to access the local cache. It is not encrypted separately by Teslafield.</p>
+    <p>You can delete an individual conversation or clear saved history from the sidebar; when cloud history is enabled, those conversation deletions are also sent to Firestore. Clearing browser data may remove the local cache but does not delete the cloud copy.</p>
     <p>Before you sign in, the first message you compose is temporarily kept in session storage in the current browser tab so Teslafield can send that same message after successful sign-in. The temporary draft is cleared after it is handed off or when the browser tab session ends.</p>
 
     <h2>3. AI processing by external providers</h2>
-    <p>When you send a chat message, Teslafield sends the recent conversation context needed for the response to its backend over HTTPS. The backend forwards the request to the configured Hugging Face chat Space for model processing.</p>
+    <p>When you send a chat message, Teslafield sends the recent conversation context needed for the response to its backend over HTTPS. The backend forwards the request to the selected model provider: the TeslafieldAI Hugging Face chat Space by default, or OpenRouter when you explicitly select an OpenRouter model. OpenRouter free and paid model requests are subject to OpenRouter's own terms, privacy practices, retention and account limits. Paid model selection may incur charges from the user's OpenRouter account.</p>
     <p>Voice input, microphone recording and read-aloud controls are not currently available in the Teslafield interface. The current website does not request microphone access or send microphone audio for processing.</p>
     <p>These providers may process or retain requests according to their own terms, privacy notices and infrastructure settings. Teslafield cannot promise deletion from a provider's systems merely by deleting a conversation in your browser. Avoid sending passwords, payment card details or other highly sensitive information.</p>
 
@@ -42,7 +42,7 @@
     <p>You can reopen the consent choices at any time using “Your privacy choices” on the first-visit screen.</p>
 
     <h2>7. Account deletion</h2>
-    <p>The account deletion control requests deletion of your Firebase Authentication account and removes that account's locally saved conversation history from the current browser. It does not delete data held by Google, Hugging Face, or other external providers, and it does not remove browser copies or backups from other devices.</p>
+    <p>The account deletion control requests deletion of your Firebase Authentication account and removes that account's locally saved conversation history from the current browser. It does not currently bulk-delete the account's Firestore cloud conversations. Delete cloud conversations individually before account deletion if cloud history is enabled. It also does not delete data held by Google, Hugging Face, OpenRouter or other external providers, or browser copies on other devices.</p>
 
     <h2>8. Data minimisation</h2>
     <p>Teslafield aims to collect only information needed to authenticate requests, operate the interface and protect the API. We do not currently operate advertising or analytics trackers on the website.</p>
