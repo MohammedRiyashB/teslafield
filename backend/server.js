@@ -815,7 +815,7 @@ const server = http.createServer(async (req, res) => {
 
       const createCompletion = async () => {
         if (selectedModel !== "teslafield") {
-          if (!openRouterCatalog.configured) {
+          if (!openRouter.configured) {
             const error = new Error("OpenRouter is not connected. Add OPENROUTER_API_KEY to the backend environment to enable these models.");
             error.statusCode = 503;
             error.errorCode = "MODEL_PROVIDER_NOT_CONFIGURED";
@@ -979,7 +979,7 @@ const server = http.createServer(async (req, res) => {
       let upstream;
       let streamContentType = "text/plain; charset=utf-8";
       if (selectedModel !== "teslafield") {
-        if (!openRouterCatalog.configured) {
+        if (!openRouter.configured) {
           sendJson(res, 503, {
             error: "MODEL_PROVIDER_NOT_CONFIGURED",
             message: "Render does not detect OPENROUTER_API_KEY. The API key must be saved in the Render backend environment."
@@ -989,7 +989,7 @@ const server = http.createServer(async (req, res) => {
 
         let model;
         try {
-          model = await openRouterCatalog.findModel(selectedModel);
+          model = await openRouter.findFreeChatModel(selectedModel);
         } catch (catalogError) {
           audit("chat.stream_catalog_failed", req.authUser && req.authUser.uid, url.pathname);
           sendJson(res, 503, {
