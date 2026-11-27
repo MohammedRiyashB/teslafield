@@ -643,6 +643,7 @@
       }
     } finally {
       cloudSyncBusy = false;
+      if (currentUser && currentUser !== user) syncCloudHistory();
     }
   }
 
@@ -683,6 +684,7 @@
       }
     } finally {
       cloudSyncBusy = false;
+      if (currentUser && currentUser !== user) syncCloudHistory();
     }
   }
 
