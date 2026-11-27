@@ -67,7 +67,9 @@ jobs:
           const oauthCss = fs.readFileSync('oauth.css', 'utf8');
           const hostingConfig = JSON.parse(fs.readFileSync('firebase.json', 'utf8'));
           const csp = hostingConfig.hosting.headers.find((entry) => entry.source === '**').headers.find((entry) => entry.key === 'Content-Security-Policy').value;
-          assert.ok(!csp.includes("'unsafe-inline'") && !csp.includes('https:;') && !csp.includes('https://*.'), 'CSP must not permit unsafe inline styles or broad HTTPS wildcards');
+          const styleSrc = csp.split(';').map((directive) => directive.trim()).find((directive) => directive.startsWith('style-src '));
+          assert.ok(styleSrc && !styleSrc.includes("'unsafe-inline'") && csp.includes("style-src-elem 'self'") && csp.includes("style-src-attr 'unsafe-inline'"), 'CSP must disallow inline style elements and scope compatibility styles to attributes');
+          assert.ok(!csp.includes('https:;') && !csp.includes('https://*.'), 'CSP must not permit broad HTTPS wildcards');
           assert.ok(!/<style\\b|\\sstyle\\s*=/.test(oauthPage), 'OAuth page must not use inline styles');
           assert.ok(oauthCss.includes('.primary{'), 'OAuth page external stylesheet must exist');
           assert.ok(!app.includes('.style.') && !app.includes('visual-viewport-height'), 'Frontend must not mutate inline styles');
