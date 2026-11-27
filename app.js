@@ -1801,7 +1801,7 @@
           renderModelPicker();
           closeModelPicker();
           if (model.provider === "OpenRouter") {
-            toast(model.free ? "OpenRouter free model selected. Provider limits and availability apply." : "Paid OpenRouter model selected. Usage charges may apply.");
+            toast("OpenRouter :free model selected. Free-tier limits and availability apply.");
           } else {
             toast("Teslafield B1 selected.");
           }
