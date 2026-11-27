@@ -1,0 +1,53 @@
+name: TeslafieldAI engineering validation
+
+on:
+  push:
+    branches:
+      - "engineering/**"
+    paths:
+      - "app.js"
+      - "oauth.js"
+      - "sw.js"
+      - "backend/**"
+      - "huggingface/chat-space/**"
+      - ".github/workflows/engineering-validation.yml"
+  pull_request:
+    paths:
+      - "app.js"
+      - "oauth.js"
+      - "sw.js"
+      - "backend/**"
+      - "huggingface/chat-space/**"
+      - ".github/workflows/engineering-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: teslafieldai-engineering-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Check JavaScript and Python syntax
+        run: |
+          node --check app.js
+          node --check oauth.js
+          node --check backend/server.js
+          node --check backend/oauth-mcp.js
+          node --check sw.js
+          python -m py_compile huggingface/chat-space/app.py
+
+      - name: Run backend API regression tests
+        run: npm test --prefix backend
