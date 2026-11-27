@@ -768,7 +768,9 @@ const server = http.createServer(async (req, res) => {
             error.errorCode = "MODEL_NOT_AVAILABLE";
             throw error;
           }
-          const upstream = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          let upstream;
+          try {
+            upstream = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
             headers: {
               "Authorization": "Bearer " + process.env.OPENROUTER_API_KEY,
@@ -782,7 +784,13 @@ const server = http.createServer(async (req, res) => {
               max_tokens: 384
             }),
             signal: AbortSignal.timeout(240000)
-          });
+            });
+          } catch (providerError) {
+            const error = new Error("OpenRouter could not be reached. Check provider status and try again.");
+            error.statusCode = 504;
+            error.errorCode = "MODEL_PROVIDER_UNAVAILABLE";
+            throw error;
+          }
           const data = await upstream.json().catch(() => ({}));
           if (!upstream.ok) {
             const error = new Error("OpenRouter could not complete this request. Check provider access, account limits and model availability.");
