@@ -109,13 +109,20 @@ function createConversationStore({ projectId, fetchImpl = fetch } = {}) {
 
   async function listDeleted(uid, token) {
     if (!safeId(uid)) throw new Error("INVALID_USER_ID");
-    const payload = await request(deletedCollectionPath(uid) + "?pageSize=" + MAX_CONVERSATIONS, token);
-    return (Array.isArray(payload.documents) ? payload.documents : [])
-      .map((document) => {
+    const results = [];
+    let pageToken = "";
+    // Tombstones are intentionally retained so stale offline devices cannot resurrect deleted chats.
+    do {
+      const query = "?pageSize=500" + (pageToken ? "&pageToken=" + encodeURIComponent(pageToken) : "");
+      const payload = await request(deletedCollectionPath(uid) + query, token);
+      for (const document of Array.isArray(payload.documents) ? payload.documents : []) {
         const fields = Object.fromEntries(Object.entries(document.fields || {}).map(([key, value]) => [key, decodeValue(value)]));
-        return { id: fields.id || document.name.split("/").pop(), deletedAt: Number(fields.deletedAt || 0) };
-      })
-      .filter((item) => safeId(item.id));
+        const item = { id: fields.id || document.name.split("/").pop(), deletedAt: Number(fields.deletedAt || 0) };
+        if (safeId(item.id)) results.push(item);
+      }
+      pageToken = typeof payload.nextPageToken === "string" ? payload.nextPageToken : "";
+    } while (pageToken && results.length < 10000);
+    return results;
   }
 
   async function writeTombstone(uid, token, id) {
