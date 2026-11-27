@@ -58,9 +58,15 @@ function createOpenRouterCatalog({ apiKey = "", fetchImpl = fetch, ttlMs = 10 * 
       const models = payload.data.map(normalizeOpenRouterModel).filter(Boolean);
       models.sort((a, b) => Number(b.free) - Number(a.free) || a.name.localeCompare(b.name));
       // Keep every eligible :free chat model; never expose paid or merely $0-priced IDs.
-      cachedModels = models;
-      cachedAt = Date.now();
-      return cachedModels;
+      // Do not cache an empty response: a transient upstream/catalogue issue must be retryable.
+      if (models.length > 0) {
+        cachedModels = models;
+        cachedAt = Date.now();
+      } else {
+        cachedModels = null;
+        cachedAt = 0;
+      }
+      return models;
     })();
     try {
       return await pending;

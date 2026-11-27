@@ -65,3 +65,12 @@ test("Firestore rules restrict conversation reads and writes to the authenticate
 test("cloud sync retries for the newly selected account after an in-flight account switch", () => {
   assert.match(app, /if \(currentUser && currentUser !== user\) syncCloudHistory\(\);/);
 });
+
+
+
+test("model picker renders immediately, shows loading feedback and can retry the catalogue", () => {
+  assert.ok(/renderModelPicker\(\);\s*loadModelCatalog\(\);/.test(app), "Picker must render before the network catalogue request");
+  assert.ok(app.includes("Loading free models…"));
+  assert.ok(app.includes("AbortSignal.timeout(25000)"));
+  assert.ok(app.includes("loadModelCatalog({ force: true })"));
+});

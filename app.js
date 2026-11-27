@@ -79,6 +79,9 @@
   let userPreferences = { responseStyle: "balanced", textSize: "standard", reduceMotion: false, model: "teslafield" };
   let availableModels = [{ id: "teslafield", name: "Teslafield B1", free: true, freeTier: true, provider: "TeslafieldAI" }];
   let modelCatalogStatus = "";
+  let modelCatalogLoading = false;
+  let modelCatalogLastAttemptAt = 0;
+  let modelCatalogPromise = null;
   let cloudSyncReady = false;
   let cloudSyncBusy = false;
   let cloudSyncTimer = null;
@@ -1861,6 +1864,11 @@
     popup.hidden = false;
     $("modelPickerButton").setAttribute("aria-expanded", "true");
     $("modelPickerWrap").classList.add("is-open");
+    const hasProviderModels = availableModels.some((model) => model.provider === "OpenRouter");
+    if (!modelCatalogLoading && !hasProviderModels) {
+      // Retry when the user opens the picker again after a cold start or catalogue failure.
+      void loadModelCatalog({ force: true });
+    }
   }
 
   function closeModelPicker() {
@@ -1871,37 +1879,62 @@
     $("modelPickerWrap").classList.remove("is-open");
   }
 
-  async function loadModelCatalog() {
-    availableModels = [{ id: "teslafield", name: "Teslafield B1", free: true, freeTier: true, provider: "TeslafieldAI" }];
-    modelCatalogStatus = "";
-    try {
-      const response = await fetch(API + "/api/v1/models", { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(12000) });
-      if (!response.ok) throw new Error("MODEL_CATALOG_UNAVAILABLE");
-      const data = await response.json();
-      if (!data || !Array.isArray(data.models)) throw new Error("MODEL_CATALOG_INVALID");
-      if (data.openRouterConfigured === false) {
-        modelCatalogStatus = "Render backend does not detect OPENROUTER_API_KEY. Check the exact environment variable name.";
-      } else if (data.catalogAvailable === false) {
-        modelCatalogStatus = "OpenRouter model catalogue failed: " + String(data.catalogError || "unknown error") + ".";
-      } else if (Number(data.openRouterModelCount || 0) === 0) {
-        modelCatalogStatus = "OpenRouter responded, but returned no eligible :free chat models.";
-      }
-      availableModels = data.models.filter((model) =>
-        model && typeof model.id === "string" && typeof model.name === "string" &&
-        typeof model.free === "boolean" && /^[A-Za-z0-9._:/-]{1,160}$/.test(model.id) &&
-        (model.id === "teslafield" || (model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true && model.free === true))
-      );
-      if (!availableModels.some((model) => model.id === "teslafield")) {
-        availableModels.unshift({ id: "teslafield", name: "Teslafield B1", free: true, provider: "TeslafieldAI" });
-      }
-    } catch (error) {
-      modelCatalogStatus = "Could not reach the TeslafieldAI model catalogue. Check the backend connection and refresh.";
-    }
-    if (!availableModels.some((model) => model.id === "teslafield")) {
-      availableModels.unshift({ id: "teslafield", name: "Teslafield B1", free: true, freeTier: true, provider: "TeslafieldAI" });
-    }
+  async function loadModelCatalog(options = {}) {
+    const force = options.force === true;
+    if (modelCatalogPromise) return modelCatalogPromise;
+    const hasProviderModels = availableModels.some((model) => model.provider === "OpenRouter");
+    if (!force && !hasProviderModels && modelCatalogLastAttemptAt && Date.now() - modelCatalogLastAttemptAt < 15000) return;
+
+    modelCatalogLoading = true;
+    modelCatalogStatus = hasProviderModels ? "Refreshing free models…" : "Loading free models…";
     renderModelSelector();
     renderModelPicker();
+
+    const request = (async () => {
+      try {
+        // Render Free can take longer to wake from idle; keep the UI populated while this request runs.
+        const response = await fetch(API + "/api/v1/models", {
+          headers: { Accept: "application/json" },
+          signal: AbortSignal.timeout(25000)
+        });
+        if (!response.ok) throw new Error("MODEL_CATALOG_UNAVAILABLE");
+        const data = await response.json();
+        if (!data || !Array.isArray(data.models)) throw new Error("MODEL_CATALOG_INVALID");
+
+        if (data.openRouterConfigured === false) {
+          modelCatalogStatus = "Render backend does not detect OPENROUTER_API_KEY. Check the exact environment variable name.";
+        } else if (data.catalogAvailable === false) {
+          modelCatalogStatus = "OpenRouter model catalogue failed: " + String(data.catalogError || "unknown error") + ".";
+        } else if (Number(data.openRouterModelCount || 0) === 0) {
+          modelCatalogStatus = "OpenRouter responded, but returned no eligible :free chat models.";
+        } else {
+          modelCatalogStatus = "";
+        }
+
+        availableModels = data.models.filter((model) =>
+          model && typeof model.id === "string" && typeof model.name === "string" &&
+          typeof model.free === "boolean" && /^[A-Za-z0-9._:/-]{1,160}$/.test(model.id) &&
+          (model.id === "teslafield" || (model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true && model.free === true))
+        );
+      } catch (error) {
+        modelCatalogStatus = "Could not reach the TeslafieldAI model catalogue. Teslafield B1 is still available; open Choose model again to retry.";
+      } finally {
+        modelCatalogLastAttemptAt = Date.now();
+        if (!availableModels.some((model) => model.id === "teslafield")) {
+          availableModels.unshift({ id: "teslafield", name: "Teslafield B1", free: true, freeTier: true, provider: "TeslafieldAI" });
+        }
+        modelCatalogLoading = false;
+        renderModelSelector();
+        renderModelPicker();
+      }
+    })();
+
+    modelCatalogPromise = request;
+    try {
+      await request;
+    } finally {
+      if (modelCatalogPromise === request) modelCatalogPromise = null;
+    }
   }
 
   $("modelSelector").addEventListener("change", () => {
@@ -2127,6 +2160,9 @@
   } catch (error) { applyTheme("dark"); }
   renderHistory();
   readPersonalization();
+  // Render the local free model immediately so the chooser is never an empty popup.
+  renderModelSelector();
+  renderModelPicker();
   loadModelCatalog();
   let connectionTimer = null;
   function startConnectionMonitor() {
