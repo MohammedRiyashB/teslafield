@@ -24,14 +24,14 @@ test("create stores a complete response with an authenticated Firestore write", 
       return { ok: true, status: 200, json: async () => ({ name: "sharedResponses/" + id }) };
     }
   });
-  const result = await store.create(id, "test-user", token, "Full response");
+  const result = await store.create(id, token, "Full response");
   assert.equal(result.id, id);
   assert.match(request.url, /sharedResponses\//);
   assert.equal(request.options.method, "PATCH");
   assert.equal(request.options.headers.Authorization, "Bearer " + token);
   const body = JSON.parse(request.options.body);
   assert.equal(body.fields.content.stringValue, "Full response");
-  assert.equal(body.fields.ownerUid.stringValue, "test-user");
+  assert.equal(body.fields.ownerUid, undefined);
 });
 
 test("get reads a share by ID without requiring authentication", async () => {
@@ -59,9 +59,9 @@ test("get returns null for an unknown share ID", async () => {
 
 test("create rejects invalid identifiers, empty content and oversized responses", async () => {
   const store = createSharedResponseStore({ fetchImpl: async () => { throw new Error("unexpected fetch"); } });
-  await assert.rejects(store.create("bad", "test-user", token, "content"), /INVALID_SHARE_ID/);
-  await assert.rejects(store.create(id, "test-user", token, "  "), /INVALID_SHARE_CONTENT/);
-  await assert.rejects(store.create(id, "test-user", token, "x".repeat(MAX_SHARED_RESPONSE_BYTES + 1)), /SHARE_CONTENT_TOO_LARGE/);
+  await assert.rejects(store.create("bad", token, "content"), /INVALID_SHARE_ID/);
+  await assert.rejects(store.create(id, token, "  "), /INVALID_SHARE_CONTENT/);
+  await assert.rejects(store.create(id, token, "x".repeat(MAX_SHARED_RESPONSE_BYTES + 1)), /SHARE_CONTENT_TOO_LARGE/);
 });
 
 test("get rejects malformed stored documents", async () => {
