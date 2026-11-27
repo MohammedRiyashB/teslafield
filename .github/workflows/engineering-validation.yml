@@ -20,6 +20,8 @@ on:
       - "sw.js"
       - "backend/**"
       - "huggingface/chat-space/**"
+      - "huggingface/speech-space/**"
+      - "huggingface/voice-space/**"
       - ".github/workflows/engineering-validation.yml"
   workflow_dispatch:
 
