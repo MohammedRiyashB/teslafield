@@ -58,9 +58,8 @@ function createSharedResponseStore({ projectId, fetchImpl = fetch } = {}) {
     return response.status === 204 ? null : response.json().catch(() => ({}));
   }
 
-  async function create(id, ownerUid, token, content) {
-    if (typeof id !== "string" || !SHARE_ID_PATTERN.test(id)) throw new Error("INVALID_SHARE_ID");
-    if (typeof ownerUid !== "string" || !ownerUid.trim() || ownerUid.length > 128 ||
+  async function create(id, token, content) {
+    if (typeof id !== "string" || !SHARE_ID_PATTERN.test(id) ||
         typeof token !== "string" || !token.trim() || token.length > 8192) {
       throw new Error("INVALID_SHARE_ID");
     }
@@ -69,7 +68,6 @@ function createSharedResponseStore({ projectId, fetchImpl = fetch } = {}) {
     const createdAt = Date.now();
     const fields = {
       id: encodeString(id),
-      ownerUid: encodeString(ownerUid),
       content: encodeString(content),
       createdAt: encodeInteger(createdAt)
     };
