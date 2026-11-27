@@ -31,7 +31,7 @@ test("Firestore values round-trip nested conversation messages", () => {
   assert.deepEqual(decodeValue(encodeValue(value)), value);
 });
 
-test("cloud history store scopes every document path to the authenticated UID", async () => {
+test("cloud history store scopes conversations and deletion tombstones to the authenticated UID", async () => {
   const calls = [];
   const fetchImpl = async (url, options) => {
     calls.push({ url, options });
@@ -39,7 +39,10 @@ test("cloud history store scopes every document path to the authenticated UID", 
       return { ok: true, status: 200, json: async () => ({}) };
     }
     if (url.includes("/deletedConversations")) {
-      return { ok: true, status: 200, json: async () => ({ documents: [{ name: "deletedConversations/chat_old", fields: { id: { stringValue: "chat_old" }, deletedAt: { integerValue: "99" } } }] }) };
+      return { ok: true, status: 200, json: async () => ({ documents: [{
+        name: "deletedConversations/chat_old",
+        fields: { id: { stringValue: "chat_old" }, deletedAt: { integerValue: "99" } }
+      }] }) };
     }
     return {
       ok: true,
@@ -63,19 +66,26 @@ test("cloud history store scopes every document path to the authenticated UID", 
   };
   const store = createConversationStore({ projectId: "teslafieldai", fetchImpl });
   const listed = await store.list("user_123", "firebase-id-token");
+  const deleted = await store.listDeleted("user_123", "firebase-id-token");
   assert.equal(listed[0].id, "chat_1");
-  assert.match(calls[0].url, /users\/user_123\/conversations/);
+  assert.deepEqual(deleted, [{ id: "chat_old", deletedAt: 99 }]);
+  assert.match(calls[0].url, /users\\/user_123\\/conversations/);
   assert.equal(calls[0].options.headers.Authorization, "Bearer firebase-id-token");
+  assert.match(calls[1].url, /users\\/user_123\\/deletedConversations/);
 
   await store.upsert("user_123", "firebase-id-token", {
     id: "chat_2", title: "Second", created: 30, updated: 40, messages: [{ role: "user", content: "Hi" }]
   });
-  assert.equal(calls[1].options.method, "PATCH");
-  assert.match(calls[1].url, /users\/user_123\/conversations\/chat_2/);
+  assert.equal(calls[2].options.method, "PATCH");
+  assert.match(calls[2].url, /users\\/user_123\\/conversations\\/chat_2/);
+  assert.equal(calls[3].options.method, "DELETE");
+  assert.match(calls[3].url, /deletedConversations\\/chat_2$/);
 
   await store.remove("user_123", "firebase-id-token", "chat_2");
-  assert.equal(calls[2].options.method, "DELETE");
-  assert.match(calls[2].url, /users\/user_123\/conversations\/chat_2$/);
+  assert.equal(calls[4].options.method, "PATCH");
+  assert.match(calls[4].url, /deletedConversations\\/chat_2$/);
+  assert.equal(calls[5].options.method, "DELETE");
+  assert.match(calls[5].url, /conversations\\/chat_2$/);
 });
 
 test("cloud history rejects unsafe UID and conversation IDs before network access", async () => {
