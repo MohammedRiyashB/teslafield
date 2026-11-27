@@ -89,12 +89,6 @@ test("free chat normalization includes all :free text chat variants and rejects 
     "inclusionai/ling-3.2-flash:free",
     "recursive/flint-v1.0:free"
   ]) assert.equal(normalizeFreeChatModel(model(id), providers), null, id + " must be excluded");
-  for (const id of [
-    "google/gemma-4-26b-a4b-it:free",
-    "google/gemma-4-31b-it:free",
-    "inclusionai/ling-3.2-flash:free",
-    "recursive/flint-v1.0:free"
-  ]) assert.equal(normalizeFreeChatModel(model(id), providers), null, id + " must be excluded");
   assert.equal(normalizeFreeChatModel(model("nvidia/nemotron-rerank:free", {
     endpoints: ["/api/v1/rerank"]
   }), providers), null);
@@ -143,9 +137,9 @@ test("model discovery uses the standard OpenRouter catalogue with the server key
   ]);
   assert.equal(models[0].providerLogoAvailable, true);
   assert.equal(models[0].providerLogoUrl, "https://openrouter.ai/images/icons/brands/nvidia.svg?v=0cc710e7");
-  assert.equal(models[2].providerName, "Google");
-  assert.equal(integration.getDiagnostics().eligibleModelCount, 3);
-  assert.equal(integration.getDiagnostics().freeChatModelIds.length, 3);
+  assert.equal(models[1].providerName, "NVIDIA");
+  assert.equal(integration.getDiagnostics().eligibleModelCount, 2);
+  assert.equal(integration.getDiagnostics().freeChatModelIds.length, 2);
   assert.equal(calls.some((call) => call.url === OPENROUTER_API + "/models?output_modalities=text&sort=top-weekly"), true);
   assert.equal(calls.some((call) => call.url === OPENROUTER_FRONTEND_API + "/all-providers"), true);
 });
