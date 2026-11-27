@@ -4,6 +4,7 @@ const { handleOAuthMcp } = require("./oauth-mcp");
 const { IdempotencyStore } = require("./idempotency");
 const { createOpenRouterIntegration } = require("./openrouter");
 const { createConversationStore } = require("./conversation-store");
+const { createSharedResponseStore } = require("./shared-response-store");
 const { clientOptions: hfClientOptions, requestHeaders: hfRequestHeaders } = require("./huggingface-auth");
 const { pruneExpiredEntries, hasCapacity } = require("./security-collections");
 
@@ -18,6 +19,7 @@ const allowedOrigins = (process.env.CORS_ORIGIN || "https://teslafieldai.web.app
   .filter(Boolean);
 const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || "teslafieldai";
 const conversationStore = createConversationStore({ projectId: FIREBASE_PROJECT_ID });
+const sharedResponseStore = createSharedResponseStore({ projectId: FIREBASE_PROJECT_ID });
 let firebaseSigningKeys = null;
 let firebaseSigningKeysExpiresAt = 0;
 
@@ -85,6 +87,7 @@ async function verifyFirebaseIdToken(token) {
 const RATE_LIMITS = {
   global: { limit: 120, windowMs: 60_000 },
   chat: { limit: 20, windowMs: 60_000 },
+  share: { limit: 10, windowMs: 60_000 },
   speech: { limit: 5, windowMs: 60_000 },
   voice: { limit: 10, windowMs: 60_000 },
   image: { limit: 3, windowMs: 60_000 },
@@ -165,6 +168,7 @@ async function authenticateFirebase(req, res) {
 const protectedApiRoutes = new Map([
   ["/api/v1/chat/completions", "chat"],
   ["/api/v1/chat/stream", "chat"],
+  ["/api/v1/shares", "share"],
   ["/api/v1/speech/transcribe", "speech"],
   ["/api/v1/voice/synthesize", "voice"],
   ["/api/v1/image/generate", "image"],
@@ -554,6 +558,49 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  if (req.method === "POST" && url.pathname === "/api/v1/shares") {
+    try {
+      const input = await readJson(req, 760 * 1024);
+      if (!input || typeof input.content !== "string" || !input.content.trim()) {
+        return sendJson(res, 400, { error: "SHARE_CONTENT_REQUIRED", message: "There is no completed response to share." });
+      }
+      const shareId = crypto.randomBytes(12).toString("hex");
+      const token = (req.headers.authorization || "").slice(7);
+      const saved = await sharedResponseStore.create(shareId, req.authUser.uid, token, input.content);
+      audit("share.created", req.authUser.uid, url.pathname);
+      return sendJson(res, 201, { ok: true, id: saved.id, createdAt: saved.createdAt });
+    } catch (error) {
+      if (error.message === "BODY_TOO_LARGE") return sendJson(res, 413, { error: "SHARE_TOO_LARGE", message: "This response is too large to share. Copy the response instead." });
+      if (error.message === "INVALID_SHARE_ID" || error.message === "INVALID_SHARE_CONTENT" || error.message === "SHARE_CONTENT_TOO_LARGE") {
+        return sendJson(res, 400, { error: error.message, message: "This response could not be saved as a share link." });
+      }
+      if (error.status === 403 || error.status === 404) {
+        return sendJson(res, 503, { error: "SHARE_STORAGE_NOT_READY", message: "Share storage is not enabled yet. Deploy the Firestore share rules and try again." });
+      }
+      audit("share.create_failed", req.authUser && req.authUser.uid, url.pathname);
+      return sendJson(res, 503, { error: "SHARE_STORAGE_UNAVAILABLE", message: "A short share link could not be created right now. Please try again." });
+    }
+  }
+
+  const sharedResponseMatch = req.method === "GET" && url.pathname.match(/^\/api\/v1\/shares\/([a-f0-9]{24})$/);
+  if (sharedResponseMatch) {
+    try {
+      const shared = await sharedResponseStore.get(sharedResponseMatch[1]);
+      if (!shared) return sendJson(res, 404, { error: "SHARE_NOT_FOUND", message: "This shared response is unavailable." });
+      const body = JSON.stringify({ ok: true, id: shared.id, content: shared.content, createdAt: shared.createdAt });
+      res.writeHead(200, {
+        "Content-Type": "application/json; charset=utf-8",
+        "Content-Length": Buffer.byteLength(body),
+        "Cache-Control": "public, max-age=300, stale-while-revalidate=3600",
+        "X-Content-Type-Options": "nosniff"
+      });
+      res.end(body);
+    } catch (error) {
+      return sendJson(res, 503, { error: "SHARE_STORAGE_UNAVAILABLE", message: "This shared response could not be loaded right now." });
+    }
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === "/") {
     sendJson(res, 200, {
       service: SERVICE_NAME,
@@ -856,7 +903,7 @@ const server = http.createServer(async (req, res) => {
                 // Fallbacks remain limited to another endpoint for this same exact model.
                 allow_fallbacks: true
               },
-              max_tokens: 384
+              max_tokens: 3072
             }),
             signal: AbortSignal.timeout(240000)
             });
@@ -885,7 +932,7 @@ const server = http.createServer(async (req, res) => {
         const upstream = await fetch(CHAT_SPACE_URL + "/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json", ...hfRequestHeaders(CHAT_SPACE_URL, process.env.HF_TOKEN) },
-          body: JSON.stringify({ messages: safeMessages, max_new_tokens: 384, response_style: responseStyle }),
+          body: JSON.stringify({ messages: safeMessages, max_new_tokens: 2048, response_style: responseStyle }),
           signal: AbortSignal.timeout(240000)
         });
         const data = await upstream.json().catch(() => ({}));
@@ -1024,7 +1071,8 @@ const server = http.createServer(async (req, res) => {
                   concise: "be brief and direct",
                   balanced: "give a clear answer with useful context",
                   detailed: "provide thorough explanations and examples when useful"
-                }[responseStyle] || "give a clear answer with useful context") + "."
+                }[responseStyle] || "give a clear answer with useful context") +
+                  ". Complete the requested explanation. Finish every section, sentence, formula and table row; never leave a heading or table row blank. Prefer a complete, well-structured answer over an abrupt ending."
               }, ...safeMessages],
               // User explicitly approved providers that may retain data or train on prompts.
               provider: {
@@ -1033,7 +1081,7 @@ const server = http.createServer(async (req, res) => {
                 // This never switches to another model.
                 allow_fallbacks: true
               },
-              max_tokens: 384,
+              max_tokens: 3072,
               stream: true
             }),
             signal: upstreamController.signal
@@ -1101,7 +1149,7 @@ const server = http.createServer(async (req, res) => {
               "Accept": "text/plain",
               ...hfRequestHeaders(CHAT_SPACE_URL, process.env.HF_TOKEN)
             },
-            body: JSON.stringify({ messages: safeMessages, max_new_tokens: 384, response_style: responseStyle }),
+            body: JSON.stringify({ messages: safeMessages, max_new_tokens: 2048, response_style: responseStyle }),
             signal: upstreamController.signal
           });
         } catch (providerError) {
