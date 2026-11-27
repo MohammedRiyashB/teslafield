@@ -81,3 +81,11 @@ test("recorder errors release microphone tracks and clear active recorder refere
   assert.match(handler, /mediaRecorder = null/);
   assert.match(handler, /mediaRecorderStream = null/);
 });
+
+test("recorder failure does not fall through into transcription", () => {
+  const start = app.indexOf("async function startVoiceRecording()");
+  const end = app.indexOf("function resetVoiceModeUI()", start + 1);
+  const source = app.slice(start, end);
+  assert.match(source, /recorder\.failed = true;/);
+  assert.match(source, /if \(recorder\.cancelled \|\| recorder\.failed\)/);
+});
