@@ -1141,6 +1141,7 @@ const server = http.createServer(async (req, res) => {
         }
         streamContentType = "text/event-stream; charset=utf-8";
       } else {
+        streamContentType = "text/event-stream; charset=utf-8";
         try {
           upstream = await fetch(CHAT_SPACE_URL + "/stream", {
             method: "POST",
