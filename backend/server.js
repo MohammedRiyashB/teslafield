@@ -797,10 +797,10 @@ const server = http.createServer(async (req, res) => {
             error.errorCode = "MODEL_CATALOG_UNAVAILABLE";
             throw error;
           }
-          if (!model) {
-            const error = new Error("That model is no longer available. Refresh the model list and choose another.");
+          if (!model || model.freeTier !== true || !model.id.endsWith(":free")) {
+            const error = new Error("Only OpenRouter models explicitly marked :free are allowed.");
             error.statusCode = 400;
-            error.errorCode = "MODEL_NOT_AVAILABLE";
+            error.errorCode = "FREE_MODEL_ONLY";
             throw error;
           }
           let upstream;
