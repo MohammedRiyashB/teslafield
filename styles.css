@@ -2700,3 +2700,7 @@ body.signed-in:not(.guest-mode) .composer .send-button .stop-icon rect{
 body.signed-in:not(.guest-mode) .composer .send-button .send-icon path{
   stroke:#FFFFFF!important;
 }
+
+
+.model-picker-status{margin:0 10px 9px;padding:8px 10px;border:1px solid #343638;border-radius:10px;background:#212224;color:#E3E5E8;font-size:11px;line-height:1.45;overflow-wrap:anywhere}
+.model-picker-status[hidden]{display:none!important}
