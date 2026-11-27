@@ -77,3 +77,27 @@ test("catalog caches model data and resolves free and paid models", async () => 
   assert.equal((await catalog.findModel("openrouter/free")).freeTier, true);
   assert.equal(calls, 1);
 });
+
+
+test("catalog keeps paid choices visible even when more than 100 free models exist", async () => {
+  const data = Array.from({ length: 125 }, (_, index) => ({
+    id: "provider/free-" + index,
+    name: "Free " + index,
+    architecture: { input_modalities: ["text"], output_modalities: ["text"] },
+    pricing: { prompt: "0", completion: "0" }
+  }));
+  data.push({
+    id: "provider/paid",
+    name: "Paid Model",
+    architecture: { input_modalities: ["text"], output_modalities: ["text"] },
+    pricing: { prompt: "0.000001", completion: "0.000002" }
+  });
+  const catalog = createOpenRouterCatalog({
+    apiKey: "test-key",
+    fetchImpl: async () => ({ ok: true, json: async () => ({ data }) })
+  });
+  const models = await catalog.listModels();
+  assert.equal(models.filter((model) => model.free).length, 50);
+  assert.equal(models.filter((model) => !model.free).length, 1);
+  assert.ok(models.some((model) => model.id === "provider/paid"));
+});
