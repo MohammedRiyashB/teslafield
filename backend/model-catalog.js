@@ -49,7 +49,9 @@ function createOpenRouterCatalog({ apiKey = "", fetchImpl = fetch, ttlMs = 10 * 
       if (!payload || !Array.isArray(payload.data)) throw new Error("OPENROUTER_CATALOG_INVALID");
       const models = payload.data.map(normalizeOpenRouterModel).filter(Boolean);
       models.sort((a, b) => Number(b.free) - Number(a.free) || a.name.localeCompare(b.name));
-      cachedModels = models.slice(0, 100);
+      const freeModels = models.filter((model) => model.free).slice(0, 50);
+      const paidModels = models.filter((model) => !model.free).slice(0, 100);
+      cachedModels = freeModels.concat(paidModels);
       cachedAt = Date.now();
       return cachedModels;
     })();
