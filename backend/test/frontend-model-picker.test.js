@@ -25,7 +25,7 @@ test("model picker uses authentic provider website logos and never creates initi
   assert.match(app, /model\.id === "teslafield" \? "Teslafield B1"/);
   assert.match(app, /function getModelBrand\(model\)/);
   assert.doesNotMatch(app, /function providerFallbackLogo|fallbackLogo|data:image\/svg\+xml/);
-  assert.match(app, /https:\/\/www\.google\.com\/s2\/favicons\?domain=/);
+  assert.match(app, /\/api\/v1\/providers\/logo\//);
   for (const provider of ["nvidia\.com", "baidu\.com", "recursive\.ai", "google\.com", "deepseek\.com", "qwen\.ai", "openai\.com", "anthropic\.com"]) {
     assert.match(app, new RegExp(provider));
   }
@@ -49,6 +49,7 @@ test("backend rejects non-free models and streams the exact OpenRouter model wit
   assert.match(backend, /zdr: true/);
   assert.match(backend, /data_collection: "deny"/);
   assert.match(backend, /allow_fallbacks: true/);
+  assert.match(backend, /serveProviderLogo/);
 });
 
 test("model picker popup opens above the capsule and supports Escape dismissal", () => {
@@ -79,7 +80,10 @@ test("cloud sync retries for the newly selected account after an in-flight accou
 
 test("model picker renders immediately, shows loading feedback and can retry the catalogue", () => {
   assert.ok(/renderModelPicker\(\);\s*loadModelCatalog\(\);/.test(app), "Picker must render before the network catalogue request");
-  assert.ok(app.includes("Loading models…"));
+  assert.match(app, /MODEL_CATALOG_CACHE_KEY/);
+  assert.match(app, /readCachedProviderModels\(\)/);
+  assert.match(app, /localStorage\.setItem\(MODEL_CATALOG_CACHE_KEY/);
+  assert.doesNotMatch(app, /modelCatalogStatus = hasProviderModels \? "Refreshing models…"/);
   assert.ok(app.includes("AbortSignal.timeout(25000)"));
   assert.ok(app.includes("loadModelCatalog({ force: true })"));
 });
@@ -95,4 +99,11 @@ test("model picker displays the official provider logo beside each model and kee
   assert.doesNotMatch(app, /FREE · Rate-limited|FREE · TeslafieldAI|option\.textContent = model\.name \+ " · FREE"/);
   assert.doesNotMatch(app, /"Free models only\./);
   assert.match(app, /model\.id\.endsWith\(":free"\)/);
+});
+
+
+test("frontend posts the exact selected model ID and keeps cached models on catalogue errors", () => {
+  assert.match(app, /model: userPreferences\.model/);
+  assert.match(app, /Only replace the last-known-good cache after a non-empty, healthy ZDR-filtered refresh/);
+  assert.match(app, /if \(data\.catalogAvailable !== false && fetchedProviderModels\.length > 0\)/);
 });
