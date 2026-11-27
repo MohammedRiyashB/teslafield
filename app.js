@@ -1050,7 +1050,37 @@
       await copyText(shareUrl);
       toast("Short share link copied. Send it to anyone.");
     } catch (error) {
-      toast(error && error.message ? error.message : "This response could not be prepared for sharing. Please try again.");
+      // Keep sharing usable while Firestore Rules publication is unavailable.
+      // The app continues to support this older compressed-link format.
+      try {
+        const responseText = String(content || "").trim();
+        if (!responseText) throw error;
+        const payload = JSON.stringify({ content: responseText, createdAt: new Date().toISOString() });
+        const bytes = new TextEncoder().encode(payload);
+        if (bytes.byteLength > MAX_SHARED_RESPONSE_BYTES) throw new Error("This response is too large to share.");
+        let encoded = "j" + base64UrlEncode(bytes);
+        if ("CompressionStream" in window && "DecompressionStream" in window) {
+          try {
+            const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip"));
+            const compressed = new Uint8Array(await new Response(stream).arrayBuffer());
+            const gzipEncoded = "g" + base64UrlEncode(compressed);
+            if (gzipEncoded.length < encoded.length) encoded = gzipEncoded;
+          } catch (compressionError) {}
+        }
+        const id = Array.from(crypto.getRandomValues(new Uint8Array(18)), (v, i) => String(i === 0 ? (v % 9) + 1 : v % 10)).join("");
+        const compatibilityUrl = location.origin + "/share/" + id + "?data=" + encodeURIComponent(encoded);
+        if (navigator.share) {
+          try {
+            await navigator.share({ title: "TeslafieldAI AI response", text: "A response shared from TeslafieldAI AI", url: compatibilityUrl });
+            toast("Short share storage is unavailable; shared using a compatibility link.");
+            return;
+          } catch (shareError) { if (shareError && shareError.name === "AbortError") return; }
+        }
+        await copyText(compatibilityUrl);
+        toast("Short share storage is unavailable; a compatibility link was copied.");
+      } catch (fallbackError) {
+        toast(fallbackError && fallbackError.message ? fallbackError.message : "This response could not be prepared for sharing. Please try again.");
+      }
     }
   }
 
