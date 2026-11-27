@@ -82,6 +82,8 @@
   let modelCatalogLoading = false;
   let modelCatalogLastAttemptAt = 0;
   let modelCatalogPromise = null;
+  let modelCatalogRetryCount = 0;
+  let modelCatalogRetryTimer = null;
   let cloudSyncReady = false;
   let cloudSyncBusy = false;
   let cloudSyncTimer = null;
@@ -1416,14 +1418,99 @@
     }
   }
 
+  
+  async function consumeChatStream(response, onText) {
+    if (!response.body) throw new Error("The AI provider did not open a response stream.");
+    const contentType = (response.headers.get("content-type") || "").toLowerCase();
+    const isEventStream = contentType.includes("text/event-stream");
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let completeText = "";
+
+    const append = (value) => {
+      if (typeof value !== "string" || !value) return;
+      completeText += value;
+      onText(completeText);
+    };
+
+    const readEvent = (eventText) => {
+      const data = eventText.split(/\r?\n/)
+        .filter((line) => line.startsWith("data:"))
+        .map((line) => line.slice(5).replace(/^ /, ""));
+      if (!data.length) return;
+      const payloadText = data.join("\n").trim();
+      if (!payloadText || payloadText === "[DONE]") return;
+      let payload;
+      try { payload = JSON.parse(payloadText); }
+      catch (error) { throw new Error("OpenRouter sent an invalid streaming event."); }
+      if (payload && payload.error) {
+        const detail = typeof payload.error === "string"
+          ? payload.error
+          : payload.error.message || payload.error.code || "OpenRouter stream failed.";
+        throw new Error(String(detail).slice(0, 420));
+      }
+      const delta = payload && payload.choices && payload.choices[0] && payload.choices[0].delta;
+      if (!delta) return;
+      if (typeof delta.content === "string") append(delta.content);
+      else if (Array.isArray(delta.content)) {
+        append(delta.content.map((part) => part && typeof part.text === "string" ? part.text : "").join(""));
+      }
+    };
+
+    try {
+      while (true) {
+        const part = await reader.read();
+        if (part.done) break;
+        const decoded = decoder.decode(part.value, { stream: true });
+        if (!isEventStream) {
+          append(decoded);
+          continue;
+        }
+        buffer += decoded;
+        let separator;
+        while ((separator = buffer.search(/\r?\n\r?\n/)) !== -1) {
+          const eventText = buffer.slice(0, separator);
+          const delimiter = buffer.slice(separator).match(/^\r?\n\r?\n/)[0];
+          buffer = buffer.slice(separator + delimiter.length);
+          readEvent(eventText);
+        }
+      }
+      const tail = decoder.decode();
+      if (tail) {
+        if (isEventStream) buffer += tail;
+        else append(tail);
+      }
+      if (isEventStream && buffer.trim()) readEvent(buffer);
+      return completeText;
+    } finally {
+      try { reader.releaseLock(); } catch (error) {}
+    }
+  }
+
+  function createStreamingAssistantBubble() {
+    const row = document.createElement("article");
+    row.className = "message-row assistant";
+    row.id = "streamingAssistantMessage";
+    const stack = document.createElement("div");
+    stack.className = "message-stack assistant-stack";
+    const body = document.createElement("div");
+    body.className = "message-content";
+    body.setAttribute("aria-live", "polite");
+    body.textContent = "";
+    stack.appendChild(body);
+    row.appendChild(stack);
+    messageList.appendChild(row);
+    scrollBottom();
+    return { row, body };
+  }
+
   async function requestReply(chat) {
-    const idempotencyKey = window.crypto && typeof window.crypto.randomUUID === "function"
-      ? window.crypto.randomUUID()
-      : makeId() + "-" + Date.now().toString(36);
     const requestController = new AbortController();
     const requestSignal = requestController.signal;
     controller = requestController;
     const typingIndicator = showTyping();
+    let streamingBubble = null;
     setGenerating(true);
     try {
       await waitForApiReady(90000, requestSignal);
@@ -1432,38 +1519,82 @@
       if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
       const chatRequest = {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token, "Idempotency-Key": idempotencyKey },
-        body: JSON.stringify({ messages: chat.messages.slice(-30), response_style: userPreferences.responseStyle, model: userPreferences.model }),
-        signal: requestSignal
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "text/event-stream, text/plain",
+          "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify({
+          messages: chat.messages.slice(-30),
+          response_style: userPreferences.responseStyle,
+          model: userPreferences.model
+        }),
+        signal: requestSignal,
+        cache: "no-store"
       };
+
       let response;
       for (let attempt = 0; attempt < 3; attempt += 1) {
         if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
-        response = await fetch(API + "/api/v1/chat/completions", chatRequest);
-        if (response.ok || ![502, 503, 504].includes(response.status) || attempt === 2) break;
+        try {
+          response = await fetch(API + "/api/v1/chat/stream", chatRequest);
+        } catch (networkError) {
+          if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
+          if (attempt === 2) throw new Error("TeslafieldAI could not reach the chat stream. Check your connection and retry.");
+          await new Promise((resolve, reject) => {
+            let timer;
+            const abort = () => { clearTimeout(timer); reject(new DOMException("Request cancelled", "AbortError")); };
+            timer = window.setTimeout(() => {
+              requestSignal.removeEventListener("abort", abort);
+              resolve();
+            }, attempt === 0 ? 900 : 1800);
+            requestSignal.addEventListener("abort", abort, { once: true });
+            if (requestSignal.aborted) abort();
+          });
+          continue;
+        }
+        if (response.ok) break;
+        const rawError = await response.text().catch(() => "");
+        let errorData = {};
+        try { errorData = rawError ? JSON.parse(rawError) : {}; } catch (error) {}
+        const message = errorData.message || errorData.error || "AI request failed (" + response.status + ").";
+        if (![502, 503, 504].includes(response.status) || attempt === 2) {
+          throw new Error(message);
+        }
         await new Promise((resolve, reject) => {
           let timer;
           const abort = () => { clearTimeout(timer); reject(new DOMException("Request cancelled", "AbortError")); };
-          timer = setTimeout(() => { requestSignal.removeEventListener("abort", abort); resolve(); }, attempt === 0 ? 1800 : 4500);
+          timer = window.setTimeout(() => {
+            requestSignal.removeEventListener("abort", abort);
+            resolve();
+          }, attempt === 0 ? 900 : 1800);
           requestSignal.addEventListener("abort", abort, { once: true });
           if (requestSignal.aborted) abort();
         });
       }
+
       if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
-      if (!response) throw new Error("TeslafieldAI could not reach the chat service. Please retry.");
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message || data.error || "AI request failed (" + response.status + ").");
-      const replyText = safeText(data.reply).trim();
-      if (!replyText) throw new Error("The connected model returned an empty response.");
+      if (!response || !response.ok) throw new Error("TeslafieldAI could not open the response stream. Please retry.");
+      typingIndicator.remove();
+      streamingBubble = createStreamingAssistantBubble();
+      const replyText = await consumeChatStream(response, (currentText) => {
+        streamingBubble.body.textContent = currentText;
+        scrollBottom();
+      });
+      if (!replyText.trim()) throw new Error("The selected model ended the stream without returning text.");
       if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
-      chat.messages.push({ role: "assistant", content: replyText });
+      chat.messages.push({ role: "assistant", content: replyText.trim() });
       chat.updated = Date.now();
       saveStore();
       if (typeof window.showBannerWhenDue === "function") window.showBannerWhenDue(chat);
     } catch (error) {
+      if (streamingBubble && streamingBubble.row.isConnected) streamingBubble.row.remove();
       if (error.name !== "AbortError" && !requestSignal.aborted) {
         const message = error.message || "The AI service could not complete this request.";
-        chat.messages.push({ role: "assistant", content: "**TeslafieldAI service notice**\n\n" + message + "\n\nYour prompt is saved in this conversation. You can retry after the service is connected." });
+        chat.messages.push({
+          role: "assistant",
+          content: "**TeslafieldAI service notice**\n\n" + message + "\n\nYour prompt is saved in this conversation. You can retry after the service is connected."
+        });
         chat.updated = Date.now();
         saveStore();
         toast(message);
@@ -1752,21 +1883,72 @@
     }
   }
 
+  function providerFallbackLogo(label, color) {
+    const initials = String(label || "AI").split(/\s+/).filter(Boolean).map((part) => part.charAt(0)).join("").slice(0, 2).toUpperCase() || "AI";
+    const safeColor = /^#[0-9a-f]{6}$/i.test(color || "") ? color : "#586174";
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect x="2" y="2" width="60" height="60" rx="18" fill="' + safeColor + '"/><text x="32" y="39" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="700" fill="#fff">' + initials + '</text></svg>';
+    return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
+  }
+
   function getModelBrand(model) {
-    if (!model || model.id === "teslafield") return { key: "teslafield", label: "TESLAFIELD", domain: "teslafieldai.web.app", logo: "/teslafieldai-logo.png?v=20261127-03" };
+    if (!model || model.id === "teslafield") {
+      return {
+        key: "teslafield", label: "TESLAFIELD", domain: "teslafieldai.web.app",
+        logo: "/teslafieldai-logo.png?v=20261127-04",
+        fallbackLogo: providerFallbackLogo("TF", "#252525")
+      };
+    }
     const slug = String(model.id || "").split("/")[0].toLowerCase();
     const brands = {
-      baidu: { label: "BAIDU", domain: "baidu.com" },
-      nvidia: { label: "NVIDIA", domain: "nvidia.com" },
-      recursive: { label: "RECURSIVE", domain: "recursive.ai" },
-      perplexity: { label: "PERPLEXITY", domain: "perplexity.ai" },
-      google: { label: "GOOGLE", domain: "google.com" },
-      inclusionai: { label: "INCLUSIONAI", domain: "inclusion.ai" },
-      liquid: { label: "LIQUID AI", domain: "liquid.ai" },
-      "particle-ai": { label: "PARTICLE AI", domain: "particle.network" }
+      baidu: { label: "BAIDU", domain: "baidu.com", color: "#2932E1" },
+      nvidia: { label: "NVIDIA", domain: "nvidia.com", color: "#76B900" },
+      recursive: { label: "RECURSIVE", domain: "recursive.ai", color: "#5665C0" },
+      perplexity: { label: "PERPLEXITY", domain: "perplexity.ai", color: "#20808D" },
+      google: { label: "GOOGLE", domain: "google.com", color: "#4285F4" },
+      inclusionai: { label: "INCLUSIONAI", domain: "inclusion.ai", color: "#5C61D8" },
+      liquid: { label: "LIQUID AI", domain: "liquid.ai", color: "#276D8C" },
+      "particle-ai": { label: "PARTICLE AI", domain: "particle.network", color: "#6854C8" },
+      openai: { label: "OPENAI", domain: "openai.com", color: "#10A37F" },
+      anthropic: { label: "ANTHROPIC", domain: "anthropic.com", color: "#C17B54" },
+      "meta-llama": { label: "META", domain: "meta.com", color: "#0866FF" },
+      meta: { label: "META", domain: "meta.com", color: "#0866FF" },
+      deepseek: { label: "DEEPSEEK", domain: "deepseek.com", color: "#3978D5" },
+      qwen: { label: "QWEN", domain: "qwen.ai", color: "#6157C8" },
+      alibaba: { label: "ALIBABA", domain: "alibabagroup.com", color: "#F28C28" },
+      mistral: { label: "MISTRAL", domain: "mistral.ai", color: "#F26B38" },
+      mistralai: { label: "MISTRAL", domain: "mistral.ai", color: "#F26B38" },
+      "x-ai": { label: "X AI", domain: "x.ai", color: "#222222" },
+      cohere: { label: "COHERE", domain: "cohere.com", color: "#39594D" },
+      microsoft: { label: "MICROSOFT", domain: "microsoft.com", color: "#5E5E5E" },
+      amazon: { label: "AMAZON", domain: "aboutamazon.com", color: "#FF9900" },
+      bytedance: { label: "BYTEDANCE", domain: "bytedance.com", color: "#283B70" },
+      moonshotai: { label: "MOONSHOT", domain: "moonshot.ai", color: "#4B62AD" },
+      minimax: { label: "MINIMAX", domain: "minimax.io", color: "#6257BD" },
+      nousresearch: { label: "NOUS", domain: "nousresearch.com", color: "#8861B7" },
+      "01-ai": { label: "01 AI", domain: "01.ai", color: "#4267A8" },
+      allenai: { label: "ALLEN AI", domain: "allenai.org", color: "#316B9B" },
+      arcee: { label: "ARCEE", domain: "arcee.ai", color: "#425C8A" },
+      "arcee-ai": { label: "ARCEE", domain: "arcee.ai", color: "#425C8A" },
+      stepfun: { label: "STEPFUN", domain: "stepfun.com", color: "#4B6FB8" },
+      tngtech: { label: "TNG", domain: "tngtech.com", color: "#466C9D" },
+      "z-ai": { label: "Z AI", domain: "z.ai", color: "#3E526F" },
+      upstage: { label: "UPSTAGE", domain: "upstage.ai", color: "#315C9B" }
     };
-    const brand = brands[slug] || { label: slug.replace(/[-_]/g, " ").toUpperCase(), domain: "" };
-    return { key: slug || "provider", label: brand.label, domain: brand.domain, logo: brand.domain ? "https://www.google.com/s2/favicons?domain=" + encodeURIComponent(brand.domain) + "&sz=64" : "" };
+    const brand = brands[slug] || {
+      label: (slug || "AI PROVIDER").replace(/[-_]/g, " ").toUpperCase(),
+      domain: "",
+      color: "#586174"
+    };
+    const fallbackLogo = providerFallbackLogo(brand.label, brand.color);
+    return {
+      key: slug || "provider",
+      label: brand.label,
+      domain: brand.domain,
+      fallbackLogo,
+      logo: brand.domain
+        ? "https://www.google.com/s2/favicons?domain=" + encodeURIComponent(brand.domain) + "&sz=64"
+        : fallbackLogo
+    };
   }
 
   function renderModelPicker() {
@@ -1780,9 +1962,11 @@
     if (selected) {
       const brand = getModelBrand(selected);
       selectedName.textContent = selected.id === "teslafield" ? "Teslafield B1" : selected.name;
-      selectedLogo.src = brand.logo || "/teslafieldai-logo.png?v=20261127-03";
+      selectedLogo.src = brand.logo || brand.fallbackLogo;
       selectedLogo.alt = "";
-      selectedLogo.onerror = () => { selectedLogo.src = "/teslafieldai-logo.png?v=20261127-03"; };
+      selectedLogo.onerror = () => {
+        if (selectedLogo.src !== brand.fallbackLogo) selectedLogo.src = brand.fallbackLogo;
+      };
     }
     list.replaceChildren();
     const status = $("modelPickerStatus");
@@ -1808,10 +1992,12 @@
       const brand = group.brand || getModelBrand(group.models[0]);
       if (brand.logo) {
         const logo = document.createElement("img");
-        logo.src = brand.logo;
-        logo.alt = "";
+        logo.src = brand.logo || brand.fallbackLogo;
+        logo.alt = group.title + " logo";
         logo.className = "model-provider-logo";
-        logo.onerror = () => { logo.hidden = true; };
+        logo.onerror = () => {
+          if (logo.src !== brand.fallbackLogo) logo.src = brand.fallbackLogo;
+        };
         heading.appendChild(logo);
       }
       const label = document.createElement("span");
@@ -1827,10 +2013,12 @@
         option.dataset.modelId = model.id;
         const logo = document.createElement("img");
         const modelBrand = getModelBrand(model);
-        logo.src = modelBrand.logo || "/teslafieldai-logo.png?v=20261127-03";
-        logo.alt = "";
+        logo.src = modelBrand.logo || modelBrand.fallbackLogo;
+        logo.alt = modelBrand.label + " logo";
         logo.className = "model-option-logo";
-        logo.onerror = () => { logo.hidden = true; };
+        logo.onerror = () => {
+          if (logo.src !== modelBrand.fallbackLogo) logo.src = modelBrand.fallbackLogo;
+        };
         const copy = document.createElement("span");
         copy.className = "model-option-copy";
         const name = document.createElement("strong");
@@ -1879,8 +2067,20 @@
     $("modelPickerWrap").classList.remove("is-open");
   }
 
+  function scheduleModelCatalogRetry() {
+    if (modelCatalogRetryTimer || modelCatalogRetryCount >= 3) return;
+    const delays = [1200, 3500, 8000];
+    const delay = delays[modelCatalogRetryCount] || 8000;
+    modelCatalogRetryCount += 1;
+    modelCatalogRetryTimer = window.setTimeout(() => {
+      modelCatalogRetryTimer = null;
+      void loadModelCatalog({ force: true });
+    }, delay);
+  }
+
   async function loadModelCatalog(options = {}) {
     const force = options.force === true;
+    let retryCatalog = false;
     if (modelCatalogPromise) return modelCatalogPromise;
     const hasProviderModels = availableModels.some((model) => model.provider === "OpenRouter");
     if (!force && !hasProviderModels && modelCatalogLastAttemptAt && Date.now() - modelCatalogLastAttemptAt < 15000) return;
@@ -1903,12 +2103,16 @@
 
         if (data.openRouterConfigured === false) {
           modelCatalogStatus = "Render backend does not detect OPENROUTER_API_KEY. Check the exact environment variable name.";
+          modelCatalogRetryCount = 0;
         } else if (data.catalogAvailable === false) {
-          modelCatalogStatus = "OpenRouter model catalogue failed: " + String(data.catalogError || "unknown error") + ".";
+          modelCatalogStatus = "OpenRouter model catalogue failed: " + String(data.catalogError || "unknown error") + ". Retrying automatically…";
+          retryCatalog = true;
         } else if (Number(data.openRouterModelCount || 0) === 0) {
-          modelCatalogStatus = "OpenRouter returned no eligible chat models.";
+          modelCatalogStatus = "OpenRouter returned no eligible chat models. Retrying automatically…";
+          retryCatalog = true;
         } else {
           modelCatalogStatus = "";
+          modelCatalogRetryCount = 0;
         }
 
         availableModels = data.models.filter((model) =>
@@ -1917,7 +2121,8 @@
           (model.id === "teslafield" || (model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true && model.free === true))
         );
       } catch (error) {
-        modelCatalogStatus = "Could not reach the TeslafieldAI model catalogue. Teslafield B1 is still available; open Choose model again to retry.";
+        modelCatalogStatus = "Could not reach the TeslafieldAI model catalogue. Retrying automatically…";
+        retryCatalog = true;
       } finally {
         modelCatalogLastAttemptAt = Date.now();
         if (!availableModels.some((model) => model.id === "teslafield")) {
@@ -1926,6 +2131,12 @@
         modelCatalogLoading = false;
         renderModelSelector();
         renderModelPicker();
+        if (retryCatalog) scheduleModelCatalogRetry();
+        else if (modelCatalogRetryTimer) {
+          clearTimeout(modelCatalogRetryTimer);
+          modelCatalogRetryTimer = null;
+          modelCatalogRetryCount = 0;
+        }
       }
     })();
 

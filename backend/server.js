@@ -844,7 +844,9 @@ const server = http.createServer(async (req, res) => {
               provider: {
                 zdr: true,
                 data_collection: "deny",
-                allow_fallbacks: false
+                // Allow another serving endpoint for this same exact model only.
+                // The model ID never changes, and strict ZDR / data-collection rules remain active.
+                allow_fallbacks: true
               },
               max_tokens: 384
             }),
@@ -958,31 +960,173 @@ const server = http.createServer(async (req, res) => {
         sendJson(res, 413, { error: "CHAT_CONTEXT_TOO_LARGE", message: "Reduce the conversation length and try again." });
         return;
       }
+
       const responseStyle = ["concise", "balanced", "detailed"].includes(input.response_style) ? input.response_style : "balanced";
-      const upstream = await fetch(CHAT_SPACE_URL + "/stream", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "text/plain", ...hfRequestHeaders(CHAT_SPACE_URL, process.env.HF_TOKEN) },
-        body: JSON.stringify({ messages: safeMessages, max_new_tokens: 384, response_style: responseStyle }),
-        signal: upstreamController.signal
-      });
-      if (!upstream.ok) {
-        const detail = await upstream.text().catch(() => "");
-        sendJson(res, upstream.status === 429 ? 429 : 502, {
-          error: "CHAT_STREAM_PROVIDER_ERROR",
-          message: detail.slice(0, 500) || "The TESLAFIELD Chat Space is waking up or loading its model."
-        });
+      const selectedModel = typeof input.model === "string" && input.model.trim() ? input.model.trim() : "teslafield";
+      if (selectedModel.length > 160 || !/^[A-Za-z0-9._:/-]+$/.test(selectedModel)) {
+        sendJson(res, 400, { error: "INVALID_MODEL", message: "Choose a model from the TeslafieldAI model selector." });
         return;
       }
+
+      let upstream;
+      let streamContentType = "text/plain; charset=utf-8";
+      if (selectedModel !== "teslafield") {
+        if (!openRouterCatalog.configured) {
+          sendJson(res, 503, {
+            error: "MODEL_PROVIDER_NOT_CONFIGURED",
+            message: "Render does not detect OPENROUTER_API_KEY. The API key must be saved in the Render backend environment."
+          });
+          return;
+        }
+
+        let model;
+        try {
+          model = await openRouterCatalog.findModel(selectedModel);
+        } catch (catalogError) {
+          audit("chat.stream_catalog_failed", req.authUser && req.authUser.uid, url.pathname);
+          sendJson(res, 503, {
+            error: "MODEL_CATALOG_UNAVAILABLE",
+            message: "OpenRouter's free-model catalogue is temporarily unavailable. TeslafieldAI will retry; no model was substituted."
+          });
+          return;
+        }
+        if (!model || model.freeTier !== true || model.free !== true || !model.id.endsWith(":free")) {
+          sendJson(res, 400, {
+            error: "FREE_MODEL_ONLY",
+            message: "That model is no longer in the verified free-model catalogue. Refresh the model list and choose an available :free model."
+          });
+          return;
+        }
+
+        try {
+          upstream = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": "Bearer " + process.env.OPENROUTER_API_KEY,
+              "Content-Type": "application/json",
+              "Accept": "text/event-stream",
+              "HTTP-Referer": "https://teslafieldai.web.app",
+              "X-Title": "TeslafieldAI"
+            },
+            body: JSON.stringify({
+              model: model.id,
+              messages: [{
+                role: "system",
+                content: "You are TeslafieldAI, a helpful, accurate and respectful AI assistant. Be clear about uncertainty and never claim actions you have not performed. Response style: " + ({
+                  concise: "be brief and direct",
+                  balanced: "give a clear answer with useful context",
+                  detailed: "provide thorough explanations and examples when useful"
+                }[responseStyle] || "give a clear answer with useful context") + "."
+              }, ...safeMessages],
+              provider: {
+                zdr: true,
+                data_collection: "deny",
+                // Provider-level failover may serve the SAME model ID only.
+                // This never switches to another model and never relaxes privacy filters.
+                allow_fallbacks: true
+              },
+              max_tokens: 384,
+              stream: true
+            }),
+            signal: upstreamController.signal
+          });
+        } catch (providerError) {
+          audit("chat.stream_provider_unreachable", req.authUser && req.authUser.uid, url.pathname);
+          sendJson(res, 504, {
+            error: "MODEL_PROVIDER_UNAVAILABLE",
+            message: "TeslafieldAI could not reach OpenRouter. The backend is online; check OpenRouter availability and retry."
+          });
+          return;
+        }
+
+        if (!upstream.ok) {
+          const rawError = await upstream.text().catch(() => "");
+          let errorData = {};
+          try { errorData = rawError ? JSON.parse(rawError) : {}; } catch (error) {}
+          const providerError = errorData.error;
+          const detail = typeof providerError === "string"
+            ? providerError
+            : providerError && typeof providerError.message === "string"
+              ? providerError.message
+              : typeof errorData.message === "string" ? errorData.message : "";
+          let statusCode = 502;
+          let errorCode = "MODEL_PROVIDER_ERROR";
+          let message = detail
+            ? "OpenRouter rejected the selected free model: " + detail.replace(/\s+/g, " ").slice(0, 360)
+            : "OpenRouter could not complete the selected model request.";
+          if (upstream.status === 401 || upstream.status === 403) {
+            statusCode = 502;
+            errorCode = "MODEL_PROVIDER_AUTH_ERROR";
+            message = "OpenRouter rejected the server-side API key or account permission. Check that OPENROUTER_API_KEY is active and can access this model.";
+          } else if (upstream.status === 402) {
+            statusCode = 402;
+            errorCode = "MODEL_CREDITS_REQUIRED";
+            message = "OpenRouter returned a balance or account-limit response. Choose a model marked Rate-limited only if its free endpoint is still available; no paid model was selected.";
+          } else if (upstream.status === 429) {
+            statusCode = 429;
+            errorCode = "MODEL_RATE_LIMITED";
+            message = "The selected OpenRouter free endpoint is rate-limited. Wait briefly or choose another available :free model.";
+          } else if (upstream.status === 404) {
+            statusCode = 503;
+            errorCode = "MODEL_ENDPOINT_UNAVAILABLE";
+            message = "OpenRouter has no eligible endpoint for this exact model under TeslafieldAI's Zero Data Retention and data-collection privacy rules. Choose another :free model.";
+          } else if (upstream.status === 400) {
+            statusCode = 400;
+            errorCode = "MODEL_REQUEST_REJECTED";
+          }
+          audit("chat.stream_provider_rejected", req.authUser && req.authUser.uid, url.pathname);
+          sendJson(res, statusCode, {
+            error: errorCode,
+            message,
+            providerStatus: upstream.status,
+            model_id: model.id
+          });
+          return;
+        }
+        streamContentType = "text/event-stream; charset=utf-8";
+      } else {
+        try {
+          upstream = await fetch(CHAT_SPACE_URL + "/stream", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "text/plain",
+              ...hfRequestHeaders(CHAT_SPACE_URL, process.env.HF_TOKEN)
+            },
+            body: JSON.stringify({ messages: safeMessages, max_new_tokens: 384, response_style: responseStyle }),
+            signal: upstreamController.signal
+          });
+        } catch (providerError) {
+          sendJson(res, 504, {
+            error: "CHAT_STREAM_PROVIDER_UNAVAILABLE",
+            message: "The TeslafieldAI B1 chat engine could not be reached. It may be waking up; retry in a moment."
+          });
+          return;
+        }
+        if (!upstream.ok) {
+          const detail = await upstream.text().catch(() => "");
+          sendJson(res, upstream.status === 429 ? 429 : 502, {
+            error: "CHAT_STREAM_PROVIDER_ERROR",
+            message: detail.slice(0, 420) || "The TESLAFIELD Chat Space is waking up or loading its model."
+          });
+          return;
+        }
+      }
+
       if (!upstream.body) {
-        sendJson(res, 502, { error: "CHAT_STREAM_EMPTY", message: "The Chat Space did not open a response stream." });
+        sendJson(res, 502, { error: "CHAT_STREAM_EMPTY", message: "The selected model did not open a response stream." });
         return;
       }
+
       res.writeHead(200, {
-        "Content-Type": "text/plain; charset=utf-8",
+        "Content-Type": streamContentType,
         "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
         "X-Content-Type-Options": "nosniff",
         "X-Accel-Buffering": "no"
       });
+      if (typeof res.flushHeaders === "function") res.flushHeaders();
+
       const reader = upstream.body.getReader();
       try {
         while (true) {
@@ -992,7 +1136,11 @@ const server = http.createServer(async (req, res) => {
             const canContinue = res.write(Buffer.from(part.value));
             if (!canContinue && !res.destroyed) {
               await new Promise((resolve) => {
-                const finish = () => { res.off("drain", finish); res.off("close", finish); resolve(); };
+                const finish = () => {
+                  res.off("drain", finish);
+                  res.off("close", finish);
+                  resolve();
+                };
                 res.once("drain", finish);
                 res.once("close", finish);
               });
@@ -1010,7 +1158,12 @@ const server = http.createServer(async (req, res) => {
       if (!res.headersSent && !res.destroyed) {
         if (error.message === "BODY_TOO_LARGE") sendJson(res, 413, { error: "REQUEST_TOO_LARGE" });
         else if (error.message === "INVALID_JSON") sendJson(res, 400, { error: "INVALID_JSON" });
-        else sendJson(res, 504, { error: "CHAT_STREAM_FAILED", message: "The Chat Space timed out or is still loading. Please retry." });
+        else sendJson(res, 504, {
+          error: "CHAT_STREAM_FAILED",
+          message: error.name === "AbortError"
+            ? "The chat stream timed out. The backend stayed connected but the selected provider did not finish in time."
+            : "The chat stream failed before a response started. Please retry."
+        });
       } else if (!res.destroyed && !res.writableEnded) {
         res.end();
       }

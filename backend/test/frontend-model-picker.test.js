@@ -24,6 +24,8 @@ test("composer exposes the compact branded model capsule and accessible popup", 
 test("model picker shows Teslafield B1 and provider branding", () => {
   assert.match(app, /model\.id === "teslafield" \? "Teslafield B1"/);
   assert.match(app, /function getModelBrand\(model\)/);
+  assert.match(app, /function providerFallbackLogo\(label, color\)/);
+  assert.match(app, /fallbackLogo/);
   assert.match(app, /nvidia\.com/);
   assert.match(app, /baidu\.com/);
   assert.match(app, /recursive\.ai/);
@@ -37,9 +39,13 @@ test("model picker shows Teslafield B1 and provider branding", () => {
   assert.doesNotMatch(app, /\.slice\(0, 13\)/);
 });
 
-test("backend rejects any OpenRouter model not explicitly marked :free", () => {
+test("backend rejects non-free models and streams the exact OpenRouter model with privacy protections", () => {
   assert.match(backend, /model\.freeTier !== true \|\| !model\.id\.endsWith\(":free"\)/);
   assert.match(backend, /Only OpenRouter models explicitly marked :free are allowed/);
+  assert.match(backend, /stream: true/);
+  assert.match(backend, /zdr: true/);
+  assert.match(backend, /data_collection: "deny"/);
+  assert.match(backend, /allow_fallbacks: true/);
 });
 
 test("model picker popup opens above the capsule and supports Escape dismissal", () => {
@@ -79,6 +85,9 @@ test("model picker renders immediately, shows loading feedback and can retry the
 test("model picker shows provider logos and rate-limit text without FREE badges", () => {
   assert.match(app, /className = "model-option-logo"/);
   assert.match(app, /modelBrand\.logo/);
+  assert.match(app, /if \(logo\.src !== modelBrand\.fallbackLogo\) logo\.src = modelBrand\.fallbackLogo/);
+  assert.match(app, /async function consumeChatStream\(response, onText\)/);
+  assert.match(app, /payload\.choices\[0\]\.delta/);
   assert.match(app, /meta\.textContent = model\.provider === "OpenRouter" \? "Rate-limited" : "TeslafieldAI"/);
   assert.doesNotMatch(app, /FREE · Rate-limited|FREE · TeslafieldAI|option\.textContent = model\.name \+ " · FREE"/);
   assert.doesNotMatch(app, /"Free models only\./);

@@ -34,16 +34,18 @@ test("regenerateLast shares the same in-flight guard", () => {
 });
 
 
-test("requestReply generates one idempotency key before its retry loop", () => {
+test("requestReply uses the selected model and retries the streaming endpoint", () => {
   const start = app.indexOf("async function requestReply(chat)");
   const end = app.indexOf("function showGuestContinueCard()", start + 1);
   assert.ok(start >= 0 && end > start, "Could not locate requestReply function");
   const source = app.slice(start, end);
-  const keyAt = source.indexOf("const idempotencyKey =");
-  const requestAt = source.indexOf('const chatRequest =');
+  const requestAt = source.indexOf("const chatRequest =");
   const retryAt = source.indexOf("for (let attempt = 0; attempt < 3; attempt += 1)");
-  assert.ok(keyAt >= 0 && requestAt > keyAt && retryAt > requestAt);
-  assert.match(source, /"Idempotency-Key": idempotencyKey/);
+  const streamAt = source.indexOf('/api/v1/chat/stream');
+  assert.ok(requestAt >= 0 && retryAt > requestAt && streamAt > retryAt);
+  assert.match(source, /model: userPreferences\.model/);
+  assert.match(source, /"Accept": "text\/event-stream, text\/plain"/);
+  assert.doesNotMatch(source, /Idempotency-Key/);
 });
 
 test("voice capture prevents duplicate microphone permission requests", () => {
