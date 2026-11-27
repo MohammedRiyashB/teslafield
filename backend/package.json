@@ -12,6 +12,6 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@gradio/client": "^1.15.0"
+    "@gradio/client": "^2.8.0"
   }
 }
