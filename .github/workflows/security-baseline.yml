@@ -8,6 +8,13 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/security-baseline.yml"
+      - "firebase.json"
+      - "index.html"
+      - "styles.css"
+      - "app.js"
+      - "oauth.html"
+      - "oauth.css"
+      - "sw.js"
 
 permissions:
   contents: read
