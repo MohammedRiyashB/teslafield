@@ -10,12 +10,12 @@ const SERVICE_NAME = "teslafield-api";
 const API_VERSION = "v1";
 const chatIdempotencyStore = new IdempotencyStore({ ttlMs: 5 * 60 * 1000, maxEntries: 1000 });
 const openRouterCatalog = createOpenRouterCatalog({ apiKey: process.env.OPENROUTER_API_KEY || "" });
-const conversationStore = createConversationStore({ projectId: FIREBASE_PROJECT_ID });
 const allowedOrigins = (process.env.CORS_ORIGIN || "https://teslafieldai.web.app,https://teslafieldai.firebaseapp.com")
   .split(",")
   .map((value) => value.trim())
   .filter(Boolean);
 const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || "teslafieldai";
+const conversationStore = createConversationStore({ projectId: FIREBASE_PROJECT_ID });
 let firebaseSigningKeys = null;
 let firebaseSigningKeysExpiresAt = 0;
 
