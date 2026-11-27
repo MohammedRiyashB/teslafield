@@ -1,36 +1,58 @@
 "use strict";
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
-
-function pricePerMillion(value) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed * 1_000_000 : null;
-}
+const CHAT_COMPLETIONS_ENDPOINT = "/api/v1/chat/completions";
+const BLOCKED_MODEL_PATTERN = /(gemma[- ]4[- ]26b[- ]a4b|gemma[- ]4[- ]31b|ling[- ]3[.]2[- ]flash|lfm.*1[.]7b|particle[- ]1)/i;
 
 function normalizeOpenRouterModel(item) {
   if (!item || typeof item.id !== "string" || !item.id.trim()) return null;
-  // OpenRouter's :free catalog variant is the authoritative free-tier marker.
-  // Its API pricing metadata can still contain the paid base-model token price.
+  // The :free catalog suffix is OpenRouter's explicit free-variant marker.
   if (!item.id.endsWith(":free")) return null;
-  const identity = (item.id + " " + (typeof item.name === "string" ? item.name : "")).toLowerCase();
-  if (/(gemma[- ]4[- ]26b[- ]a4b|gemma[- ]4[- ]31b|ling[- ]3[.]2[- ]flash|lfm.*1[.]7b|particle[- ]1)/i.test(identity)) return null;
+
+  const endpoints = Array.isArray(item.endpoints) ? item.endpoints : [];
+  if (!endpoints.includes(CHAT_COMPLETIONS_ENDPOINT)) return null;
+
   const architecture = item.architecture || {};
   const inputs = Array.isArray(architecture.input_modalities) ? architecture.input_modalities : [];
   const outputs = Array.isArray(architecture.output_modalities) ? architecture.output_modalities : [];
   if (!inputs.includes("text") || !outputs.includes("text")) return null;
-  const pricing = item.pricing || {};
-  const prompt = Number(pricing.prompt);
-  const completion = Number(pricing.completion);
-  if (!Number.isFinite(prompt) || !Number.isFinite(completion) || prompt < 0 || completion < 0) return null;
+
+  const identity = (item.id + " " + (typeof item.name === "string" ? item.name : "")).toLowerCase();
+  if (BLOCKED_MODEL_PATTERN.test(identity)) return null;
+
   return {
     id: item.id,
     name: typeof item.name === "string" && item.name.trim() ? item.name.trim() : item.id,
     free: true,
     freeTier: true,
-    // A :free variant is not billed at the base model's listed token price.
+    // OpenRouter's :free catalog variants are zero-cost. Do not use base-model
+    // pricing metadata to reject them; the catalog variant itself is authoritative.
     promptPerMillion: 0,
     completionPerMillion: 0,
     contextLength: Number.isFinite(Number(item.context_length)) ? Number(item.context_length) : null
+  };
+}
+
+function getCatalogDiagnostics(items, normalizedModels) {
+  const list = Array.isArray(items) ? items : [];
+  const freeVariants = list.filter((item) => item && typeof item.id === "string" && item.id.endsWith(":free"));
+  const freeChatVariants = freeVariants.filter((item) =>
+    Array.isArray(item.endpoints) && item.endpoints.includes(CHAT_COMPLETIONS_ENDPOINT)
+  );
+  const freeTextChatVariants = freeChatVariants.filter((item) => {
+    const architecture = item.architecture || {};
+    return Array.isArray(architecture.input_modalities) &&
+      architecture.input_modalities.includes("text") &&
+      Array.isArray(architecture.output_modalities) &&
+      architecture.output_modalities.includes("text");
+  });
+  return {
+    textOutputCatalogCount: list.length,
+    freeVariantCount: freeVariants.length,
+    freeChatEndpointCount: freeChatVariants.length,
+    freeTextChatCandidateCount: freeTextChatVariants.length,
+    excludedKnownModelCount: freeTextChatVariants.length - normalizedModels.length,
+    eligibleModelCount: normalizedModels.length
   };
 }
 
@@ -38,13 +60,17 @@ function createOpenRouterCatalog({ apiKey = "", fetchImpl = fetch, ttlMs = 10 * 
   let cachedModels = null;
   let cachedAt = 0;
   let pending = null;
+  let diagnostics = null;
 
   async function listModels() {
     if (!apiKey) return [];
     if (cachedModels && Date.now() - cachedAt < ttlMs) return cachedModels;
     if (pending) return pending;
     pending = (async () => {
-      const response = await fetchImpl(OPENROUTER_BASE_URL + "/models?endpoints=%2Fapi%2Fv1%2Fchat%2Fcompletions", {
+      // OpenRouter defaults this catalogue to text-output models. Filter the
+      // chat-completions route locally from each model's documented endpoints
+      // field rather than depending on the remote endpoints query parameter.
+      const response = await fetchImpl(OPENROUTER_BASE_URL + "/models?output_modalities=text", {
         headers: { Authorization: "Bearer " + apiKey, Accept: "application/json" },
         signal: AbortSignal.timeout(15000)
       });
@@ -57,7 +83,10 @@ function createOpenRouterCatalog({ apiKey = "", fetchImpl = fetch, ttlMs = 10 * 
       if (!payload || !Array.isArray(payload.data)) throw new Error("OPENROUTER_CATALOG_INVALID");
       const models = payload.data.map(normalizeOpenRouterModel).filter(Boolean);
       models.sort((a, b) => a.name.localeCompare(b.name));
-      // Do not cache an empty response: a transient upstream/catalogue issue must be retryable.
+      diagnostics = getCatalogDiagnostics(payload.data, models);
+
+      // Do not cache an empty response: transient upstream or account-policy
+      // changes must be retryable on the next catalogue refresh.
       if (models.length > 0) {
         cachedModels = models;
         cachedAt = Date.now();
@@ -79,11 +108,17 @@ function createOpenRouterCatalog({ apiKey = "", fetchImpl = fetch, ttlMs = 10 * 
     return models.find((model) => model.id === id) || null;
   }
 
-  return { listModels, findModel, configured: Boolean(apiKey) };
+  function getDiagnostics() {
+    return diagnostics;
+  }
+
+  return { listModels, findModel, getDiagnostics, configured: Boolean(apiKey) };
 }
 
 module.exports = {
   OPENROUTER_BASE_URL,
+  CHAT_COMPLETIONS_ENDPOINT,
   normalizeOpenRouterModel,
+  getCatalogDiagnostics,
   createOpenRouterCatalog
 };
