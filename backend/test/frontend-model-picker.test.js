@@ -21,7 +21,7 @@ test("composer exposes the compact branded model capsule and accessible popup", 
   assert.ok(!html.includes('id="plusButton"'), "Model capsule replaces the plus control");
 });
 
-test("model picker shows Teslafield B1 and provider-branded free models", () => {
+test("model picker shows Teslafield B1 and provider branding", () => {
   assert.match(app, /model\.id === "teslafield" \? "Teslafield B1"/);
   assert.match(app, /function getModelBrand\(model\)/);
   assert.match(app, /nvidia\.com/);
@@ -33,7 +33,7 @@ test("model picker shows Teslafield B1 and provider-branded free models", () => 
   assert.doesNotMatch(app, /OPENROUTER · FREE MODELS/);
   assert.doesNotMatch(app, /https:\/\/openrouter\.ai\/favicon\.ico/);
   assert.match(app, /model\.id\.endsWith\(":free"\)/);
-  assert.match(app, /FREE · Rate-limited/);
+  assert.match(app, /"Rate-limited"/);
   assert.doesNotMatch(app, /\.slice\(0, 13\)/);
 });
 
