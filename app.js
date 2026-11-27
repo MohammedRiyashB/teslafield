@@ -86,6 +86,11 @@
   let guestConversationStarted = false;
   let userPreferences = { responseStyle: "balanced", textSize: "standard", reduceMotion: false, model: "teslafield" };
   let availableModels = [{ id: "teslafield", name: "Teslafield B1", free: true, provider: "TeslafieldAI" }];
+  let cloudSyncReady = false;
+  let cloudSyncBusy = false;
+  let cloudSyncTimer = null;
+  let cloudSyncFingerprints = new Map();
+  let cloudHistoryWarningShown = false;
   let resolveAuthReady;
   const authReadyPromise = new Promise((resolve) => { resolveAuthReady = resolve; });
 
@@ -373,9 +378,13 @@
       if (generating) stopGeneration();
       chats = [];
       activeId = null;
+      cloudSyncReady = false;
+      cloudSyncFingerprints = new Map();
+      if (cloudSyncTimer) { clearTimeout(cloudSyncTimer); cloudSyncTimer = null; }
       if (currentUser) {
         loadStore();
         activeId = chats.length ? chats[0].id : null;
+        syncCloudHistory();
       }
       messageList.innerHTML = "";
       renderConversation();
@@ -568,10 +577,114 @@
     if (!key) return;
     try {
       localStorage.setItem(key, JSON.stringify(chats.slice(0, MAX_HISTORY)));
+      if (cloudSyncReady) queueCloudHistorySync();
     } catch (error) {
       toast("This browser could not save the conversation history.");
     }
   }
+  function cloudConversationFingerprint(chat) {
+    return JSON.stringify(chat);
+  }
+
+  async function cloudHistoryRequest(method, token, payload, id) {
+    const url = API + "/api/v1/conversations" + (id ? "?id=" + encodeURIComponent(id) : "");
+    const response = await fetch(url, {
+      method,
+      headers: {
+        Authorization: "Bearer " + token,
+        Accept: "application/json",
+        ...(payload ? { "Content-Type": "application/json" } : {})
+      },
+      ...(payload ? { body: JSON.stringify(payload) } : {}),
+      signal: AbortSignal.timeout(20000)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new Error(data.message || data.error || "Cloud history request failed.");
+      error.code = data.error || "CLOUD_HISTORY_ERROR";
+      error.status = response.status;
+      throw error;
+    }
+    return data;
+  }
+
+  async function syncCloudHistory() {
+    if (!currentUser || cloudSyncBusy) return;
+    const user = currentUser;
+    cloudSyncBusy = true;
+    cloudSyncReady = false;
+    try {
+      const token = await user.getIdToken();
+      const result = await cloudHistoryRequest("GET", token);
+      if (currentUser !== user) return;
+      const remote = Array.isArray(result.conversations) ? result.conversations : [];
+      const local = chats.slice(0, MAX_HISTORY);
+      const merged = new Map(remote.map((chat) => [chat.id, chat]));
+      local.forEach((chat) => {
+        const existing = merged.get(chat.id);
+        if (!existing || Number(chat.updated || 0) >= Number(existing.updated || 0)) merged.set(chat.id, chat);
+      });
+      chats = Array.from(merged.values()).sort((a, b) => Number(b.updated || b.created || 0) - Number(a.updated || a.created || 0)).slice(0, MAX_HISTORY);
+      if (!activeId || !chats.some((chat) => chat.id === activeId)) activeId = chats.length ? chats[0].id : null;
+      try { localStorage.setItem(conversationStoreKey(), JSON.stringify(chats)); } catch (error) {}
+      cloudSyncFingerprints = new Map(remote.map((chat) => [chat.id, cloudConversationFingerprint(chat)]));
+      cloudSyncReady = true;
+      renderConversation();
+      await pushCloudHistoryChanges();
+    } catch (error) {
+      cloudSyncReady = false;
+      if (!cloudHistoryWarningShown) {
+        cloudHistoryWarningShown = true;
+        const message = error.code === "FIRESTORE_NOT_READY"
+          ? "Cloud history is not enabled yet. Your chats remain saved on this device."
+          : "Cloud history could not sync right now. Your chats remain saved on this device.";
+        toast(message);
+      }
+    } finally {
+      cloudSyncBusy = false;
+    }
+  }
+
+  function queueCloudHistorySync() {
+    if (!currentUser || !cloudSyncReady) return;
+    if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
+    cloudSyncTimer = setTimeout(() => {
+      cloudSyncTimer = null;
+      pushCloudHistoryChanges();
+    }, 900);
+  }
+
+  async function pushCloudHistoryChanges() {
+    if (!currentUser || !cloudSyncReady || cloudSyncBusy) return;
+    const user = currentUser;
+    cloudSyncBusy = true;
+    try {
+      const token = await user.getIdToken();
+      const local = chats.slice(0, MAX_HISTORY);
+      const currentIds = new Set(local.map((chat) => chat.id));
+      for (const chat of local) {
+        if (currentUser !== user) return;
+        const fingerprint = cloudConversationFingerprint(chat);
+        if (cloudSyncFingerprints.get(chat.id) === fingerprint) continue;
+        await cloudHistoryRequest("PUT", token, { conversation: chat });
+        cloudSyncFingerprints.set(chat.id, fingerprint);
+      }
+      for (const id of Array.from(cloudSyncFingerprints.keys())) {
+        if (currentUser !== user) return;
+        if (currentIds.has(id)) continue;
+        await cloudHistoryRequest("DELETE", token, null, id);
+        cloudSyncFingerprints.delete(id);
+      }
+    } catch (error) {
+      if (!cloudHistoryWarningShown) {
+        cloudHistoryWarningShown = true;
+        toast("Cloud history sync paused. Your local chat is still saved.");
+      }
+    } finally {
+      cloudSyncBusy = false;
+    }
+  }
+
   function activeChat() { return chats.find((chat) => chat.id === activeId) || null; }
   function scrollBottom() {
     const area = $("conversationScroll");
@@ -1629,7 +1742,7 @@
         typeof model.free === "boolean" && /^[A-Za-z0-9._:/-]{1,160}$/.test(model.id)
       );
       if (!availableModels.some((model) => model.id === "teslafield")) {
-        availableModels.unshift({ id: "teslafield", name: "TeslafieldAI — Qwen3 0.6B", free: true, provider: "TeslafieldAI" });
+        availableModels.unshift({ id: "teslafield", name: "Teslafield B1", free: true, provider: "TeslafieldAI" });
       }
     } catch (error) {
       // Keep the local free model available when the catalogue service is sleeping.
@@ -1664,6 +1777,12 @@
       closeModelPicker();
       $("modelPickerButton").focus();
     }
+  });
+  window.addEventListener("focus", () => {
+    if (currentUser) syncCloudHistory();
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && currentUser) syncCloudHistory();
   });
   $("newChat").onclick = newChat;
   $("connectEntryButton").onclick = openConnectPage;
