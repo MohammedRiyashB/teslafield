@@ -12,12 +12,14 @@ const model = (id, prompt = "0", completion = "0") => ({
   context_length: 128000
 });
 
-test("catalog accepts only :free text models with zero input and output pricing", () => {
-  const free = normalizeOpenRouterModel(model("provider/model:free"));
+test("catalog accepts :free text variants even when base-model pricing metadata is nonzero", () => {
+  const free = normalizeOpenRouterModel(model("provider/model:free", "0.00000008", "0.0000002"));
   assert.equal(free.free, true);
   assert.equal(free.freeTier, true);
+  assert.equal(free.promptPerMillion, 0);
+  assert.equal(free.completionPerMillion, 0);
   assert.equal(normalizeOpenRouterModel(model("provider/zero-price")), null);
-  assert.equal(normalizeOpenRouterModel(model("provider/paid:free", "0.000001", "0")), null);
+  assert.equal(normalizeOpenRouterModel(model("provider/paid", "0.000001", "0.000002")), null);
   assert.equal(normalizeOpenRouterModel({
     ...model("provider/image:free"),
     architecture: { input_modalities: ["image"], output_modalities: ["image"] }
@@ -47,7 +49,7 @@ test("catalog excludes the five reported non-working free models", () => {
   assert.ok(normalizeOpenRouterModel(model("recursive/flint-v1.0:free")));
 });
 
-test("catalog caches every exact :free model without requiring ZDR", async () => {
+test("catalog caches exact :free variants without requiring zero base pricing or ZDR", async () => {
   let calls = 0;
   const catalog = createOpenRouterCatalog({
     apiKey: "server-only-test-key",
@@ -60,7 +62,7 @@ test("catalog caches every exact :free model without requiring ZDR", async () =>
         json: async () => ({ data: [
           model("provider/paid", "0.000001", "0.000002"),
           model("provider/zero-price"),
-          model("provider/free:free")
+          model("provider/free:free", "0.00000008", "0.0000002")
         ] })
       };
     }
@@ -68,12 +70,13 @@ test("catalog caches every exact :free model without requiring ZDR", async () =>
   const models = await catalog.listModels();
   assert.equal(models.length, 1);
   assert.equal(models[0].id, "provider/free:free");
+  assert.equal(models[0].promptPerMillion, 0);
   assert.equal(await catalog.findModel("provider/paid"), null);
   assert.equal(calls, 1);
 });
 
 test("catalog keeps every eligible :free model without truncation", async () => {
-  const data = Array.from({ length: 125 }, (_, index) => model("provider/free-" + index + ":free"));
+  const data = Array.from({ length: 125 }, (_, index) => model("provider/free-" + index + ":free", "0.00000008", "0.0000002"));
   data.push(model("provider/paid", "0.000001", "0.000002"));
   data.push(model("provider/zero-price"));
   const catalog = createOpenRouterCatalog({
@@ -87,7 +90,6 @@ test("catalog keeps every eligible :free model without truncation", async () => 
   assert.equal(await catalog.findModel("provider/paid"), null);
 });
 
-
 test("catalog does not cache a transient empty response", async () => {
   let calls = 0;
   const catalog = createOpenRouterCatalog({
@@ -97,7 +99,7 @@ test("catalog does not cache a transient empty response", async () => {
       calls += 1;
       return {
         ok: true,
-        json: async () => ({ data: calls === 1 ? [] : [model("provider/recovered:free")] })
+        json: async () => ({ data: calls === 1 ? [] : [model("provider/recovered:free", "0.00000008", "0.0000002")] })
       };
     }
   });

@@ -9,7 +9,8 @@ function pricePerMillion(value) {
 
 function normalizeOpenRouterModel(item) {
   if (!item || typeof item.id !== "string" || !item.id.trim()) return null;
-  // Only exact free endpoints are eligible; remove the five models reported as non-working in TeslafieldAI.
+  // OpenRouter's :free catalog variant is the authoritative free-tier marker.
+  // Its API pricing metadata can still contain the paid base-model token price.
   if (!item.id.endsWith(":free")) return null;
   const identity = (item.id + " " + (typeof item.name === "string" ? item.name : "")).toLowerCase();
   if (/(gemma[- ]4[- ]26b[- ]a4b|gemma[- ]4[- ]31b|ling[- ]3[.]2[- ]flash|lfm.*1[.]7b|particle[- ]1)/i.test(identity)) return null;
@@ -21,15 +22,14 @@ function normalizeOpenRouterModel(item) {
   const prompt = Number(pricing.prompt);
   const completion = Number(pricing.completion);
   if (!Number.isFinite(prompt) || !Number.isFinite(completion) || prompt < 0 || completion < 0) return null;
-  const free = prompt === 0 && completion === 0;
-  if (!free) return null;
   return {
     id: item.id,
     name: typeof item.name === "string" && item.name.trim() ? item.name.trim() : item.id,
-    free,
+    free: true,
     freeTier: true,
-    promptPerMillion: pricePerMillion(prompt),
-    completionPerMillion: pricePerMillion(completion),
+    // A :free variant is not billed at the base model's listed token price.
+    promptPerMillion: 0,
+    completionPerMillion: 0,
     contextLength: Number.isFinite(Number(item.context_length)) ? Number(item.context_length) : null
   };
 }
@@ -56,8 +56,7 @@ function createOpenRouterCatalog({ apiKey = "", fetchImpl = fetch, ttlMs = 10 * 
       const payload = await response.json();
       if (!payload || !Array.isArray(payload.data)) throw new Error("OPENROUTER_CATALOG_INVALID");
       const models = payload.data.map(normalizeOpenRouterModel).filter(Boolean);
-      models.sort((a, b) => Number(b.free) - Number(a.free) || a.name.localeCompare(b.name));
-      // Keep every exact :free text-chat model; provider data policies are user-approved at request time.
+      models.sort((a, b) => a.name.localeCompare(b.name));
       // Do not cache an empty response: a transient upstream/catalogue issue must be retryable.
       if (models.length > 0) {
         cachedModels = models;
