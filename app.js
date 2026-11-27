@@ -1714,7 +1714,8 @@
           streamingBubble = createStreamingAssistantBubble();
         }
         const segment = await consumeChatStream(response, (segmentText) => {
-          streamingBubble.body.textContent = accumulatedText + segmentText;
+          streamedPartialText = accumulatedText + segmentText;
+          streamingBubble.body.textContent = streamedPartialText;
           scrollBottom();
         });
         accumulatedText += segment.text;
