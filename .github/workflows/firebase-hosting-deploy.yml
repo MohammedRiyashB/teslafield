@@ -63,6 +63,11 @@ jobs:
           const oauthClient = fs.readFileSync('oauth.js', 'utf8');
           const mcpBridge = fs.readFileSync('backend/oauth-mcp.js', 'utf8');
           assert.match(html, /id="historySearch"/);
+          assert.match(html, /class="composer-model-row" aria-label="Choose AI model" hidden/);
+          assert.match(html, /id="attachmentButton" type="button" hidden/);
+          assert.ok(app.includes("modelSelectorRow.hidden = !signedIn"), "Model picker must follow Firebase sign-in state");
+          assert.ok(app.includes("attachmentControl.hidden = !signedIn"), "Attachment control must follow Firebase sign-in state");
+          assert.match(fs.readFileSync("styles.css", "utf8"), /body\.signed-in \.composer-model-row\s*\{\s*margin-bottom:\s*19px !important;/);
           assert.match(html, /id="personalizeModal"/);
           assert.ok(app.includes('/api/v1/chat/completions'), 'Frontend must call the complete-response model endpoint');
           assert.ok(!app.includes('/api/v1/chat/stream'), 'Frontend must not render token-by-token streaming');
