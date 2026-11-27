@@ -1698,8 +1698,7 @@
     const preferred = userPreferences.model || "teslafield";
     select.replaceChildren();
     const groups = [
-      { label: "FREE / $0 MODELS", models: availableModels.filter((model) => model.free) },
-      { label: "PAID MODELS · OPENROUTER", models: availableModels.filter((model) => !model.free) }
+      { label: "FREE MODELS", models: availableModels.filter((model) => model.id === "teslafield" || (model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true)) }
     ];
     groups.forEach((group) => {
       if (!group.models.length) return;
@@ -1708,10 +1707,7 @@
       group.models.forEach((model) => {
         const option = document.createElement("option");
         option.value = model.id;
-        const formatPrice = (value) => Number(value || 0).toFixed(6).replace(/\.?0+$/, "");
-        const price = model.free ? (model.provider === "OpenRouter" && model.freeTier !== true ? "$0 model price · account conditions may apply" : "Free") :
-          "$" + formatPrice(model.promptPerMillion) + " USD in / $" + formatPrice(model.completionPerMillion) + " USD out per 1M tokens";
-        option.textContent = model.name + " · " + price;
+        option.textContent = model.name + (model.provider === "OpenRouter" ? " · FREE · rate-limited" : " · FREE");
         optgroup.appendChild(option);
       });
       select.appendChild(optgroup);
@@ -1727,8 +1723,8 @@
     if (hint) {
       const routerReady = availableModels.some((model) => model.provider === "OpenRouter");
       hint.textContent = routerReady
-        ? "Your selected OpenRouter model is used directly. No automatic model switching. :free models are rate-limited; other $0 models may have account conditions. Prices are per 1M tokens."
-        : "TeslafieldAI Free is active. Add your OpenRouter API key to the backend to load the full model catalogue.";
+        ? "Only OpenRouter :free models are listed. Your selected model ID is sent directly; no paid-model fallback. Free-tier rate limits and availability apply."
+        : "TeslafieldAI Free is active. Add OPENROUTER_API_KEY to the backend to load available OpenRouter :free models.";
     }
   }
 
@@ -1747,12 +1743,10 @@
     }
     list.replaceChildren();
     const own = availableModels.filter((model) => model.id === "teslafield");
-    const routerFree = availableModels.filter((model) => model.provider === "OpenRouter" && model.free);
-    const routerPaid = availableModels.filter((model) => model.provider === "OpenRouter" && !model.free);
+    const routerFree = availableModels.filter((model) => model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true);
     const groups = [
       { title: "TESLAFIELD", models: own },
-      { title: "OPENROUTER · FREE MODELS", models: routerFree },
-      { title: "OPENROUTER · PAID MODELS", models: routerPaid }
+      { title: "OPENROUTER · FREE MODELS", models: routerFree }
     ];
     groups.forEach((group) => {
       if (!group.models.length) return;
@@ -1792,11 +1786,7 @@
         const name = document.createElement("strong");
         name.textContent = model.id === "teslafield" ? "Teslafield B1" : model.name;
         const meta = document.createElement("small");
-        meta.textContent = model.free
-          ? (model.provider === "OpenRouter"
-              ? (model.freeTier ? "FREE · OpenRouter :free · rate-limited" : "$0 MODEL · OpenRouter account conditions may apply")
-              : "FREE · TeslafieldAI")
-          : "PAID · $" + Number(model.promptPerMillion || 0).toFixed(4) + " in / $" + Number(model.completionPerMillion || 0).toFixed(4) + " out per 1M tokens";
+        meta.textContent = model.provider === "OpenRouter" ? "FREE · OpenRouter :free · rate-limited" : "FREE · TeslafieldAI";
         copy.append(name, meta);
         const check = document.createElement("span");
         check.className = "model-option-check";
@@ -1811,7 +1801,7 @@
           renderModelPicker();
           closeModelPicker();
           if (model.provider === "OpenRouter") {
-            toast(model.free ? "OpenRouter free model selected. Provider limits and availability apply." : "Paid OpenRouter model selected. Usage charges may apply.");
+            toast("OpenRouter :free model selected. Free-tier limits and availability apply.");
           } else {
             toast("Teslafield B1 selected.");
           }
@@ -1846,7 +1836,8 @@
       if (!data || !Array.isArray(data.models)) throw new Error("MODEL_CATALOG_INVALID");
       availableModels = data.models.filter((model) =>
         model && typeof model.id === "string" && typeof model.name === "string" &&
-        typeof model.free === "boolean" && /^[A-Za-z0-9._:/-]{1,160}$/.test(model.id)
+        typeof model.free === "boolean" && /^[A-Za-z0-9._:/-]{1,160}$/.test(model.id) &&
+        (model.id === "teslafield" || (model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true && model.free === true))
       );
       if (!availableModels.some((model) => model.id === "teslafield")) {
         availableModels.unshift({ id: "teslafield", name: "Teslafield B1", free: true, provider: "TeslafieldAI" });
@@ -1866,7 +1857,7 @@
     renderModelPicker();
     const model = availableModels.find((item) => item.id === selected);
     if (model.provider === "OpenRouter") {
-      toast(model.free ? "OpenRouter $0 model selected. Your messages go to OpenRouter; provider limits and account conditions apply." : "Paid OpenRouter model selected. Your messages go to OpenRouter and usage charges may apply.");
+      toast("OpenRouter :free model selected. Free-tier limits and availability apply.");
     } else {
       toast("Preferred model: " + model.name);
     }

@@ -9,6 +9,8 @@ function pricePerMillion(value) {
 
 function normalizeOpenRouterModel(item) {
   if (!item || typeof item.id !== "string" || !item.id.trim()) return null;
+  // Only OpenRouter IDs explicitly published as :free are eligible. A $0 price alone is not enough.
+  if (!item.id.endsWith(":free")) return null;
   const architecture = item.architecture || {};
   const inputs = Array.isArray(architecture.input_modalities) ? architecture.input_modalities : [];
   const outputs = Array.isArray(architecture.output_modalities) ? architecture.output_modalities : [];
@@ -18,11 +20,12 @@ function normalizeOpenRouterModel(item) {
   const completion = Number(pricing.completion);
   if (!Number.isFinite(prompt) || !Number.isFinite(completion) || prompt < 0 || completion < 0) return null;
   const free = prompt === 0 && completion === 0;
+  if (!free) return null;
   return {
     id: item.id,
     name: typeof item.name === "string" && item.name.trim() ? item.name.trim() : item.id,
     free,
-    freeTier: item.id.endsWith(":free"),
+    freeTier: true,
     promptPerMillion: pricePerMillion(prompt),
     completionPerMillion: pricePerMillion(completion),
     contextLength: Number.isFinite(Number(item.context_length)) ? Number(item.context_length) : null
@@ -48,7 +51,7 @@ function createOpenRouterCatalog({ apiKey = "", fetchImpl = fetch, ttlMs = 10 * 
       if (!payload || !Array.isArray(payload.data)) throw new Error("OPENROUTER_CATALOG_INVALID");
       const models = payload.data.map(normalizeOpenRouterModel).filter(Boolean);
       models.sort((a, b) => Number(b.free) - Number(a.free) || a.name.localeCompare(b.name));
-      // Keep the complete OpenRouter chat-capable catalogue; do not truncate it.
+      // Keep every eligible :free chat model; never expose paid or merely $0-priced IDs.
       cachedModels = models;
       cachedAt = Date.now();
       return cachedModels;

@@ -4,43 +4,25 @@ const assert = require("node:assert/strict");
 const { test } = require("node:test");
 const { normalizeOpenRouterModel, createOpenRouterCatalog } = require("../model-catalog");
 
-test("catalog normalizes text chat models and computes per-million prices", () => {
-  const model = normalizeOpenRouterModel({
-    id: "provider/model",
-    name: "Provider Model",
-    architecture: { input_modalities: ["text"], output_modalities: ["text"] },
-    pricing: { prompt: "0.000002", completion: "0.000008" },
-    context_length: 128000
-  });
-  assert.deepEqual(model, {
-    id: "provider/model",
-    name: "Provider Model",
-    free: false,
-    freeTier: false,
-    promptPerMillion: 2,
-    completionPerMillion: 8,
-    contextLength: 128000
-  });
+const model = (id, prompt = "0", completion = "0") => ({
+  id,
+  name: id,
+  architecture: { input_modalities: ["text"], output_modalities: ["text"] },
+  pricing: { prompt, completion },
+  context_length: 128000
 });
 
-test("catalog marks zero-priced models free and excludes non-chat or invalid pricing", () => {
-  const free = normalizeOpenRouterModel({
-    id: "provider/free",
-    architecture: { input_modalities: ["text"], output_modalities: ["text"] },
-    pricing: { prompt: "0", completion: "0" }
-  });
+test("catalog accepts only :free text models with zero input and output pricing", () => {
+  const free = normalizeOpenRouterModel(model("provider/model:free"));
   assert.equal(free.free, true);
-  assert.equal(free.freeTier, false);
+  assert.equal(free.freeTier, true);
+  assert.equal(normalizeOpenRouterModel(model("provider/zero-price")), null);
+  assert.equal(normalizeOpenRouterModel(model("provider/paid:free", "0.000001", "0")), null);
   assert.equal(normalizeOpenRouterModel({
-    id: "provider/image",
-    architecture: { input_modalities: ["image"], output_modalities: ["image"] },
-    pricing: { prompt: "0", completion: "0" }
+    ...model("provider/image:free"),
+    architecture: { input_modalities: ["image"], output_modalities: ["image"] }
   }), null);
-  assert.equal(normalizeOpenRouterModel({
-    id: "provider/bad",
-    architecture: { input_modalities: ["text"], output_modalities: ["text"] },
-    pricing: { prompt: "unknown", completion: "0" }
-  }), null);
+  assert.equal(normalizeOpenRouterModel(model("provider/bad:free", "unknown", "0")), null);
 });
 
 test("catalog is unavailable without a server-side API key", async () => {
@@ -52,7 +34,7 @@ test("catalog is unavailable without a server-side API key", async () => {
   assert.equal(calls, 0);
 });
 
-test("catalog caches model data and resolves free and paid models", async () => {
+test("catalog caches only exact :free models", async () => {
   let calls = 0;
   const catalog = createOpenRouterCatalog({
     apiKey: "server-only-test-key",
@@ -63,40 +45,31 @@ test("catalog caches model data and resolves free and paid models", async () => 
       return {
         ok: true,
         json: async () => ({ data: [
-          { id: "provider/paid", name: "Paid Model", architecture: { input_modalities: ["text"], output_modalities: ["text"] }, pricing: { prompt: "0.000001", completion: "0.000002" } },
-          { id: "provider/free", name: "Free Model", architecture: { input_modalities: ["text"], output_modalities: ["text"] }, pricing: { prompt: "0", completion: "0" } }
+          model("provider/paid", "0.000001", "0.000002"),
+          model("provider/zero-price"),
+          model("provider/free:free")
         ] })
       };
     }
   });
   const models = await catalog.listModels();
-  assert.equal(models.length, 2);
-  assert.equal(models[0].id, "provider/free");
-  assert.equal((await catalog.findModel("provider/paid")).free, false);
+  assert.equal(models.length, 1);
+  assert.equal(models[0].id, "provider/free:free");
+  assert.equal(await catalog.findModel("provider/paid"), null);
   assert.equal(calls, 1);
 });
 
-
-test("catalog keeps every free and paid model visible without truncation", async () => {
-  const data = Array.from({ length: 125 }, (_, index) => ({
-    id: "provider/free-" + index,
-    name: "Free " + index,
-    architecture: { input_modalities: ["text"], output_modalities: ["text"] },
-    pricing: { prompt: "0", completion: "0" }
-  }));
-  data.push({
-    id: "provider/paid",
-    name: "Paid Model",
-    architecture: { input_modalities: ["text"], output_modalities: ["text"] },
-    pricing: { prompt: "0.000001", completion: "0.000002" }
-  });
+test("catalog keeps every eligible :free model without truncation", async () => {
+  const data = Array.from({ length: 125 }, (_, index) => model("provider/free-" + index + ":free"));
+  data.push(model("provider/paid", "0.000001", "0.000002"));
+  data.push(model("provider/zero-price"));
   const catalog = createOpenRouterCatalog({
     apiKey: "test-key",
     fetchImpl: async () => ({ ok: true, json: async () => ({ data }) })
   });
   const models = await catalog.listModels();
-  assert.equal(models.filter((model) => model.free).length, 125);
-  assert.equal(models.filter((model) => !model.free).length, 1);
-  assert.ok(models.some((model) => model.id === "provider/free-124"));
-  assert.ok(models.some((model) => model.id === "provider/paid"));
+  assert.equal(models.length, 125);
+  assert.ok(models.every((item) => item.id.endsWith(":free") && item.freeTier === true));
+  assert.ok(models.some((item) => item.id === "provider/free-124:free"));
+  assert.equal(await catalog.findModel("provider/paid"), null);
 });
