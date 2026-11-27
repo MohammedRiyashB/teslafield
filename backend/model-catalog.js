@@ -23,6 +23,7 @@ function normalizeOpenRouterModel(item) {
     id: item.id,
     name: typeof item.name === "string" && item.name.trim() ? item.name.trim() : item.id,
     free,
+    freeTier: item.id.endsWith(":free"),
     promptPerMillion: pricePerMillion(prompt),
     completionPerMillion: pricePerMillion(completion),
     contextLength: Number.isFinite(Number(item.context_length)) ? Number(item.context_length) : null
@@ -62,7 +63,7 @@ function createOpenRouterCatalog({ apiKey = "", fetchImpl = fetch, ttlMs = 10 * 
   async function findModel(id) {
     if (id === FREE_ROUTER_MODEL) {
       if (!apiKey) return null;
-      return { id: FREE_ROUTER_MODEL, name: "OpenRouter Free Auto", free: true, promptPerMillion: 0, completionPerMillion: 0 };
+      return { id: FREE_ROUTER_MODEL, name: "OpenRouter Free Auto", free: true, freeTier: true, promptPerMillion: 0, completionPerMillion: 0 };
     }
     const models = await listModels();
     return models.find((model) => model.id === id) || null;
