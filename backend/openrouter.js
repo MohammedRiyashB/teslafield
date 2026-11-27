@@ -8,6 +8,12 @@ const PROVIDER_CACHE_TTL_MS = 60 * 60 * 1000;
 const PROVIDER_FAILURE_RETRY_MS = 5 * 60 * 1000;
 const MAX_LOGO_BYTES = 256 * 1024;
 const ALLOWED_LOGO_HOSTS = new Set(["openrouter.ai", "t0.gstatic.com"]);
+const REMOVED_FREE_CHAT_MODEL_IDS = new Set([
+  "google/gemma-4-26b-a4b-it:free",
+  "google/gemma-4-31b-it:free",
+  "inclusionai/ling-3.2-flash:free",
+  "recursive/flint-v1.0:free"
+]);
 
 function asText(value) {
   return typeof value === "string" ? value.trim() : "";
@@ -80,6 +86,7 @@ function normalizeProviderRegistry(payload) {
 
 function normalizeFreeChatModel(item, providers) {
   if (!item || typeof item.id !== "string" || !item.id.trim()) return null;
+  if (REMOVED_FREE_CHAT_MODEL_IDS.has(item.id)) return null;
   if (!item.id.endsWith(":free")) return null;
 
   const endpoints = Array.isArray(item.endpoints) ? item.endpoints : [];
@@ -101,6 +108,8 @@ function normalizeFreeChatModel(item, providers) {
     providerSlug,
     providerName: provider ? provider.name : formatProviderLabel(providerSlug),
     providerLogoAvailable: Boolean(provider && provider.logoUrl),
+    // Exact HTTPS icon URL supplied by the OpenRouter provider registry.
+    providerLogoUrl: provider && provider.logoUrl ? provider.logoUrl : null,
     promptPerMillion: 0,
     completionPerMillion: 0,
     contextLength: Number.isFinite(item.context_length) ? item.context_length : null
@@ -339,6 +348,7 @@ module.exports = {
   safeProviderLogoUrl,
   normalizeProviderRegistry,
   normalizeFreeChatModel,
+  REMOVED_FREE_CHAT_MODEL_IDS,
   buildCatalogDiagnostics,
   createOpenRouterIntegration
 };

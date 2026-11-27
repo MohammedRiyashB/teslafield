@@ -77,7 +77,14 @@
   let pendingGuestPrompt = "";
   let guestConversationStarted = false;
   let userPreferences = { responseStyle: "balanced", textSize: "standard", reduceMotion: false, model: "teslafield" };
-  const MODEL_CATALOG_CACHE_KEY = "teslafield.openrouter.catalog.v3";
+  const MODEL_CATALOG_CACHE_KEY = "teslafield.openrouter.catalog.v4";
+  const REMOVED_OPENROUTER_MODEL_IDS = new Set([
+  "google/gemma-4-26b-a4b-it:free",
+  "google/gemma-4-31b-it:free",
+  "inclusionai/ling-3.2-flash:free",
+  "recursive/flint-v1.0:free"
+]);
+  const isRemovedOpenRouterModel = (id) => REMOVED_OPENROUTER_MODEL_IDS.has(String(id || ""));
   const TESLAFIELD_MODEL = { id: "teslafield", name: "Teslafield B1", free: true, freeTier: true, provider: "TeslafieldAI" };
   try {
     localStorage.removeItem("teslafield.openrouter.models.free.v2");
@@ -85,7 +92,7 @@
   } catch (error) {}
   function isEligibleCachedModel(model) {
     return !!(model && typeof model.id === "string" && typeof model.name === "string" &&
-      model.free === true && model.freeTier === true && model.provider === "OpenRouter" &&
+      !isRemovedOpenRouterModel(model.id) && model.free === true && model.freeTier === true && model.provider === "OpenRouter" &&
       typeof model.providerSlug === "string" && model.providerSlug === model.id.split("/")[0] &&
       typeof model.providerName === "string" && /^[A-Za-z0-9._:/-]{1,160}$/.test(model.id) &&
       model.id.endsWith(":free"));
@@ -1921,15 +1928,31 @@
       ? model.providerName.trim()
       : slug.replace(/[-_]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 
+    const proxyLogo = model.providerLogoAvailable
+      ? API + "/api/v1/openrouter/providers/" + encodeURIComponent(slug) + "/logo"
+      : "";
     return {
       key: slug || "provider",
       label: label.toUpperCase(),
-      // OpenRouter supplies the provider icon URL. Teslafield proxies only
-      // that registry URL; no company-domain logo guessing or favicon map.
-      logo: model.providerLogoAvailable
-        ? API + "/api/v1/openrouter/providers/" + encodeURIComponent(slug) + "/logo"
-        : ""
+      // Use the exact validated icon URL from OpenRouter's registry first.
+      // The same icon can then be retried through our server-side image proxy.
+      logo: model.providerLogoUrl || proxyLogo,
+      proxyLogo
     };
+  }
+
+  function setProviderLogoSource(image, brand) {
+    image.decoding = "async";
+    image.onerror = () => {
+      const proxy = brand && brand.proxyLogo;
+      if (proxy && image.dataset.logoProxyAttempted !== "true" && image.src !== proxy) {
+        image.dataset.logoProxyAttempted = "true";
+        image.src = proxy;
+        return;
+      }
+      image.hidden = true;
+    };
+    image.src = brand.logo;
   }
 
   function renderModelPicker() {
@@ -1945,9 +1968,9 @@
       selectedName.textContent = selected.id === "teslafield" ? "Teslafield B1" : selected.name;
       selectedLogo.hidden = !brand.logo;
       if (brand.logo) {
-        selectedLogo.src = brand.logo;
         selectedLogo.alt = brand.label + " official logo";
-        selectedLogo.onerror = () => { selectedLogo.hidden = true; };
+        selectedLogo.classList.add("model-option-logo");
+        setProviderLogoSource(selectedLogo, brand);
       }
     }
     list.replaceChildren();
@@ -1984,10 +2007,9 @@
       const brand = group.brand || getModelBrand(group.models[0]);
       if (brand.logo) {
         const logo = document.createElement("img");
-        logo.src = brand.logo;
         logo.alt = group.title + " official logo";
         logo.className = "model-provider-logo";
-        logo.onerror = () => { logo.hidden = true; };
+        setProviderLogoSource(logo, brand);
         heading.appendChild(logo);
       }
       const label = document.createElement("span");
@@ -2005,10 +2027,9 @@
         let logo = null;
         if (modelBrand.logo) {
           logo = document.createElement("img");
-          logo.src = modelBrand.logo;
           logo.alt = modelBrand.label + " official logo";
           logo.className = "model-option-logo";
-          logo.onerror = () => { logo.hidden = true; };
+          setProviderLogoSource(logo, modelBrand);
         }
         const copy = document.createElement("span");
         copy.className = "model-option-copy";
