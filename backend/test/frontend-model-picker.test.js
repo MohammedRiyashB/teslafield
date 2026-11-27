@@ -140,3 +140,14 @@ test("completed streaming replies replace only the live bubble without rebuildin
   const cloudSync = app.slice(app.indexOf("async function syncCloudHistory()"), app.indexOf("function queueCloudHistorySync()"));
   assert.match(cloudSync, /if \(generating\) renderHistory\(\);\s*else renderConversation\(\);/);
 });
+
+
+test("opening the model picker repaints options and guarantees Teslafield B1 when the catalogue is empty", () => {
+  const picker = app.slice(app.indexOf("function openModelPicker()"), app.indexOf("function closeModelPicker()"));
+  assert.match(picker, /renderModelPicker\(\)/);
+  assert.match(picker, /list\.querySelector\("\.model-picker-option"\)/);
+  assert.match(picker, /fallback\.dataset\.modelId = "teslafield"/);
+  assert.match(picker, /name\.textContent = "Teslafield B1"/);
+  assert.match(picker, /meta\.textContent = "FREE · TeslafieldAI"/);
+  assert.match(picker, /loadModelCatalog\(\{ force: true \}\)/);
+});
