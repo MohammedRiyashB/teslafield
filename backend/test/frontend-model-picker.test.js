@@ -87,6 +87,9 @@ test("model picker renders immediately, shows loading feedback and can retry the
   assert.match(app, /MODEL_CATALOG_CACHE_KEY/);
   assert.match(app, /readCachedProviderModels\(\)/);
   assert.match(app, /localStorage\.setItem\(MODEL_CATALOG_CACHE_KEY/);
+  assert.match(app, /teslafield\.openrouter\.catalog\.v3/);
+  assert.match(app, /localStorage\.removeItem\(sourceKey\)/);
+  assert.match(app, /Migrate the last-known-good v3 catalogue/);
   assert.doesNotMatch(app, /modelCatalogStatus = hasProviderModels \? "Refreshing models…"/);
   assert.ok(app.includes("AbortSignal.timeout(25000)"));
   assert.ok(app.includes("loadModelCatalog({ force: true })"));
