@@ -126,6 +126,36 @@ test("chat stream endpoint also requires Firebase authentication", async () => {
   assert.equal((await response.json()).error, "AUTH_REQUIRED");
 });
 
+test("cloud conversation endpoints require Firebase authentication for every method", async () => {
+  const requests = [
+    fetch(baseUrl + "/api/v1/conversations"),
+    fetch(baseUrl + "/api/v1/conversations", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversation: { id: "chat_1", messages: [] } })
+    }),
+    fetch(baseUrl + "/api/v1/conversations?id=chat_1", { method: "DELETE" })
+  ];
+  const responses = await Promise.all(requests);
+  for (const response of responses) {
+    assert.equal(response.status, 401);
+    assert.equal((await response.json()).error, "AUTH_REQUIRED");
+  }
+});
+
+test("CORS preflight advertises cloud history methods", async () => {
+  const response = await fetch(baseUrl + "/api/v1/conversations", {
+    method: "OPTIONS",
+    headers: {
+      Origin: trustedOrigin,
+      "Access-Control-Request-Method": "PUT",
+      "Access-Control-Request-Headers": "content-type,authorization"
+    }
+  });
+  assert.equal(response.status, 204);
+  assert.match(response.headers.get("access-control-allow-methods") || "", /PUT/);
+});
+
 test("OAuth discovery advertises the protected MCP resource and PKCE S256", async () => {
   const [resourceResponse, authorizationResponse] = await Promise.all([
     fetch(baseUrl + "/.well-known/oauth-protected-resource"),
