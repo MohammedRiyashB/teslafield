@@ -262,6 +262,10 @@
   function updateAccountUI() {
     const signedIn = !!currentUser;
     document.body.classList.toggle("signed-in", signedIn);
+    const modelSelectorRow = document.querySelector(".composer-model-row");
+    if (modelSelectorRow) modelSelectorRow.hidden = !signedIn;
+    const attachmentControl = $("attachmentButton");
+    if (attachmentControl) attachmentControl.hidden = !signedIn;
     const displayName = signedIn ? (currentUser.displayName || (currentUser.email || "Google user").split("@")[0]) : "TeslafieldAI";
     $("accountDisplayName").textContent = displayName;
     $("accountDisplayEmail").textContent = signedIn ? (currentUser.email || "Google account") : "Sign in to your account";
