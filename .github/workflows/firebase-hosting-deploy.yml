@@ -127,7 +127,7 @@ jobs:
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-icon-192.png' && icon.sizes === '192x192'));
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-icon-512.png' && icon.sizes === '512x512'));
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-pwa-icon.svg'));
-          assert.ok(fs.readFileSync('sw.js', 'utf8').includes('teslafield-pwa-shell-v13'));
+          assert.ok(fs.readFileSync('sw.js', 'utf8').includes('teslafield-pwa-shell-v14'));
           assert.ok(fs.readFileSync('theme-init.js', 'utf8').includes('teslafield.appearance.v2'));
           const chatEngine = fs.readFileSync('huggingface/chat-space/app.py', 'utf8');
           assert.ok(chatEngine.includes('MODEL_ID = "Qwen/Qwen3-0.6B"'));
@@ -257,7 +257,7 @@ jobs:
           curl --fail --silent --show-error "${BASE}/manifest.webmanifest" -o /tmp/teslafield-manifest.json
           node -e "const m=JSON.parse(require('node:fs').readFileSync('/tmp/teslafield-manifest.json','utf8')); if(m.id!=='/' || m.display!=='standalone') process.exit(1)"
           curl --fail --silent --show-error "${BASE}/sw.js?verify=${GITHUB_SHA}" -o /tmp/teslafield-sw.js
-          grep -q "teslafield-pwa-shell-v13" /tmp/teslafield-sw.js
+          grep -q "teslafield-pwa-shell-v14" /tmp/teslafield-sw.js
           curl --fail --silent --show-error "${BASE}/teslafield-pwa-icon.svg" -o /tmp/teslafield-icon.svg
           grep -q "<svg" /tmp/teslafield-icon.svg
           curl --fail --silent --show-error "${BASE}/teslafield-icon-192.png" -o /tmp/teslafield-icon-192.png
@@ -322,3 +322,4 @@ jobs:
           if grep -Eiq "<!doctype html|<html" /tmp/teslafield-theme-init.js; then echo "theme-init.js resolved to the HTML fallback instead of JavaScript"; exit 1; fi
           grep -q "teslafield.appearance.v2" /tmp/teslafield-theme-init.js
           echo "Verified live Teslafield guest UI, consent controls, legal pages, PNG logo, CSS and application JavaScript."
+

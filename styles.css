@@ -2649,3 +2649,54 @@ body.signed-in:not(.guest-mode) .composer-actions{
     gap:6px!important;
   }
 }
+
+
+/* TESLAFIELD — one unified charcoal finish for every signed-in chat control.
+   Keep all control surfaces identical; use cool off-white for readable icons/text. */
+body.signed-in:not(.guest-mode) .topbar .icon-button,
+body.signed-in:not(.guest-mode) .connect-entry-button,
+body.signed-in:not(.guest-mode) .composer-model-row .model-picker-button,
+body.signed-in:not(.guest-mode) .composer .attachment-button,
+body.signed-in:not(.guest-mode) .composer .mic-button,
+body.signed-in:not(.guest-mode) .composer .send-button{
+  background:#212224!important;
+  background-color:#212224!important;
+  background-image:none!important;
+  border:1px solid #343638!important;
+  color:#E3E5E8!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+body.signed-in:not(.guest-mode) .topbar .icon-button:hover,
+body.signed-in:not(.guest-mode) .connect-entry-button:hover,
+body.signed-in:not(.guest-mode) .composer-model-row .model-picker-button:hover,
+body.signed-in:not(.guest-mode) .composer .attachment-button:hover,
+body.signed-in:not(.guest-mode) .composer .mic-button:hover,
+body.signed-in:not(.guest-mode) .composer .send-button:hover,
+body.signed-in:not(.guest-mode) .composer-model-row .model-picker-wrap.is-open .model-picker-button{
+  background:#212224!important;
+  background-color:#212224!important;
+  border-color:#505358!important;
+  color:#E3E5E8!important;
+  box-shadow:0 2px 8px rgba(0,0,0,.18)!important;
+}
+body.signed-in:not(.guest-mode) .topbar .icon-button svg,
+body.signed-in:not(.guest-mode) .connect-entry-button svg,
+body.signed-in:not(.guest-mode) .composer-model-row .model-picker-button svg,
+body.signed-in:not(.guest-mode) .composer .attachment-button svg,
+body.signed-in:not(.guest-mode) .composer .mic-button svg,
+body.signed-in:not(.guest-mode) .composer .send-button svg{
+  color:#E3E5E8!important;
+  stroke:currentColor!important;
+}
+body.signed-in:not(.guest-mode) .connect-entry-button .infinity-mark{
+  color:#E3E5E8!important;
+}
+body.signed-in:not(.guest-mode) .composer .send-button .stop-icon rect{
+  fill:#FFFFFF!important;
+  stroke:#FFFFFF!important;
+}
+body.signed-in:not(.guest-mode) .composer .send-button .send-icon path{
+  stroke:#FFFFFF!important;
+}
