@@ -64,6 +64,7 @@ demo = gr.Interface(
     title="TESLAFIELD Speech Engine",
     description="Local Whisper Base speech recognition for Tamil and English. Audio is transcribed in its original language.",
     examples=None,
+    delete_cache=(60, 600),
 )
 
 demo.queue()
