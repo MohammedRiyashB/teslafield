@@ -54,6 +54,8 @@ Firebase Authentication must have the Google provider enabled and `teslafieldai.
 
 ## Security and scaling notes
 
+Chat completion requests may send an `Idempotency-Key` header. The API scopes this key to the authenticated Firebase user and request payload, coalesces concurrent retries and caches successful responses for five minutes. Reusing the same key with different request content returns HTTP 409. This first implementation is process-local and bounded to 1,000 entries; it protects retries on a single API instance only. It is not a distributed lock. Keep a single Render instance until both OAuth authorization state and idempotency state are moved to a shared store.
+
 OAuth authorization requests and single-use authorization codes are held in process memory with short expirations; access tokens are HMAC-signed and resource-scoped. Keep this Render service at one instance for this initial release. Before scaling to multiple instances or using multiple regions, move the short-lived authorization state and one-time code store to shared Redis/Key Value or a database.
 
 Do not add model provider keys, OAuth signing secrets, Firebase service-account keys or user tokens to frontend files or the public repository.
