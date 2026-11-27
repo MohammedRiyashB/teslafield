@@ -21,14 +21,17 @@ test("composer exposes the compact branded model capsule and accessible popup", 
   assert.ok(!html.includes('id="plusButton"'), "Model capsule replaces the plus control");
 });
 
-test("model picker shows Teslafield B1 and provider branding", () => {
+test("model picker uses authentic provider website logos and never creates initials badges", () => {
   assert.match(app, /model\.id === "teslafield" \? "Teslafield B1"/);
   assert.match(app, /function getModelBrand\(model\)/);
-  assert.match(app, /function providerFallbackLogo\(label, color\)/);
-  assert.match(app, /fallbackLogo/);
-  assert.match(app, /nvidia\.com/);
-  assert.match(app, /baidu\.com/);
-  assert.match(app, /recursive\.ai/);
+  assert.doesNotMatch(app, /function providerFallbackLogo|fallbackLogo|data:image\/svg\+xml/);
+  assert.match(app, /https:\/\/www\.google\.com\/s2\/favicons\?domain=/);
+  for (const provider of ["nvidia\.com", "baidu\.com", "recursive\.ai", "google\.com", "deepseek\.com", "qwen\.ai", "openai\.com", "anthropic\.com"]) {
+    assert.match(app, new RegExp(provider));
+  }
+  assert.match(app, /selectedLogo\.hidden = !brand\.logo/);
+  assert.match(app, /logo\.onerror = \(\) => \{ logo\.hidden = true; \}/);
+  assert.match(app, /if \(modelBrand\.logo\) \{/);
   assert.match(app, /data\.catalogError/);
   assert.match(app, /OpenRouter returned no eligible chat models/);
   assert.match(app, /Provider models have not loaded yet/);
@@ -82,10 +85,10 @@ test("model picker renders immediately, shows loading feedback and can retry the
 });
 
 
-test("model picker shows provider logos and rate-limit text without FREE badges", () => {
+test("model picker displays the official provider logo beside each model and keeps rate-limit text", () => {
   assert.match(app, /className = "model-option-logo"/);
   assert.match(app, /modelBrand\.logo/);
-  assert.match(app, /if \(logo\.src !== modelBrand\.fallbackLogo\) logo\.src = modelBrand\.fallbackLogo/);
+  assert.match(app, /modelBrand\.label \+ " official logo"/);
   assert.match(app, /async function consumeChatStream\(response, onText\)/);
   assert.match(app, /payload\.choices\[0\]\.delta/);
   assert.match(app, /meta\.textContent = model\.provider === "OpenRouter" \? "Rate-limited" : "TeslafieldAI"/);

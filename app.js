@@ -1883,71 +1883,91 @@
     }
   }
 
-  function providerFallbackLogo(label, color) {
-    const initials = String(label || "AI").split(/\s+/).filter(Boolean).map((part) => part.charAt(0)).join("").slice(0, 2).toUpperCase() || "AI";
-    const safeColor = /^#[0-9a-f]{6}$/i.test(color || "") ? color : "#586174";
-    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect x="2" y="2" width="60" height="60" rx="18" fill="' + safeColor + '"/><text x="32" y="39" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="700" fill="#fff">' + initials + '</text></svg>';
-    return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
-  }
-
   function getModelBrand(model) {
     if (!model || model.id === "teslafield") {
       return {
-        key: "teslafield", label: "TESLAFIELD", domain: "teslafieldai.web.app",
-        logo: "/teslafieldai-logo.png?v=20261127-04",
-        fallbackLogo: providerFallbackLogo("TF", "#252525")
+        key: "teslafield",
+        label: "TESLAFIELD",
+        domain: "teslafieldai.web.app",
+        logo: "/teslafieldai-logo.png?v=20261127-05"
       };
     }
+
     const slug = String(model.id || "").split("/")[0].toLowerCase();
     const brands = {
-      baidu: { label: "BAIDU", domain: "baidu.com", color: "#2932E1" },
-      nvidia: { label: "NVIDIA", domain: "nvidia.com", color: "#76B900" },
-      recursive: { label: "RECURSIVE", domain: "recursive.ai", color: "#5665C0" },
-      perplexity: { label: "PERPLEXITY", domain: "perplexity.ai", color: "#20808D" },
-      google: { label: "GOOGLE", domain: "google.com", color: "#4285F4" },
-      inclusionai: { label: "INCLUSIONAI", domain: "inclusion.ai", color: "#5C61D8" },
-      liquid: { label: "LIQUID AI", domain: "liquid.ai", color: "#276D8C" },
-      "particle-ai": { label: "PARTICLE AI", domain: "particle.network", color: "#6854C8" },
-      openai: { label: "OPENAI", domain: "openai.com", color: "#10A37F" },
-      anthropic: { label: "ANTHROPIC", domain: "anthropic.com", color: "#C17B54" },
-      "meta-llama": { label: "META", domain: "meta.com", color: "#0866FF" },
-      meta: { label: "META", domain: "meta.com", color: "#0866FF" },
-      deepseek: { label: "DEEPSEEK", domain: "deepseek.com", color: "#3978D5" },
-      qwen: { label: "QWEN", domain: "qwen.ai", color: "#6157C8" },
-      alibaba: { label: "ALIBABA", domain: "alibabagroup.com", color: "#F28C28" },
-      mistral: { label: "MISTRAL", domain: "mistral.ai", color: "#F26B38" },
-      mistralai: { label: "MISTRAL", domain: "mistral.ai", color: "#F26B38" },
-      "x-ai": { label: "X AI", domain: "x.ai", color: "#222222" },
-      cohere: { label: "COHERE", domain: "cohere.com", color: "#39594D" },
-      microsoft: { label: "MICROSOFT", domain: "microsoft.com", color: "#5E5E5E" },
-      amazon: { label: "AMAZON", domain: "aboutamazon.com", color: "#FF9900" },
-      bytedance: { label: "BYTEDANCE", domain: "bytedance.com", color: "#283B70" },
-      moonshotai: { label: "MOONSHOT", domain: "moonshot.ai", color: "#4B62AD" },
-      minimax: { label: "MINIMAX", domain: "minimax.io", color: "#6257BD" },
-      nousresearch: { label: "NOUS", domain: "nousresearch.com", color: "#8861B7" },
-      "01-ai": { label: "01 AI", domain: "01.ai", color: "#4267A8" },
-      allenai: { label: "ALLEN AI", domain: "allenai.org", color: "#316B9B" },
-      arcee: { label: "ARCEE", domain: "arcee.ai", color: "#425C8A" },
-      "arcee-ai": { label: "ARCEE", domain: "arcee.ai", color: "#425C8A" },
-      stepfun: { label: "STEPFUN", domain: "stepfun.com", color: "#4B6FB8" },
-      tngtech: { label: "TNG", domain: "tngtech.com", color: "#466C9D" },
-      "z-ai": { label: "Z AI", domain: "z.ai", color: "#3E526F" },
-      upstage: { label: "UPSTAGE", domain: "upstage.ai", color: "#315C9B" }
+      "01-ai": { label: "01 AI", domain: "01.ai" },
+      ai21: { label: "AI21", domain: "ai21.com" },
+      alibaba: { label: "ALIBABA", domain: "alibabagroup.com" },
+      allenai: { label: "ALLEN AI", domain: "allenai.org" },
+      amazon: { label: "AMAZON", domain: "aboutamazon.com" },
+      anthropic: { label: "ANTHROPIC", domain: "anthropic.com" },
+      arcee: { label: "ARCEE", domain: "arcee.ai" },
+      "arcee-ai": { label: "ARCEE", domain: "arcee.ai" },
+      baichuan: { label: "BAICHUAN", domain: "baichuan-ai.com" },
+      baidu: { label: "BAIDU", domain: "baidu.com" },
+      "black-forest-labs": { label: "BLACK FOREST LABS", domain: "blackforestlabs.ai" },
+      bytedance: { label: "BYTEDANCE", domain: "bytedance.com" },
+      "bytedance-seed": { label: "BYTEDANCE", domain: "bytedance.com" },
+      cohere: { label: "COHERE", domain: "cohere.com" },
+      cognitivecomputations: { label: "COGNITIVE COMPUTATIONS", domain: "cognitivecomputations.com" },
+      databricks: { label: "DATABRICKS", domain: "databricks.com" },
+      deepcogito: { label: "DEEPCOGITO", domain: "deepcogito.com" },
+      deepseek: { label: "DEEPSEEK", domain: "deepseek.com" },
+      eleutherai: { label: "ELEUTHERAI", domain: "eleuther.ai" },
+      google: { label: "GOOGLE", domain: "google.com" },
+      gryphe: { label: "GRYPHE", domain: "gryphe.com" },
+      huggingface: { label: "HUGGING FACE", domain: "huggingface.co" },
+      ibm: { label: "IBM", domain: "ibm.com" },
+      inclusionai: { label: "INCLUSIONAI", domain: "inclusion.ai" },
+      inflection: { label: "INFLECTION", domain: "inflection.ai" },
+      internlm: { label: "INTERNLM", domain: "internlm.org" },
+      liquid: { label: "LIQUID AI", domain: "liquid.ai" },
+      meta: { label: "META", domain: "meta.com" },
+      "meta-llama": { label: "META", domain: "meta.com" },
+      microsoft: { label: "MICROSOFT", domain: "microsoft.com" },
+      minimax: { label: "MINIMAX", domain: "minimax.io" },
+      minimaxai: { label: "MINIMAX", domain: "minimax.io" },
+      mistral: { label: "MISTRAL", domain: "mistral.ai" },
+      mistralai: { label: "MISTRAL", domain: "mistral.ai" },
+      moonshot: { label: "MOONSHOT", domain: "moonshot.ai" },
+      moonshotai: { label: "MOONSHOT", domain: "moonshot.ai" },
+      morph: { label: "MORPH", domain: "morphllm.com" },
+      nous: { label: "NOUS", domain: "nousresearch.com" },
+      nousresearch: { label: "NOUS", domain: "nousresearch.com" },
+      nvidia: { label: "NVIDIA", domain: "nvidia.com" },
+      openai: { label: "OPENAI", domain: "openai.com" },
+      perplexity: { label: "PERPLEXITY", domain: "perplexity.ai" },
+      phind: { label: "PHIND", domain: "phind.com" },
+      "particle-ai": { label: "PARTICLE AI", domain: "particle.network" },
+      "prime-intellect": { label: "PRIME INTELLECT", domain: "primeintellect.ai" },
+      qwen: { label: "QWEN", domain: "qwen.ai" },
+      reka: { label: "REKA", domain: "reka.ai" },
+      recursive: { label: "RECURSIVE", domain: "recursive.ai" },
+      sao10k: { label: "SAO10K", domain: "sao10k.com" },
+      snowflake: { label: "SNOWFLAKE", domain: "snowflake.com" },
+      sophosympatheia: { label: "SOPHOSYMPATHEIA", domain: "huggingface.co" },
+      stepfun: { label: "STEPFUN", domain: "stepfun.com" },
+      tencent: { label: "TENCENT", domain: "tencent.com" },
+      "the-drummer": { label: "THE DRUMMER", domain: "thedrummer.ai" },
+      thudm: { label: "THUDM", domain: "tsinghua.edu.cn" },
+      tngtech: { label: "TNG", domain: "tngtech.com" },
+      undi95: { label: "UNDI95", domain: "huggingface.co" },
+      upstage: { label: "UPSTAGE", domain: "upstage.ai" },
+      writer: { label: "WRITER", domain: "writer.com" },
+      "x-ai": { label: "X AI", domain: "x.ai" },
+      "z-ai": { label: "Z AI", domain: "z.ai" }
     };
-    const brand = brands[slug] || {
-      label: (slug || "AI PROVIDER").replace(/[-_]/g, " ").toUpperCase(),
-      domain: "",
-      color: "#586174"
-    };
-    const fallbackLogo = providerFallbackLogo(brand.label, brand.color);
+    const brand = brands[slug];
+
     return {
       key: slug || "provider",
-      label: brand.label,
-      domain: brand.domain,
-      fallbackLogo,
-      logo: brand.domain
+      label: brand ? brand.label : (slug || "AI PROVIDER").replace(/[-_]/g, " ").toUpperCase(),
+      domain: brand ? brand.domain : "",
+      // Use the provider's own website favicon as its official brand mark.
+      // Unknown providers stay logo-less instead of receiving a fabricated initials badge.
+      logo: brand
         ? "https://www.google.com/s2/favicons?domain=" + encodeURIComponent(brand.domain) + "&sz=64"
-        : fallbackLogo
+        : ""
     };
   }
 
@@ -1962,11 +1982,12 @@
     if (selected) {
       const brand = getModelBrand(selected);
       selectedName.textContent = selected.id === "teslafield" ? "Teslafield B1" : selected.name;
-      selectedLogo.src = brand.logo || brand.fallbackLogo;
-      selectedLogo.alt = "";
-      selectedLogo.onerror = () => {
-        if (selectedLogo.src !== brand.fallbackLogo) selectedLogo.src = brand.fallbackLogo;
-      };
+      selectedLogo.hidden = !brand.logo;
+      if (brand.logo) {
+        selectedLogo.src = brand.logo;
+        selectedLogo.alt = brand.label + " official logo";
+        selectedLogo.onerror = () => { selectedLogo.hidden = true; };
+      }
     }
     list.replaceChildren();
     const status = $("modelPickerStatus");
@@ -1992,12 +2013,10 @@
       const brand = group.brand || getModelBrand(group.models[0]);
       if (brand.logo) {
         const logo = document.createElement("img");
-        logo.src = brand.logo || brand.fallbackLogo;
-        logo.alt = group.title + " logo";
+        logo.src = brand.logo;
+        logo.alt = group.title + " official logo";
         logo.className = "model-provider-logo";
-        logo.onerror = () => {
-          if (logo.src !== brand.fallbackLogo) logo.src = brand.fallbackLogo;
-        };
+        logo.onerror = () => { logo.hidden = true; };
         heading.appendChild(logo);
       }
       const label = document.createElement("span");
@@ -2011,14 +2030,15 @@
         option.setAttribute("role", "option");
         option.setAttribute("aria-selected", String(model.id === (userPreferences.model || "teslafield")));
         option.dataset.modelId = model.id;
-        const logo = document.createElement("img");
         const modelBrand = getModelBrand(model);
-        logo.src = modelBrand.logo || modelBrand.fallbackLogo;
-        logo.alt = modelBrand.label + " logo";
-        logo.className = "model-option-logo";
-        logo.onerror = () => {
-          if (logo.src !== modelBrand.fallbackLogo) logo.src = modelBrand.fallbackLogo;
-        };
+        let logo = null;
+        if (modelBrand.logo) {
+          logo = document.createElement("img");
+          logo.src = modelBrand.logo;
+          logo.alt = modelBrand.label + " official logo";
+          logo.className = "model-option-logo";
+          logo.onerror = () => { logo.hidden = true; };
+        }
         const copy = document.createElement("span");
         copy.className = "model-option-copy";
         const name = document.createElement("strong");
@@ -2029,7 +2049,8 @@
         const check = document.createElement("span");
         check.className = "model-option-check";
         check.textContent = model.id === (userPreferences.model || "teslafield") ? "✓" : "";
-        option.append(logo, copy, check);
+        if (logo) option.append(logo);
+        option.append(copy, check);
         option.addEventListener("click", () => {
           const select = $("modelSelector");
           select.value = model.id;
