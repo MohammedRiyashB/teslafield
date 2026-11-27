@@ -252,15 +252,21 @@ jobs:
           echo "TESLAFIELD static files prepared."
 
       - name: Deploy Firestore security rules
+        id: deploy_firestore_rules
+        continue-on-error: true
         env:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TESLAFIELDAI }}
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/teslafield-firebase-service-account.json
         run: |
           set -euo pipefail
+          trap 'rm -f "$GOOGLE_APPLICATION_CREDENTIALS"' EXIT
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$GOOGLE_APPLICATION_CREDENTIALS"
           chmod 600 "$GOOGLE_APPLICATION_CREDENTIALS"
           npx --yes firebase-tools@latest deploy --only firestore:rules --project teslafieldai --non-interactive --force
-          rm -f "$GOOGLE_APPLICATION_CREDENTIALS"
+
+      - name: Warn when Firestore rules could not be deployed
+        if: steps.deploy_firestore_rules.outcome != 'success'
+        run: echo "::warning::Firestore Rules deployment needs the Firebase Rules Admin permission on the GitHub Actions service account. Hosting will deploy; compact share links will use the compatibility format until rules are published."
 
       - name: Deploy Firebase Hosting live
         uses: FirebaseExtended/action-hosting-deploy@v0

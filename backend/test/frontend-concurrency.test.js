@@ -133,13 +133,14 @@ test("long streams continue the same selected model and keep one live bubble", (
   assert.match(source, /streamingBubble\.body\.classList\.remove\("is-revealing"\)/);
 });
 
-test("new share links store response on the API and use a short ID-only URL", () => {
+test("share links prefer a short API ID and retain the old URL only as a failure fallback", () => {
   const start = app.indexOf("async function shareAssistantMessage(content)");
   const end = app.indexOf("function base64UrlEncode(", start + 1);
   const source = app.slice(start, end);
   assert.match(source, /API \+ "\/api\/v1\/shares"/);
   assert.match(source, /location\.origin \+ "\/share\/" \+ result\.id/);
-  assert.doesNotMatch(source, /\?data=/);
+  assert.match(source, /const shareUrl = location\.origin \+ "\/share\/" \+ result\.id/);
+  assert.match(source, /compatibilityUrl = location\.origin \+ "\/share\/" \+ id \+ "\?data="/);
 });
 
 test("shared response page supports old compressed links and fetches new ID links", () => {
@@ -149,4 +150,15 @@ test("shared response page supports old compressed links and fetches new ID link
   assert.match(source, /legacyPayload/);
   assert.match(source, /API \+ "\/api\/v1\/shares\/" \+/);
   assert.match(source, /DecompressionStream/);
+});
+
+ 
+test("share creation falls back to the legacy compressed URL when short storage is unavailable", () => {
+  const start = app.indexOf("async function shareAssistantMessage(content)");
+  const end = app.indexOf("function base64UrlEncode(", start + 1);
+  const source = app.slice(start, end);
+  assert.match(source, /compatibilityUrl/);
+  assert.match(source, /CompressionStream\("gzip"\)/);
+  assert.match(source, /\?data=/);
+  assert.match(source, /Short share storage is unavailable/);
 });
