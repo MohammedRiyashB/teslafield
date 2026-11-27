@@ -108,11 +108,13 @@ test("catalog exposes diagnostic counts for endpoint-filtered catalogue results"
   assert.equal((await catalog.listModels()).length, 1);
   assert.deepEqual(catalog.getDiagnostics(), {
     textOutputCatalogCount: 1,
+    chatEndpointCatalogCount: 1,
     freeVariantCount: 1,
     freeChatEndpointCount: 1,
     freeTextChatCandidateCount: 1,
     excludedKnownModelCount: 0,
-    eligibleModelCount: 1
+    eligibleModelCount: 1,
+    freeChatModelIds: ["particle-ai/particle-1:free"]
   });
 });
 
