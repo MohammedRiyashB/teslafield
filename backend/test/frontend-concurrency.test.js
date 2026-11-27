@@ -32,3 +32,16 @@ test("regenerateLast shares the same in-flight guard", () => {
   assert.match(source, /sendPending = true;/);
   assert.match(source, /finally \{\s*sendPending = false;\s*\}/);
 });
+
+
+test("requestReply generates one idempotency key before its retry loop", () => {
+  const start = app.indexOf("async function requestReply(chat)");
+  const end = app.indexOf("function showGuestContinueCard()", start + 1);
+  assert.ok(start >= 0 && end > start, "Could not locate requestReply function");
+  const source = app.slice(start, end);
+  const keyAt = source.indexOf("const idempotencyKey =");
+  const requestAt = source.indexOf('const chatRequest =');
+  const retryAt = source.indexOf("for (let attempt = 0; attempt < 3; attempt += 1)");
+  assert.ok(keyAt >= 0 && requestAt > keyAt && retryAt > requestAt);
+  assert.match(source, /"Idempotency-Key": idempotencyKey/);
+});
