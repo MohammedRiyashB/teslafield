@@ -2097,6 +2097,48 @@
     const popup = $("modelPickerPopup");
     if (!popup) return;
     closeMenus("modelPickerButton");
+
+    // Repaint on every open instead of relying only on the one-time startup render.
+    // This also recovers when auth restore or an interrupted catalogue refresh left
+    // the popup shell visible but its options were never painted.
+    try {
+      renderModelPicker();
+    } catch (error) {
+      console.error("Model picker render failed:", error);
+    }
+
+    // Teslafield B1 is the guaranteed local free option. Never let an empty
+    // provider catalogue or a failed render leave the selector completely blank.
+    const list = $("modelPickerList");
+    if (list && !list.querySelector(".model-picker-option")) {
+      const fallback = document.createElement("button");
+      fallback.type = "button";
+      fallback.className = "model-picker-option";
+      fallback.setAttribute("role", "option");
+      fallback.dataset.modelId = "teslafield";
+      fallback.setAttribute("aria-selected", String((userPreferences.model || "teslafield") === "teslafield"));
+      const copy = document.createElement("span");
+      copy.className = "model-option-copy";
+      const name = document.createElement("strong");
+      name.textContent = "Teslafield B1";
+      const meta = document.createElement("small");
+      meta.textContent = "FREE · TeslafieldAI";
+      copy.append(name, meta);
+      const check = document.createElement("span");
+      check.className = "model-option-check";
+      check.textContent = (userPreferences.model || "teslafield") === "teslafield" ? "✓" : "";
+      fallback.append(copy, check);
+      fallback.addEventListener("click", () => {
+        userPreferences.model = "teslafield";
+        try { localStorage.setItem("teslafield.preferences.v1", JSON.stringify(userPreferences)); } catch (error) {}
+        renderModelSelector();
+        renderModelPicker();
+        closeModelPicker();
+        toast("Teslafield B1 selected.");
+      });
+      list.appendChild(fallback);
+    }
+
     popup.hidden = false;
     $("modelPickerButton").setAttribute("aria-expanded", "true");
     $("modelPickerWrap").classList.add("is-open");
