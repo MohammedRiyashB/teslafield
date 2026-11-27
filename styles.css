@@ -1817,3 +1817,49 @@ body.guest-mode .composer-actions{column-gap:16px!important;gap:16px!important}
 
 /* Keep model selection out of the public welcome and guest experience. */
 body:not(.signed-in) .composer-model-row{display:none}
+
+
+/* Floating model selector lives OUTSIDE the message box. */
+.composer-shell{width:min(680px,100%);margin:0 auto}
+.composer-model-row{
+  position:relative;z-index:12;
+  display:flex;align-items:center;justify-content:flex-start;
+  width:100%;min-height:30px;margin:0 0 7px;padding:0 2px;
+}
+.composer-model-row .model-picker-button{
+  height:29px;max-width:min(48vw,190px);padding:0 9px;gap:6px;font-size:10px;
+  background:var(--surface);box-shadow:0 3px 12px #00000012;
+}
+.composer-model-row .model-picker-button img{width:15px;height:15px}
+.composer-model-row .model-picker-button svg{width:11px;height:11px}
+.composer-model-row .model-picker-popup{bottom:calc(100% + 8px)}
+body:not(.signed-in) .composer-model-row{display:none!important}
+
+/* Compact centered composer; attachment stays on the left inside its lower toolbar. */
+.composer{
+  padding:8px 10px 7px!important;
+  border-radius:19px!important;
+}
+.composer textarea{
+  min-height:25px!important;max-height:135px!important;
+  padding:2px 3px 6px!important;font-size:14px!important;
+  text-align:left!important;
+}
+.composer-toolbar{min-height:30px}
+.composer-tools{gap:6px}
+.composer .attachment-button{
+  width:29px;height:29px;min-width:29px;min-height:29px;
+  border:1px solid var(--border);border-radius:50%;
+}
+.composer .attachment-button svg{width:15px;height:15px}
+.composer .composer-hint{font-size:10px}
+.composer .mic-button{width:30px;height:30px}
+.composer .send-button{width:31px;height:31px}
+@media(max-width:760px){
+  .composer-area{padding:8px 14px max(9px,env(safe-area-inset-bottom))}
+  .composer-shell{width:100%;max-width:680px}
+  .composer-model-row{margin-bottom:6px;padding-left:2px}
+  .composer-model-row .model-picker-button{height:29px;max-width:52vw}
+  .composer{padding:7px 9px 6px!important;border-radius:18px!important}
+  .composer textarea{min-height:24px!important;max-height:112px!important;font-size:14px!important}
+}
