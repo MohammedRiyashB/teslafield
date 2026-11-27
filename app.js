@@ -933,7 +933,7 @@
       const element = $(id);
       if (element) element.hidden = true;
     });
-    ["plusButton", "accountButton"].forEach((id) => {
+    ["attachmentButton", "accountButton"].forEach((id) => {
       if (id === except) return;
       const element = $(id);
       if (element) element.setAttribute("aria-expanded", "false");
@@ -1174,7 +1174,7 @@
       button.setAttribute("aria-label", "Finish voice recording");
       button.title = "Finish voice recording";
       $("composer").classList.add("voice-recording");
-      const cancelButton = $("plusButton");
+      const cancelButton = $("attachmentButton");
       cancelButton.classList.add("cancel-recording");
       cancelButton.setAttribute("aria-label", "Cancel voice recording");
       cancelButton.title = "Cancel voice recording";
@@ -1197,11 +1197,11 @@
 
   function resetVoiceModeUI() {
     const composer = $("composer");
-    const cancelButton = $("plusButton");
+    const cancelButton = $("attachmentButton");
     if (composer) composer.classList.remove("voice-recording");
     if (cancelButton) {
       cancelButton.classList.remove("cancel-recording");
-      cancelButton.setAttribute("aria-label", "Add files and more");
+      cancelButton.setAttribute("aria-label", "Add files");
       cancelButton.title = "Add files";
     }
   }
@@ -1874,8 +1874,8 @@
   };
   $("accountDelete").onclick = deleteAccountAndLocalData;
   $("accountButton").onclick = () => toggleMenu("accountMenu", "accountButton");
-  $("plusButton").onclick = () => {
-    if ($("plusButton").classList.contains("cancel-recording")) {
+  $("attachmentButton").onclick = () => {
+    if ($("attachmentButton").classList.contains("cancel-recording")) {
       cancelVoiceRecording();
       return;
     }
