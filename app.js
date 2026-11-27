@@ -1002,7 +1002,6 @@
     $("sharedMessagePage").hidden = false;
     try {
       const query = new URLSearchParams(location.search);
-      // Prefer the query payload used by current links; retain fragment support for older links.
       const payload = query.get("data") || location.hash.slice(1);
       if (!payload || payload.length > MAX_SHARED_PAYLOAD_CHARS || !/^[gj][A-Za-z0-9_-]+$/.test(payload)) {
         throw new Error("Missing, invalid or oversized share data");

@@ -14,7 +14,7 @@ This is a technical review of public provider documentation for the services cur
 
 All three Hugging Face Spaces are currently public. Hugging Face's documentation says a public Space's source and running app are publicly accessible and clonable. Website Firebase login does not authenticate a person who directly visits a public Space URL. This is a material separation between website access control and inference endpoint access control.
 
-Do not switch these Spaces to private until the backend has a working Hugging Face token configured in Render and every backend-to-Space request has been tested with authenticated access. The connected Hugging Face session currently exposes read-oriented Hub scopes to this review; no secret token value is available to copy into Render. The GitHub Actions deployment secret is not automatically available to the Render service.
+Do not switch these Spaces to private until the backend has a working Hugging Face token configured in Render and every backend-to-Space request has been tested with authenticated access. The Hugging Face connector manages its own session and does not expose the token bytes for copying into Render. The GitHub Actions deployment secret is not automatically available to the Render service.
 
 ## Provider policy references reviewed
 

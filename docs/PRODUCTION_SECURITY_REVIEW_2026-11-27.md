@@ -74,3 +74,17 @@ No full external penetration test has been performed. The new production checks 
 - OpenRouter privacy policy: https://openrouter.ai/privacy
 - Hugging Face Spaces security and sharing guidance: https://huggingface.co/docs/hub/spaces-overview
 - Gradio temporary-file cleanup: https://www.gradio.app/guides/resource-cleanup
+
+## Passive production DAST baseline — 27 November 2026
+
+The unauthenticated OWASP ZAP baseline scanned the public Firebase Hosting site and Render API root. The report artifact is attached to [workflow run 45954035875](https://github.com/MohammedRiyashB/teslafield/actions/runs/45954035875).
+
+- Firebase Hosting: 61 PASS, 7 WARN, 0 FAIL.
+- Render API root: 66 PASS, 2 WARN, 0 FAIL.
+- The earlier CSP wildcard and inline-style warnings were no longer present after PR #52.
+- The API's no-store response and the app's no-store root/OAuth responses are intentional for sensitive or stateful surfaces; ZAP labels these as informational cache warnings.
+- Firebase-managed SDK JavaScript under /__/firebase/ returns Access-Control-Allow-Origin: * and contains build timestamps. These are public Firebase SDK assets, not the Teslafield chat/API endpoints.
+- COOP remains same-origin-allow-popups for Google sign-in popup compatibility. COEP require-corp is intentionally not enabled because it can block cross-origin Google/Firebase auth resources. A real-browser sign-in test remains necessary after CSP changes.
+- The scan is passive and unauthenticated. It does not assess account-protected routes, OAuth replay with real accounts, business-logic abuse, DoS, credential theft or infrastructure escape.
+
+PR #55 tightens CORP to same-origin, explicitly sets Permissions-Policy on the Firebase SDK path, and removes a nonessential comment flagged by ZAP. A fresh scan must confirm whether those residual findings change.

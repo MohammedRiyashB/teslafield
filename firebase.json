@@ -42,7 +42,7 @@
           },
           {
             "key": "Cross-Origin-Resource-Policy",
-            "value": "same-site"
+            "value": "same-origin"
           }
         ]
       },
@@ -106,6 +106,15 @@
           {
             "key": "Cache-Control",
             "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/__/firebase/**",
+        "headers": [
+          {
+            "key": "Permissions-Policy",
+            "value": "accelerometer=(), camera=(), geolocation=(), microphone=(self), payment=()"
           }
         ]
       }
