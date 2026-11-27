@@ -1643,7 +1643,9 @@
     }
     list.replaceChildren();
     const own = availableModels.filter((model) => model.id === "teslafield");
-    const routerFree = availableModels.filter((model) => model.provider === "OpenRouter" && model.free).slice(0, 13);
+    const allRouterFree = availableModels.filter((model) => model.provider === "OpenRouter" && model.free);
+    const routerFree = allRouterFree.slice(0, 13);
+    if (selected && selected.provider === "OpenRouter" && selected.free && !routerFree.some((model) => model.id === selected.id)) routerFree[12] = selected;
     const routerPaid = availableModels.filter((model) => model.provider === "OpenRouter" && !model.free);
     const groups = [
       { title: "TESLAFIELD", models: own },
@@ -1690,7 +1692,7 @@
         const meta = document.createElement("small");
         meta.textContent = model.free
           ? (model.provider === "OpenRouter" ? "FREE · OpenRouter" : "FREE · TeslafieldAI")
-          : "PAID · $" + Number(model.promptPerMillion || 0).toFixed(4) + " / 1M input tokens";
+          : "PAID · $" + Number(model.promptPerMillion || 0).toFixed(4) + " in / $" + Number(model.completionPerMillion || 0).toFixed(4) + " out per 1M tokens";
         copy.append(name, meta);
         const check = document.createElement("span");
         check.className = "model-option-check";
