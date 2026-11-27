@@ -36,6 +36,7 @@ before(async () => {
       PORT: String(port),
       CORS_ORIGIN: trustedOrigin,
       FIREBASE_PROJECT_ID: "teslafieldai",
+      OPENROUTER_API_KEY: "",
       PUBLIC_BASE_URL: "https://teslafield-api.onrender.com",
       TESLAFIELD_OAUTH_SECRET: "test-only-secret-value-with-more-than-32-characters"
     },
@@ -255,4 +256,15 @@ test("MCP rejects a malformed bearer token", async () => {
   });
   assert.equal(response.status, 401);
   assert.match(response.headers.get("www-authenticate") || "", /resource_metadata=/);
+});
+
+
+test("model catalogue exposes the local free model without requiring provider credentials", async () => {
+  const response = await fetch(baseUrl + "/api/v1/models");
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.openRouterConfigured, false);
+  assert.equal(payload.defaultModel, "teslafield");
+  assert.ok(payload.models.some((model) => model.id === "teslafield" && model.free === true));
+  assert.equal(payload.models.some((model) => model.id === "openrouter/free"), false);
 });
