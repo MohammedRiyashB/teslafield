@@ -121,8 +121,8 @@
 - **Stage 1 complete on the upgrade branch:** corrected the root README and added this audit/roadmap document.
 - **Stage 2 complete on the upgrade branch:** added a non-deploying GitHub Actions validation workflow, seven backend API smoke tests, five response-style unit tests, and two frontend concurrency regression checks.
 - **Functional fixes on the upgrade branch:** the selected response style now reaches the Qwen system prompt for both chat routes; send and regenerate now share a lock acquired before waiting for Firebase authentication.
-- **Latest branch validation:** GitHub Actions run 45934332849 completed successfully; JavaScript/Python syntax checks and all 14 automated tests passed.
-- **Stage 3 in progress on the upgrade branch:** added process-local chat idempotency and stable browser request keys; added coverage for concurrent retries, key conflicts, failures, expiry, capacity, Firebase project mismatch and OAuth invalid-grant/authorization boundaries.
+- **Latest PR validation:** GitHub Actions run 45935576444 completed successfully on code commit cbc4377c38966fa5a20b86c7b08278e2171b88f4; JavaScript/Python syntax checks and 23 Node.js plus 5 Python tests (28 total) passed.
+- **Stage 3 complete on the upgrade branch:** added a bounded five-minute, process-local idempotency store scoped by Firebase user and request fingerprint; the browser reuses one idempotency key across automatic retries; mismatched key/payload pairs return HTTP 409; CORS preflight allows the new header. Added tests for coalesced concurrent calls, cached results, conflict rejection, failed-operation retry, expiry, capacity, invalid Firebase project claims and OAuth/MCP rejection boundaries.
 - **Not deployed:** all changes remain isolated on the engineering branch. The production main branch and existing deployments were not changed.
 
 This document is a measured engineering roadmap, not a claim that every category is already complete or that a 10/10 score can be guaranteed. A category is complete only when its acceptance criteria are tested against the actual deployed system.
