@@ -44,7 +44,7 @@ function createOpenRouterCatalog({ apiKey = "", fetchImpl = fetch, ttlMs = 10 * 
     if (cachedModels && Date.now() - cachedAt < ttlMs) return cachedModels;
     if (pending) return pending;
     pending = (async () => {
-      const response = await fetchImpl(OPENROUTER_BASE_URL + "/models?endpoints=%2Fapi%2Fv1%2Fchat%2Fcompletions&zdr=true", {
+      const response = await fetchImpl(OPENROUTER_BASE_URL + "/models?endpoints=%2Fapi%2Fv1%2Fchat%2Fcompletions", {
         headers: { Authorization: "Bearer " + apiKey, Accept: "application/json" },
         signal: AbortSignal.timeout(15000)
       });
@@ -57,7 +57,7 @@ function createOpenRouterCatalog({ apiKey = "", fetchImpl = fetch, ttlMs = 10 * 
       if (!payload || !Array.isArray(payload.data)) throw new Error("OPENROUTER_CATALOG_INVALID");
       const models = payload.data.map(normalizeOpenRouterModel).filter(Boolean);
       models.sort((a, b) => Number(b.free) - Number(a.free) || a.name.localeCompare(b.name));
-      // Keep only :free chat models with a ZDR endpoint; requests still enforce ZDR and data_collection=deny.
+      // Keep every exact :free text-chat model; provider data policies are user-approved at request time.
       // Do not cache an empty response: a transient upstream/catalogue issue must be retryable.
       if (models.length > 0) {
         cachedModels = models;

@@ -77,7 +77,8 @@
   let pendingGuestPrompt = "";
   let guestConversationStarted = false;
   let userPreferences = { responseStyle: "balanced", textSize: "standard", reduceMotion: false, model: "teslafield" };
-  const MODEL_CATALOG_CACHE_KEY = "teslafield.openrouter.models.zdr.v1";
+  const MODEL_CATALOG_CACHE_KEY = "teslafield.openrouter.models.free.v2";
+  const LEGACY_MODEL_CATALOG_CACHE_KEY = "teslafield.openrouter.models.zdr.v1";
   const TESLAFIELD_MODEL = { id: "teslafield", name: "Teslafield B1", free: true, freeTier: true, provider: "TeslafieldAI" };
   function isEligibleCachedModel(model) {
     return !!(model && typeof model.id === "string" && typeof model.name === "string" &&
@@ -86,7 +87,7 @@
   }
   function readCachedProviderModels() {
     try {
-      const cached = JSON.parse(localStorage.getItem(MODEL_CATALOG_CACHE_KEY) || "[]");
+      const cached = JSON.parse(localStorage.getItem(MODEL_CATALOG_CACHE_KEY) || localStorage.getItem(LEGACY_MODEL_CATALOG_CACHE_KEY) || "[]");
       return Array.isArray(cached) ? cached.filter(isEligibleCachedModel).slice(0, 500) : [];
     } catch (error) {
       return [];
@@ -2153,7 +2154,7 @@
         }
 
         const fetchedProviderModels = data.models.filter(isEligibleCachedModel);
-        // Only replace the last-known-good cache after a non-empty, healthy ZDR-filtered refresh.
+        // Only replace the last-known-good cache after a non-empty, healthy free-model refresh.
         if (data.catalogAvailable !== false && fetchedProviderModels.length > 0) {
           availableModels = [TESLAFIELD_MODEL, ...fetchedProviderModels];
           try {
