@@ -187,8 +187,8 @@ This document is a measured engineering roadmap, not a claim that every category
 
 ### Stage 6 initial implementation validation
 
-- GitHub Actions run [45938411618](https://github.com/MohammedRiyashB/teslafield/actions/runs/45938411618) completed successfully on commit `7270806649225009f98c0eb35a0f4e494e4b1029`.
+- GitHub Actions run [45938591456](https://github.com/MohammedRiyashB/teslafield/actions/runs/45938591456) completed successfully on UI/code-test commit `cfd0bf1e06bebb8fb90cc4b543889feb51f32c4a`.
 - JavaScript syntax checks passed, including `backend/conversation-store.js`.
 - **47 Node.js tests and 5 Python tests passed; zero failures.**
-- Added test coverage for owner-scoped Firestore paths, invalid IDs/messages, Firestore value serialization, authenticated history routes, CORS methods, model picker UI structure, local-cache sync contract, Firestore rules and account-switch sync recovery.
+- Added test coverage for owner-scoped Firestore paths, invalid IDs/messages, Firestore value serialization, authenticated history routes, CORS methods, the model capsule replacing the plus button, paperclip attachment retention, local-cache sync contract, Firestore rules and account-switch sync recovery.
 - This is code-level validation only. The live Firebase Firestore database has not been provisioned and the rules have not been deployed. Live Firestore authorization, cross-device behavior, deletion conflict handling and Android visual verification remain pending.
