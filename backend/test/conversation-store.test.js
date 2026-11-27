@@ -35,11 +35,11 @@ test("cloud history store scopes every document path to the authenticated UID", 
   const calls = [];
   const fetchImpl = async (url, options) => {
     calls.push({ url, options });
-    if (options.method === "PATCH") {
+    if (options.method === "PATCH" || options.method === "DELETE") {
       return { ok: true, status: 200, json: async () => ({}) };
     }
-    if (options.method === "DELETE") {
-      return { ok: true, status: 200, json: async () => ({}) };
+    if (url.includes("/deletedConversations")) {
+      return { ok: true, status: 200, json: async () => ({ documents: [{ name: "deletedConversations/chat_old", fields: { id: { stringValue: "chat_old" }, deletedAt: { integerValue: "99" } } }] }) };
     }
     return {
       ok: true,
