@@ -10,12 +10,12 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="TeslafieldAI">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <script src="/theme-init.js?v=20261127-02"></script>
+  <script src="/theme-init.js?v=20261127-06"></script>
   <meta name="description" content="TeslafieldAI — an AI workspace for ideas, answers and creation.">
   <title>TeslafieldAI</title>
   <link rel="icon" type="image/png" href="/teslafield-icon-192.png">
   <link rel="apple-touch-icon" href="/teslafield-icon-192.png">
-  <link rel="stylesheet" href="/styles.css?v=20261127-02">
+  <link rel="stylesheet" href="/styles.css?v=20261127-06">
 </head>
 <body>
 <div class="install-experience-banner" id="installExperienceBanner" role="region" aria-label="Install TeslafieldAI" hidden>
@@ -129,7 +129,7 @@
     <div class="composer-area" id="composerArea">
       <div class="attachment-strip" id="attachmentStrip" hidden></div>
       <div class="composer-shell">
-                <div class="composer-model-row" aria-label="Choose AI model">
+                <div class="composer-model-row" aria-label="Choose AI model" hidden>
             <div class="model-picker-wrap" id="modelPickerWrap">
               <button class="model-picker-button" id="modelPickerButton" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="modelPickerPopup" aria-label="Choose AI model">
                 <img id="modelPickerCurrentLogo" src="/teslafieldai-logo.png?v=20261127-02" alt="">
@@ -150,7 +150,7 @@
           <textarea id="promptInput" rows="1" maxlength="12000" placeholder="Message TeslafieldAI" aria-label="Message TeslafieldAI"></textarea>
           <div class="composer-toolbar">
             <div class="composer-tools">
-              <button class="composer-icon plus-button attachment-button" id="attachmentButton" type="button" aria-label="Add files" title="Add files">
+              <button class="composer-icon plus-button attachment-button" id="attachmentButton" type="button" hidden aria-label="Add files" title="Add files">
               <svg class="attachment-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m8.5 12.5 6.9-6.9a3.5 3.5 0 0 1 5 5l-9.2 9.2a5 5 0 0 1-7.1-7.1l9.2-9.2"/></svg>
               <svg class="cancel-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
             </button>
@@ -290,6 +290,6 @@
 <script defer src="/__/firebase/8.10.1/firebase-app.js"></script>
 <script defer src="/__/firebase/8.10.1/firebase-auth.js"></script>
 <script defer src="/__/firebase/init.js"></script>
-<script src="/app.js?v=20261127-05" defer></script>
+<script src="/app.js?v=20261127-06" defer></script>
 </body>
 </html>
