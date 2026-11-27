@@ -497,8 +497,10 @@
       }
     } catch (error) {
       if (authClient && authClient.currentUser) applyFirebaseUser(authClient.currentUser);
-      else updateAccountUI();
-      authClient = authClient || null;
+      else {
+        authClient = null;
+        updateAccountUI();
+      }
       initialAuthStateReceived = true;
       redirectResultProcessed = true;
       markAuthReady();
