@@ -4,7 +4,6 @@ const assert = require("node:assert/strict");
 const { test } = require("node:test");
 const {
   normalizeOpenRouterModel,
-  getCatalogDiagnostics,
   createOpenRouterCatalog,
   CHAT_COMPLETIONS_ENDPOINT
 } = require("../model-catalog");
@@ -63,7 +62,7 @@ test("catalog excludes the five models previously reported as non-working", () =
   assert.ok(normalizeOpenRouterModel(model("recursive/flint-v1.0:free")));
 });
 
-test("catalog uses the standard text-output Models API and filters chat route locally", async () => {
+test("catalog uses standard text-output Models API and filters chat route locally", async () => {
   let calls = 0;
   const catalog = createOpenRouterCatalog({
     apiKey: "server-only-test-key",
@@ -109,7 +108,7 @@ test("catalog keeps every eligible :free model without truncation", async () => 
 });
 
 test("catalog exposes diagnostic counts when no eligible models remain", async () => {
-  const data = [model("provider/free-no-chat:free")];
+  const data = [model("particle-ai/particle-1:free")];
   const catalog = createOpenRouterCatalog({
     apiKey: "test-key",
     fetchImpl: async () => ({ ok: true, json: async () => ({ data }) })
@@ -120,8 +119,8 @@ test("catalog exposes diagnostic counts when no eligible models remain", async (
     freeVariantCount: 1,
     freeChatEndpointCount: 1,
     freeTextChatCandidateCount: 1,
-    excludedKnownModelCount: 0,
-    eligibleModelCount: 1
+    excludedKnownModelCount: 1,
+    eligibleModelCount: 0
   });
 });
 
