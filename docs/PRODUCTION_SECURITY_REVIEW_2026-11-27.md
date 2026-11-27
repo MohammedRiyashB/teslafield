@@ -77,14 +77,14 @@ No full external penetration test has been performed. The new production checks 
 
 ## Passive production DAST baseline — 27 November 2026
 
-The unauthenticated OWASP ZAP baseline scanned the public Firebase Hosting site and Render API root. The report artifact is attached to [workflow run 45954035875](https://github.com/MohammedRiyashB/teslafield/actions/runs/45954035875).
+The unauthenticated OWASP ZAP baseline scanned the public Firebase Hosting site and Render API root after the strict-CSP deployment. The final report artifact is attached to [workflow run 45954570969](https://github.com/MohammedRiyashB/teslafield/actions/runs/45954570969).
 
-- Firebase Hosting: 61 PASS, 7 WARN, 0 FAIL.
+- Firebase Hosting: 62 PASS, 6 WARN, 0 FAIL.
 - Render API root: 66 PASS, 2 WARN, 0 FAIL.
-- The earlier CSP wildcard and inline-style warnings were no longer present after PR #52.
-- The API's no-store response and the app's no-store root/OAuth responses are intentional for sensitive or stateful surfaces; ZAP labels these as informational cache warnings.
-- Firebase-managed SDK JavaScript under /__/firebase/ returns Access-Control-Allow-Origin: * and contains build timestamps. These are public Firebase SDK assets, not the Teslafield chat/API endpoints.
-- COOP remains same-origin-allow-popups for Google sign-in popup compatibility. COEP require-corp is intentionally not enabled because it can block cross-origin Google/Firebase auth resources. A real-browser sign-in test remains necessary after CSP changes.
+- CSP wildcard, inline-style-element, Cross-Origin-Resource-Policy and suspicious-comment alerts are no longer present.
+- The API's no-store response and the app's no-store root/OAuth responses are intentional for sensitive or stateful surfaces; ZAP labels these as informational cache warnings. Static manifest/legal pages use a one-hour cache.
+- Firebase-managed SDK JavaScript under /__/firebase/ returns Access-Control-Allow-Origin: * and contains build timestamps. These are public Firebase SDK assets, not the Teslafield chat/API endpoints. The Firebase-managed SDK route also does not inherit the app's Permissions-Policy header.
+- COOP remains same-origin-allow-popups for Google sign-in popup compatibility; ZAP flags it because it recommends same-origin. COEP require-corp is intentionally not enabled because it can block cross-origin Google/Firebase auth resources. Do not change these isolation headers without a real-browser Google sign-in regression test.
 - The scan is passive and unauthenticated. It does not assess account-protected routes, OAuth replay with real accounts, business-logic abuse, DoS, credential theft or infrastructure escape.
 
-PR #55 tightens CORP to same-origin, explicitly sets Permissions-Policy on the Firebase SDK path, and removes a nonessential comment flagged by ZAP. A fresh scan must confirm whether those residual findings change.
+PR #55 tightened CORP to same-origin, explicitly attempted to set Permissions-Policy on the Firebase SDK path, and removed the nonessential source comment. The remaining six site warnings are limited to Firebase-managed SDK behavior, compatibility-sensitive COOP/COEP headers, and informational cache behavior.
