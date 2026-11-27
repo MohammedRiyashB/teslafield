@@ -21,16 +21,19 @@ test("composer exposes the compact branded model capsule and accessible popup", 
   assert.ok(!html.includes('id="plusButton"'), "Model capsule replaces the plus control");
 });
 
-test("model picker shows Teslafield B1 and OpenRouter :free models only", () => {
+test("model picker shows Teslafield B1 and provider-branded free models", () => {
   assert.match(app, /model\.id === "teslafield" \? "Teslafield B1"/);
-  assert.match(app, /https:\/\/openrouter\.ai\/favicon\.ico/);
-  assert.match(app, /OPENROUTER · FREE MODELS/);
+  assert.match(app, /function getModelBrand\(model\)/);
+  assert.match(app, /nvidia\.com/);
+  assert.match(app, /baidu\.com/);
+  assert.match(app, /recursive\.ai/);
   assert.match(app, /data\.catalogError/);
   assert.match(app, /OpenRouter responded, but returned no eligible/);
-  assert.match(app, /No OpenRouter :free models have loaded yet/);
-  assert.doesNotMatch(app, /OPENROUTER · PAID MODELS/);
+  assert.match(app, /Free provider models have not loaded yet/);
+  assert.doesNotMatch(app, /OPENROUTER · FREE MODELS/);
+  assert.doesNotMatch(app, /https:\/\/openrouter\.ai\/favicon\.ico/);
   assert.match(app, /model\.id\.endsWith\(":free"\)/);
-  assert.match(app, /FREE · OpenRouter :free · rate-limited/);
+  assert.match(app, /FREE · Rate-limited/);
   assert.doesNotMatch(app, /\.slice\(0, 13\)/);
 });
 
