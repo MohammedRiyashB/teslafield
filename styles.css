@@ -1792,3 +1792,5 @@ body.guest-mode .composer-actions{column-gap:16px!important;gap:16px!important}
   .model-picker-popup{width:min(340px,calc(100vw - 20px));max-height:min(420px,62vh)}
 }
 .dark .model-picker-popup{box-shadow:0 16px 44px #000b}
+
+.history-actions{display:inline-flex;align-items:center;gap:10px}
