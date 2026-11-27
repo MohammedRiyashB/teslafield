@@ -102,7 +102,7 @@ test("model picker displays the official provider logo beside each model and kee
   assert.match(app, /modelBrand\.label \+ " official logo"/);
   assert.match(app, /async function consumeChatStream\(response, onText\)/);
   assert.match(app, /payload\.choices\[0\]\.delta/);
-  assert.match(app, /meta\.textContent = model\.provider === "OpenRouter" \? "FREE · Rate-limited" : "FREE · TeslafieldAI"/);
+  assert.match(app, /meta\.textContent = locked \? "PRO VERSION ONLY" :/);\n  assert.match(app, /"FREE · Rate-limited" : "FREE · TeslafieldAI"/);
   assert.match(app, /FREE · Rate-limited/);
   assert.doesNotMatch(app, /"Free models only\./);
   assert.match(app, /model\.id\.endsWith\(":free"\)/);
