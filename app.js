@@ -1509,7 +1509,7 @@
     if (hint) {
       const routerReady = availableModels.some((model) => model.provider === "OpenRouter");
       hint.textContent = routerReady
-        ? "Paid choices use your OpenRouter account. Prices shown per 1M tokens."
+        ? "When selected, your chat messages are sent to OpenRouter. Paid models use your OpenRouter account; prices are shown per 1M tokens."
         : "TeslafieldAI Free is active. More choices require a server-side OpenRouter key.";
     }
   }
@@ -1539,7 +1539,11 @@
     userPreferences.model = selected;
     try { localStorage.setItem("teslafield.preferences.v1", JSON.stringify(userPreferences)); } catch (error) {}
     const model = availableModels.find((item) => item.id === selected);
-    toast("Preferred model: " + model.name);
+    if (model.provider === "OpenRouter") {
+      toast(model.free ? "OpenRouter Free selected. Your messages go to OpenRouter; provider limits apply." : "Paid OpenRouter model selected. Your messages go to OpenRouter and usage charges may apply.");
+    } else {
+      toast("Preferred model: " + model.name);
+    }
   });
 
   $("newChat").onclick = newChat;
