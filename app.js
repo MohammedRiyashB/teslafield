@@ -86,6 +86,52 @@
 ]);
   const isRemovedOpenRouterModel = (id) => REMOVED_OPENROUTER_MODEL_IDS.has(String(id || ""));
   const TESLAFIELD_MODEL = { id: "teslafield", name: "Teslafield B1", free: true, freeTier: true, provider: "TeslafieldAI" };
+
+  // UI-only Pro catalogue snapshot, ordered by OpenRouter's current intelligence
+  // and usage rankings. These rows are deliberately non-routable until Pro exists.
+  const LOCKED_OPENROUTER_MODELS = [
+    ["openai/gpt-6.2-astra-20261117", "GPT-6.2 Astra", "openai", "OpenAI"],
+    ["anthropic/claude-fable-5.2-20261109", "Claude Fable 5.2", "anthropic", "Anthropic"],
+    ["google/gemini-4-neon-20261118", "Gemini 4 Neon", "google", "Google"],
+    ["google/gemini-4-carbon-20261110", "Gemini 4 Carbon", "google", "Google"],
+    ["anthropic/claude-opus-5.5-20260921", "Claude Opus 5.5", "anthropic", "Anthropic"],
+    ["openai/gpt-6.2-sol-20261117", "GPT-6.2 Sol", "openai", "OpenAI"],
+    ["openai/gpt-6-astra-20260903", "GPT-6 Astra", "openai", "OpenAI"],
+    ["anthropic/claude-sonnet-5.5-20260928", "Claude Sonnet 5.5", "anthropic", "Anthropic"],
+    ["openai/gpt-6.1-sol-20260929", "GPT-6.1 Sol", "openai", "OpenAI"],
+    ["google/gemini-4-hydrogen-20261112", "Gemini 4 Hydrogen", "google", "Google"],
+    ["openai/gpt-6-luna", "GPT-6 Luna", "openai", "OpenAI"],
+    ["deepseek/deepseek-v4.1-flash-1017", "DeepSeek V4.1 Flash 1017", "deepseek", "DeepSeek"],
+    ["tencent/hy4-flash", "Hy4 flash", "tencent", "Tencent"],
+    ["moonshotai/kimi-k3.1-pro-20261023", "Kimi K3.1 Pro", "moonshotai", "Moonshot AI"],
+    ["minimax/minimax-m3.1-flash", "MiniMax M3.1 Flash", "minimax", "MiniMax"],
+    ["z-ai/glm-5.3", "GLM 5.3", "z-ai", "Z.ai"],
+    ["z-ai/glm-5.3-flash", "GLM 5.3 Flash", "z-ai", "Z.ai"],
+    ["deepseek/deepseek-v4.1-flash-20260910", "DeepSeek V4.1 Flash", "deepseek", "DeepSeek"],
+    ["moonshotai/kimi-k3-20260715", "Kimi K3", "moonshotai", "Moonshot AI"],
+    ["qwen/qwen3.8-27b-20260814", "Qwen3.8 27B", "qwen", "Qwen"],
+    ["anthropic/claude-haiku-5.5-20261007", "Claude Haiku 5.5", "anthropic", "Anthropic"],
+    ["openai/gpt-oss-120b", "GPT-OSS 120B", "openai", "OpenAI"],
+    ["openai/gpt-oss-20b", "GPT-OSS 20B", "openai", "OpenAI"],
+    ["meta-llama/llama-3.1-8b-instruct", "Llama 3.1 8B Instruct", "meta-llama", "Meta"],
+    ["upstage/solar-pro-4-contributor", "Solar Pro 4 Contributor", "upstage", "Upstage"],
+    ["upstage/solar-mini-4.5-preview", "Solar Mini 4.5 Preview", "upstage", "Upstage"],
+    ["thinkingmachines/inkling-2-mini", "Inkling 2 Mini", "thinkingmachines", "Thinking Machines"],
+    ["radixark/daisyrose-27b", "DaisyRose 27B", "radixark", "RadixArk"],
+    ["xiaomi/mimo-v2.6-flash-mopd", "MiMo-V2.6-Flash-MOPD", "xiaomi", "Xiaomi"],
+    ["mistralai/pixtral-large-2502", "Pixtral Large 2502", "mistralai", "Mistral"]
+  ].map(([id, name, providerSlug, providerName], index) => ({
+    id,
+    name,
+    provider: "OpenRouter",
+    providerSlug,
+    providerName,
+    providerLogoAvailable: true,
+    free: false,
+    freeTier: false,
+    proLocked: true,
+    rank: index + 1
+  }));
   try {
     localStorage.removeItem("teslafield.openrouter.models.free.v2");
     localStorage.removeItem("teslafield.openrouter.models.zdr.v1");
@@ -2014,7 +2060,7 @@
       status.hidden = !modelCatalogStatus;
       status.textContent = modelCatalogStatus;
     }
-    const groups = [];
+
     const freeProviders = availableModels.filter((model) =>
       model.provider === "OpenRouter" && model.id.endsWith(":free") && model.freeTier === true
     );
@@ -2026,16 +2072,76 @@
       }
       providerGroups.get(brand.key).models.push(model);
     });
-    if (freeProviders.length) {
+    const own = availableModels.filter((model) => model.id === "teslafield");
+
+    if (freeProviders.length || own.length) {
       const freeHeading = document.createElement("div");
       freeHeading.className = "model-picker-group-title";
       freeHeading.textContent = "FREE MODELS";
       list.appendChild(freeHeading);
     }
-    groups.push(...Array.from(providerGroups.values()).sort((a, b) => a.title.localeCompare(b.title)));
-    const own = availableModels.filter((model) => model.id === "teslafield");
-    if (own.length) groups.push({ key: "teslafield", title: "TESLAFIELD", models: own });
-    groups.forEach((group) => {
+
+    const freeGroups = [...Array.from(providerGroups.values()).sort((a, b) => a.title.localeCompare(b.title))];
+    if (own.length) freeGroups.push({ key: "teslafield", title: "TESLAFIELD", models: own });
+
+    const appendModelRow = (model, locked = false) => {
+      const option = document.createElement("button");
+      option.type = "button";
+      option.className = locked ? "model-picker-option is-locked" : "model-picker-option";
+      option.setAttribute("role", "option");
+      option.setAttribute("aria-selected", String(!locked && model.id === (userPreferences.model || "teslafield")));
+      if (locked) option.setAttribute("aria-disabled", "true");
+      option.dataset.modelId = model.id;
+
+      const modelBrand = getModelBrand(model);
+      if (modelBrand.logo) {
+        const logo = document.createElement("img");
+        logo.alt = modelBrand.label + " official logo";
+        logo.className = "model-option-logo";
+        setProviderLogoSource(logo, modelBrand);
+        option.appendChild(logo);
+      }
+
+      const copy = document.createElement("span");
+      copy.className = "model-option-copy";
+      const name = document.createElement("strong");
+      name.textContent = model.id === "teslafield" ? "Teslafield B1" : model.name;
+      const meta = document.createElement("small");
+      meta.textContent = locked ? "PRO VERSION ONLY" :
+        model.provider === "OpenRouter" ? "FREE · Rate-limited" : "FREE · TeslafieldAI";
+      copy.append(name, meta);
+      option.appendChild(copy);
+
+      if (locked) {
+        const lock = document.createElement("span");
+        lock.className = "model-option-lock";
+        lock.setAttribute("aria-hidden", "true");
+        lock.textContent = "🔒";
+        option.appendChild(lock);
+        option.addEventListener("click", () => {
+          toast("You are not a Pro version account. This model is locked.");
+        });
+      } else {
+        const check = document.createElement("span");
+        check.className = "model-option-check";
+        check.textContent = model.id === (userPreferences.model || "teslafield") ? "✓" : "";
+        option.appendChild(check);
+        option.addEventListener("click", () => {
+          const select = $("modelSelector");
+          select.value = model.id;
+          userPreferences.model = model.id;
+          try { localStorage.setItem("teslafield.preferences.v1", JSON.stringify(userPreferences)); } catch (error) {}
+          renderModelSelector();
+          renderModelPicker();
+          closeModelPicker();
+          toast(model.id === "teslafield" ? "Teslafield B1 selected." : model.name + " selected.");
+        });
+      }
+
+      list.appendChild(option);
+    };
+
+    freeGroups.forEach((group) => {
       if (!group.models.length) return;
       const heading = document.createElement("div");
       heading.className = "model-picker-group-title";
@@ -2051,45 +2157,21 @@
       label.textContent = group.title;
       heading.appendChild(label);
       list.appendChild(heading);
-      group.models.forEach((model) => {
-        const option = document.createElement("button");
-        option.type = "button";
-        option.className = "model-picker-option";
-        option.setAttribute("role", "option");
-        option.setAttribute("aria-selected", String(model.id === (userPreferences.model || "teslafield")));
-        option.dataset.modelId = model.id;
-        const modelBrand = getModelBrand(model);
-        let logo = null;
-        if (modelBrand.logo) {
-          logo = document.createElement("img");
-          logo.alt = modelBrand.label + " official logo";
-          logo.className = "model-option-logo";
-          setProviderLogoSource(logo, modelBrand);
-        }
-        const copy = document.createElement("span");
-        copy.className = "model-option-copy";
-        const name = document.createElement("strong");
-        name.textContent = model.id === "teslafield" ? "Teslafield B1" : model.name;
-        const meta = document.createElement("small");
-        meta.textContent = model.provider === "OpenRouter" ? "FREE · Rate-limited" : "FREE · TeslafieldAI";
-        copy.append(name, meta);
-        const check = document.createElement("span");
-        check.className = "model-option-check";
-        check.textContent = model.id === (userPreferences.model || "teslafield") ? "✓" : "";
-        if (logo) option.append(logo);
-        option.append(copy, check);
-        option.addEventListener("click", () => {
-          const select = $("modelSelector");
-          select.value = model.id;
-          userPreferences.model = model.id;
-          try { localStorage.setItem("teslafield.preferences.v1", JSON.stringify(userPreferences)); } catch (error) {}
-          renderModelSelector();
-          renderModelPicker();
-          closeModelPicker();
-          toast(model.id === "teslafield" ? "Teslafield B1 selected." : model.name + " selected.");
-        });
-        list.appendChild(option);
-      });
+      group.models.forEach((model) => appendModelRow(model, false));
+    });
+
+    const lockedHeading = document.createElement("div");
+    lockedHeading.className = "model-picker-group-title model-picker-locked-title";
+    lockedHeading.textContent = "LOCKED MODELS";
+    list.appendChild(lockedHeading);
+    const lockedNote = document.createElement("div");
+    lockedNote.className = "model-picker-locked-note";
+    lockedNote.textContent = "FOR PRO VERSION ONLY";
+    list.appendChild(lockedNote);
+
+    LOCKED_OPENROUTER_MODELS.forEach((model) => {
+      if (availableModels.some((available) => available.id === model.id)) return;
+      appendModelRow(model, true);
     });
   }
 
