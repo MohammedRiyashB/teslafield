@@ -9,7 +9,9 @@ function pricePerMillion(value) {
 
 function normalizeOpenRouterModel(item) {
   if (!item || typeof item.id !== "string" || !item.id.trim()) return null;
-  // Only OpenRouter IDs explicitly published as :free are eligible. A $0 price alone is not enough.\n  if (!item.id.endsWith(":free")) return null;\n  const architecture = item.architecture || {};
+  // Only OpenRouter IDs explicitly published as :free are eligible. A $0 price alone is not enough.
+  if (!item.id.endsWith(":free")) return null;
+  const architecture = item.architecture || {};
   const inputs = Array.isArray(architecture.input_modalities) ? architecture.input_modalities : [];
   const outputs = Array.isArray(architecture.output_modalities) ? architecture.output_modalities : [];
   if (!inputs.includes("text") || !outputs.includes("text")) return null;
@@ -17,7 +19,8 @@ function normalizeOpenRouterModel(item) {
   const prompt = Number(pricing.prompt);
   const completion = Number(pricing.completion);
   if (!Number.isFinite(prompt) || !Number.isFinite(completion) || prompt < 0 || completion < 0) return null;
-  const free = prompt === 0 && completion === 0;\n  if (!free) return null;
+  const free = prompt === 0 && completion === 0;
+  if (!free) return null;
   return {
     id: item.id,
     name: typeof item.name === "string" && item.name.trim() ? item.name.trim() : item.id,
