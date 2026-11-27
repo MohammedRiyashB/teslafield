@@ -2,22 +2,18 @@
 
 const assert = require("node:assert/strict");
 const { test } = require("node:test");
-const {
-  normalizeOpenRouterModel,
-  createOpenRouterCatalog,
-  CHAT_COMPLETIONS_ENDPOINT
-} = require("../model-catalog");
+const { normalizeOpenRouterModel, createOpenRouterCatalog } = require("../model-catalog");
 
 const model = (id, prompt = "0", completion = "0") => ({
   id,
   name: id,
-  endpoints: [CHAT_COMPLETIONS_ENDPOINT, "/api/v1/messages"],
+  // The standard /models record may omit its detailed endpoints array.
   architecture: { input_modalities: ["text"], output_modalities: ["text"] },
   pricing: { prompt, completion },
   context_length: 128000
 });
 
-test("catalog accepts only exact :free text-chat variants", () => {
+test("catalog accepts exact :free text-chat variants without an embedded endpoints array", () => {
   const free = normalizeOpenRouterModel(model("provider/model:free"));
   assert.equal(free.free, true);
   assert.equal(free.freeTier, true);
@@ -34,11 +30,7 @@ test("free variant remains eligible if pricing metadata is missing or non-zero",
   assert.equal(normalizeOpenRouterModel(model("provider/base-priced-free:free", "0.00000008", "0.0000002")).free, true);
 });
 
-test("catalog requires chat endpoint and text input/output", () => {
-  assert.equal(normalizeOpenRouterModel({
-    ...model("provider/not-chat:free"),
-    endpoints: ["/api/v1/messages"]
-  }), null);
+test("catalog requires text input and output modalities", () => {
   assert.equal(normalizeOpenRouterModel({
     ...model("provider/image-input-only:free"),
     architecture: { input_modalities: ["image"], output_modalities: ["text"] }
@@ -62,21 +54,20 @@ test("catalog no longer blocks free chat variants through a stale hard-coded den
   assert.ok(normalizeOpenRouterModel(model("recursive/flint-v1.0:free")));
 });
 
-test("catalog uses standard text-output Models API and filters chat route locally", async () => {
+test("catalog uses OpenRouter server-side chat-completions endpoint filter", async () => {
   let calls = 0;
   const catalog = createOpenRouterCatalog({
     apiKey: "server-only-test-key",
     fetchImpl: async (url, options) => {
       calls += 1;
-      assert.equal(url, "https://openrouter.ai/api/v1/models?output_modalities=text");
+      assert.equal(url, "https://openrouter.ai/api/v1/models?endpoints=%2Fapi%2Fv1%2Fchat%2Fcompletions");
       assert.equal(options.headers.Authorization, "Bearer server-only-test-key");
       return {
         ok: true,
         json: async () => ({ data: [
           model("provider/paid", "0.000001", "0.000002"),
           model("provider/zero-price-no-free-suffix"),
-          model("provider/free:free", "0.00000008", "0.0000002"),
-          { ...model("provider/non-chat:free"), endpoints: ["/api/v1/messages"] }
+          model("provider/free:free", "0.00000008", "0.0000002")
         ] })
       };
     }
@@ -84,10 +75,11 @@ test("catalog uses standard text-output Models API and filters chat route locall
   const models = await catalog.listModels();
   assert.equal(models.length, 1);
   assert.equal(models[0].id, "provider/free:free");
-  assert.equal(catalog.getDiagnostics().textOutputCatalogCount, 4);
-  assert.equal(catalog.getDiagnostics().freeVariantCount, 2);
+  assert.equal(catalog.getDiagnostics().textOutputCatalogCount, 3);
+  assert.equal(catalog.getDiagnostics().freeVariantCount, 1);
   assert.equal(catalog.getDiagnostics().freeChatEndpointCount, 1);
-  assert.equal(catalog.getDiagnostics().eligibleModelCount, 1);
+  assert.equal(catalog.getDiagnostics().freeTextChatCandidateCount, 1);
+  assert.equal(catalog.getDiagnostics().excludedKnownModelCount, 0);
   assert.equal(await catalog.findModel("provider/paid"), null);
   assert.equal(calls, 1);
 });
@@ -107,7 +99,7 @@ test("catalog keeps every eligible :free model without truncation", async () => 
   assert.equal(await catalog.findModel("provider/paid"), null);
 });
 
-test("catalog exposes diagnostic counts when no eligible models remain", async () => {
+test("catalog exposes diagnostic counts for endpoint-filtered catalogue results", async () => {
   const data = [model("particle-ai/particle-1:free")];
   const catalog = createOpenRouterCatalog({
     apiKey: "test-key",
