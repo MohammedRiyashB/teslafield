@@ -3,6 +3,7 @@ const crypto = require("node:crypto");
 const { handleOAuthMcp } = require("./oauth-mcp");
 const { IdempotencyStore } = require("./idempotency");
 const { createOpenRouterCatalog } = require("./model-catalog");
+const { serveProviderLogo } = require("./provider-logos");
 const { createConversationStore } = require("./conversation-store");
 const { clientOptions: hfClientOptions, requestHeaders: hfRequestHeaders } = require("./huggingface-auth");
 const { pruneExpiredEntries, hasCapacity } = require("./security-collections");
@@ -565,6 +566,13 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "GET" && url.pathname === "/health") {
     sendJson(res, 200, { ok: true, service: SERVICE_NAME });
+    return;
+  }
+
+  const providerLogoMatch = req.method === "GET" && url.pathname.match(/^\/api\/v1\/providers\/logo\/([a-z0-9-]{1,64})$/);
+  if (providerLogoMatch) {
+    const served = await serveProviderLogo(res, providerLogoMatch[1]);
+    if (!served) sendJson(res, 404, { error: "PROVIDER_LOGO_NOT_FOUND" });
     return;
   }
 
