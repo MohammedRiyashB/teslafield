@@ -8,9 +8,6 @@ function normalizeOpenRouterModel(item) {
   // The :free catalog suffix is OpenRouter's explicit free-variant marker.
   if (!item.id.endsWith(":free")) return null;
 
-  const endpoints = Array.isArray(item.endpoints) ? item.endpoints : [];
-  if (!endpoints.includes(CHAT_COMPLETIONS_ENDPOINT)) return null;
-
   const architecture = item.architecture || {};
   const inputs = Array.isArray(architecture.input_modalities) ? architecture.input_modalities : [];
   const outputs = Array.isArray(architecture.output_modalities) ? architecture.output_modalities : [];
@@ -32,9 +29,9 @@ function normalizeOpenRouterModel(item) {
 function getCatalogDiagnostics(items, normalizedModels) {
   const list = Array.isArray(items) ? items : [];
   const freeVariants = list.filter((item) => item && typeof item.id === "string" && item.id.endsWith(":free"));
-  const freeChatVariants = freeVariants.filter((item) =>
-    Array.isArray(item.endpoints) && item.endpoints.includes(CHAT_COMPLETIONS_ENDPOINT)
-  );
+  // The catalogue request itself is filtered by the chat-completions endpoint.
+  // OpenRouter's ordinary /models records do not consistently embed an endpoints array.
+  const freeChatVariants = freeVariants;
   const freeTextChatVariants = freeChatVariants.filter((item) => {
     const architecture = item.architecture || {};
     return Array.isArray(architecture.input_modalities) &&
@@ -44,11 +41,13 @@ function getCatalogDiagnostics(items, normalizedModels) {
   });
   return {
     textOutputCatalogCount: list.length,
+    chatEndpointCatalogCount: list.length,
     freeVariantCount: freeVariants.length,
     freeChatEndpointCount: freeChatVariants.length,
     freeTextChatCandidateCount: freeTextChatVariants.length,
     excludedKnownModelCount: freeTextChatVariants.length - normalizedModels.length,
-    eligibleModelCount: normalizedModels.length
+    eligibleModelCount: normalizedModels.length,
+    freeChatModelIds: normalizedModels.map((model) => model.id)
   };
 }
 
@@ -63,10 +62,10 @@ function createOpenRouterCatalog({ apiKey = "", fetchImpl = fetch, ttlMs = 10 * 
     if (cachedModels && Date.now() - cachedAt < ttlMs) return cachedModels;
     if (pending) return pending;
     pending = (async () => {
-      // OpenRouter defaults this catalogue to text-output models. Filter the
-      // chat-completions route locally from each model's documented endpoints
-      // field rather than depending on the remote endpoints query parameter.
-      const response = await fetchImpl(OPENROUTER_BASE_URL + "/models?output_modalities=text", {
+      // Ask OpenRouter to filter models by the chat-completions endpoint.
+      // Do not require item.endpoints locally: the normal /models record can
+      // omit that array; endpoint details are a separate API representation.
+      const response = await fetchImpl(OPENROUTER_BASE_URL + "/models?endpoints=" + encodeURIComponent(CHAT_COMPLETIONS_ENDPOINT), {
         headers: { Authorization: "Bearer " + apiKey, Accept: "application/json" },
         signal: AbortSignal.timeout(15000)
       });
@@ -113,7 +112,6 @@ function createOpenRouterCatalog({ apiKey = "", fetchImpl = fetch, ttlMs = 10 * 
 
 module.exports = {
   OPENROUTER_BASE_URL,
-  CHAT_COMPLETIONS_ENDPOINT,
   normalizeOpenRouterModel,
   getCatalogDiagnostics,
   createOpenRouterCatalog
