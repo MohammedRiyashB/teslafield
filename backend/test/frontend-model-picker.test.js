@@ -21,35 +21,35 @@ test("composer exposes the compact branded model capsule and accessible popup", 
   assert.ok(!html.includes('id="plusButton"'), "Model capsule replaces the plus control");
 });
 
-test("model picker uses authentic provider website logos and never creates initials badges", () => {
-  assert.match(app, /model\.id === "teslafield" \? "Teslafield B1"/);
+test("model picker uses OpenRouter's provider registry icons and puts free providers first", () => {
   assert.match(app, /function getModelBrand\(model\)/);
-  assert.doesNotMatch(app, /function providerFallbackLogo|fallbackLogo|data:image\/svg\+xml/);
-  assert.match(app, /\/api\/v1\/providers\/logo\//);
-  for (const provider of ["nvidia\.com", "baidu\.com", "recursive\.ai", "google\.com", "deepseek\.com", "qwen\.ai", "openai\.com", "anthropic\.com"]) {
-    assert.match(app, new RegExp(provider));
-  }
+  assert.match(app, /model\.providerSlug/);
+  assert.match(app, /model\.providerName/);
+  assert.match(app, /model\.providerLogoAvailable/);
+  assert.match(app, /\/api\/v1\/openrouter\/providers\//);
+  assert.match(app, /FREE MODELS/);
+  assert.match(app, /teslafield\.openrouter\.catalog\.v3/);
+  assert.doesNotMatch(app, /nvidia\.com|google\.com|deepseek\.com|qwen\.ai|anthropic\.com/);
+  assert.doesNotMatch(app, /google\.com\/s2\/favicons|\/api\/v1\/providers\/logo\//);
   assert.match(app, /selectedLogo\.hidden = !brand\.logo/);
   assert.match(app, /logo\.onerror = \(\) => \{ logo\.hidden = true; \}/);
-  assert.match(app, /if \(modelBrand\.logo\) \{/);
+  assert.match(app, /modelBrand\.logo/);
   assert.match(app, /data\.catalogError/);
-  assert.match(app, /OpenRouter returned no eligible chat models/);
-  assert.match(app, /Provider models have not loaded yet/);
-  assert.doesNotMatch(app, /OPENROUTER · FREE MODELS/);
-  assert.doesNotMatch(app, /https:\/\/openrouter\.ai\/favicon\.ico/);
+  assert.match(app, /FREE · Rate-limited/);
   assert.match(app, /model\.id\.endsWith\(":free"\)/);
-  assert.match(app, /"Rate-limited"/);
-  assert.doesNotMatch(app, /\.slice\(0, 13\)/);
 });
 
-test("backend rejects non-free models and streams the exact OpenRouter model with privacy protections", () => {
-  assert.match(backend, /model\.freeTier !== true \|\| !model\.id\.endsWith\(":free"\)/);
-  assert.match(backend, /Only OpenRouter models explicitly marked :free are allowed/);
-  assert.match(backend, /stream: true/);
-  assert.doesNotMatch(backend, /zdr: true/);
-  assert.match(backend, /data_collection: "allow"/);
-  assert.match(backend, /allow_fallbacks: true/);
-  assert.match(backend, /serveProviderLogo/);
+test("backend wires only the rebuilt OpenRouter integration for catalogue, exact selection and provider icons", () => {
+  assert.match(backend, /createOpenRouterIntegration/);
+  assert.match(backend, /openRouter\.listFreeChatModels\(\)/);
+  assert.match(backend, /openRouter\.findFreeChatModel\(selectedModel\)/);
+  assert.match(backend, /openRouter\.serveProviderLogo/);
+  assert.match(backend, /model:\s*model\.id/);
+  assert.doesNotMatch(backend, /model:\s*["']openrouter\/free["']/);
+  assert.match(backend, /stream:\s*true/);
+  assert.match(backend, /data_collection:\s*"allow"/);
+  assert.match(backend, /allow_fallbacks:\s*true/);
+  assert.doesNotMatch(backend, /zdr:\s*true/);
 });
 
 test("model picker popup opens above the capsule and supports Escape dismissal", () => {
@@ -95,8 +95,8 @@ test("model picker displays the official provider logo beside each model and kee
   assert.match(app, /modelBrand\.label \+ " official logo"/);
   assert.match(app, /async function consumeChatStream\(response, onText\)/);
   assert.match(app, /payload\.choices\[0\]\.delta/);
-  assert.match(app, /meta\.textContent = model\.provider === "OpenRouter" \? "Rate-limited" : "TeslafieldAI"/);
-  assert.doesNotMatch(app, /FREE · Rate-limited|FREE · TeslafieldAI|option\.textContent = model\.name \+ " · FREE"/);
+  assert.match(app, /meta\.textContent = model\.provider === "OpenRouter" \? "FREE · Rate-limited" : "FREE · TeslafieldAI"/);
+  assert.match(app, /FREE · Rate-limited/);
   assert.doesNotMatch(app, /"Free models only\./);
   assert.match(app, /model\.id\.endsWith\(":free"\)/);
 });
