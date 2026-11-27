@@ -86,6 +86,7 @@ function normalizeProviderRegistry(payload) {
 
 function normalizeFreeChatModel(item, providers) {
   if (!item || typeof item.id !== "string" || !item.id.trim()) return null;
+  if (REMOVED_FREE_CHAT_MODEL_IDS.has(item.id)) return null;
   if (!item.id.endsWith(":free")) return null;
 
   const endpoints = Array.isArray(item.endpoints) ? item.endpoints : [];
@@ -107,6 +108,8 @@ function normalizeFreeChatModel(item, providers) {
     providerSlug,
     providerName: provider ? provider.name : formatProviderLabel(providerSlug),
     providerLogoAvailable: Boolean(provider && provider.logoUrl),
+    // Exact HTTPS icon URL supplied by the OpenRouter provider registry.
+    providerLogoUrl: provider && provider.logoUrl ? provider.logoUrl : null,
     promptPerMillion: 0,
     completionPerMillion: 0,
     contextLength: Number.isFinite(item.context_length) ? item.context_length : null
@@ -345,6 +348,7 @@ module.exports = {
   safeProviderLogoUrl,
   normalizeProviderRegistry,
   normalizeFreeChatModel,
+  REMOVED_FREE_CHAT_MODEL_IDS,
   buildCatalogDiagnostics,
   createOpenRouterIntegration
 };
