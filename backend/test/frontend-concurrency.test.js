@@ -150,3 +150,14 @@ test("shared response page supports old compressed links and fetches new ID link
   assert.match(source, /API \+ "\/api\/v1\/shares\/" \+/);
   assert.match(source, /DecompressionStream/);
 });
+
+ 
+test("share creation falls back to the legacy compressed URL when short storage is unavailable", () => {
+  const start = app.indexOf("async function shareAssistantMessage(content)");
+  const end = app.indexOf("function base64UrlEncode(", start + 1);
+  const source = app.slice(start, end);
+  assert.match(source, /compatibilityUrl/);
+  assert.match(source, /CompressionStream\("gzip"\)/);
+  assert.match(source, /\?data=/);
+  assert.match(source, /Short share storage is unavailable/);
+});
