@@ -26,6 +26,9 @@ test("model picker uses OpenRouter's provider registry icons and puts free provi
   assert.match(app, /model\.providerSlug/);
   assert.match(app, /model\.providerName/);
   assert.match(app, /model\.providerLogoAvailable/);
+  assert.match(app, /model\.providerLogoUrl/);
+  assert.match(app, /function setProviderLogoSource\(image, brand\)/);
+  assert.match(app, /image\.dataset\.logoProxyAttempted/);
   assert.match(app, /\/api\/v1\/openrouter\/providers\//);
   assert.match(app, /FREE MODELS/);
   assert.match(app, /teslafield\.openrouter\.catalog\.v3/);
@@ -100,6 +103,15 @@ test("model picker displays the official provider logo beside each model and kee
   assert.match(app, /FREE · Rate-limited/);
   assert.doesNotMatch(app, /"Free models only\./);
   assert.match(app, /model\.id\.endsWith\(":free"\)/);
+  const rowRenderer = app.slice(app.indexOf("function renderModelPicker"), app.indexOf("function openModelPicker"));
+  assert.ok(rowRenderer.indexOf("option.append(logo)") < rowRenderer.indexOf("option.append(copy, check)"), "Round provider logo must appear to the left of the model name");
+  for (const id of [
+    "google/gemma-4-26b-a4b-it:free",
+    "google/gemma-4-31b-it:free",
+    "inclusionai/ling-3.2-flash:free",
+    "recursive/flint-v1.0:free"
+  ]) assert.ok(app.includes(id), "Removed model must be blocked in the browser cache");
+  assert.match(css, /\.model-option-logo\{[^}]*border-radius:50%/);
 });
 
 
