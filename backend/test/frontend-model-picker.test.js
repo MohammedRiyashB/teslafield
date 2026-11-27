@@ -126,6 +126,15 @@ test("frontend posts the exact selected model ID and keeps cached models on cata
 });
 
 
+test("cookie banner never interrupts first visit and cookie preferences remain accessible", () => {
+  const init = app.slice(app.indexOf("function initializeCookieChoices"), app.indexOf("function storeCookieChoices"));
+  assert.match(init, /\$\("cookieBanner"\)\.hidden = true/);
+  assert.doesNotMatch(init, /cookieBanner"\)\.hidden = false/);
+  assert.match(app, /\$\("privacyChoices"\)\.onclick = \(\) => \{ closeMenus\(\); openCookieSettings\(\); \}/);
+  assert.match(html, /id="privacyChoices" type="button">Cookie preferences/);
+});
+
+
 test("completed streaming replies replace only the live bubble without rebuilding chat history", () => {
   const renderer = app.slice(app.indexOf("function renderMessage("), app.indexOf("async function shareAssistantMessage("));
   assert.match(renderer, /return row;/);
