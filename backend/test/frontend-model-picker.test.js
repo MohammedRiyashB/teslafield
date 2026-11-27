@@ -41,7 +41,7 @@ test("model picker shows Teslafield B1 and provider branding", () => {
 
 test("backend rejects any OpenRouter model not explicitly marked :free", () => {
   assert.match(backend, /model\.freeTier !== true \|\| !model\.id\.endsWith\(":free"\)/);
-  assert.match(backend, /Only OpenRouter models explicitly marked :free are allowed/);
+  assert.match(backend, /Only OpenRouter models explicitly marked :free are allowed/);\n  assert.match(backend, /stream: true/);\n  assert.match(backend, /zdr: true/);\n  assert.match(backend, /data_collection: "deny"/);\n  assert.match(backend, /allow_fallbacks: true/);
 });
 
 test("model picker popup opens above the capsule and supports Escape dismissal", () => {
@@ -83,7 +83,7 @@ test("model picker shows provider logos and rate-limit text without FREE badges"
   assert.match(app, /modelBrand\.logo/);
   assert.match(app, /if \(logo\.src !== modelBrand\.fallbackLogo\) logo\.src = modelBrand\.fallbackLogo/);
   assert.match(app, /async function consumeChatStream\(response, onText\)/);
-  assert.match(app, /choices\[0\] && payload\.choices\[0\]\.delta/);
+  assert.match(app, /payload\.choices\[0\]\.delta/);
   assert.match(app, /meta\.textContent = model\.provider === "OpenRouter" \? "Rate-limited" : "TeslafieldAI"/);
   assert.doesNotMatch(app, /FREE · Rate-limited|FREE · TeslafieldAI|option\.textContent = model\.name \+ " · FREE"/);
   assert.doesNotMatch(app, /"Free models only\./);
