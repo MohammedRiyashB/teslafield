@@ -89,3 +89,22 @@ test("recorder failure does not fall through into transcription", () => {
   assert.match(source, /recorder\.failed = true;/);
   assert.match(source, /if \(recorder\.cancelled \|\| recorder\.failed\)/);
 });
+
+test("chat requests send the selected preferred model", () => {
+  const start = app.indexOf("async function requestReply(chat)");
+  const end = app.indexOf("function showGuestC", start + 1);
+  assert.ok(start >= 0 && end > start);
+  assert.match(app.slice(start, end), /model: userPreferences\.model/);
+});
+
+test("model preference is restored, saved and safely falls back to TeslafieldAI", () => {
+  const readStart = app.indexOf("function readPersonalization()");
+  const readEnd = app.indexOf("function applyPersonalization()", readStart + 1);
+  const read = app.slice(readStart, readEnd);
+  assert.match(read, /saved\.model/);
+  assert.match(read, /"teslafield"/);
+  const saveStart = app.indexOf("function savePersonalize()");
+  const saveEnd = app.indexOf("function renderModelSelector()", saveStart + 1);
+  assert.match(app.slice(saveStart, saveEnd), /model: userPreferences\.model/);
+  assert.match(app, /userPreferences\.model = selected/);
+});
