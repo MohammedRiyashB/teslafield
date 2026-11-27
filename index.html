@@ -10,16 +10,16 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="TeslafieldAI">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <script src="/theme-init.js?v=20261127-01"></script>
+  <script src="/theme-init.js?v=20261127-02"></script>
   <meta name="description" content="TeslafieldAI — an AI workspace for ideas, answers and creation.">
   <title>TeslafieldAI</title>
   <link rel="icon" type="image/png" href="/teslafield-icon-192.png">
   <link rel="apple-touch-icon" href="/teslafield-icon-192.png">
-  <link rel="stylesheet" href="/styles.css?v=20261127-01">
+  <link rel="stylesheet" href="/styles.css?v=20261127-02">
 </head>
 <body>
 <div class="install-experience-banner" id="installExperienceBanner" role="region" aria-label="Install TeslafieldAI" hidden>
-  <img class="install-experience-logo" src="/teslafieldai-logo.png?v=20261127-01" alt="" aria-hidden="true">
+  <img class="install-experience-logo" src="/teslafieldai-logo.png?v=20261127-02" alt="" aria-hidden="true">
   <span class="install-experience-copy">Experience the TeslafieldAI</span>
   <button class="install-experience-download" id="installExperienceDownload" type="button">Download now</button>
   <button class="install-experience-close" id="installExperienceClose" type="button" aria-label="Dismiss install banner">×</button>
@@ -29,7 +29,7 @@
   <aside class="sidebar" id="sidebar" aria-label="Main navigation">
     <div class="sidebar-header">
       <a class="brand" href="/" aria-label="TeslafieldAI home">
-        <img class="brand-mark" src="/teslafieldai-logo.png?v=20261127-01" alt=""><span class="brand-word">TeslafieldAI</span>
+        <img class="brand-mark" src="/teslafieldai-logo.png?v=20261127-02" alt=""><span class="brand-word">TeslafieldAI</span>
       </a>
       <button type="button" class="icon-button sidebar-collapse" id="sidebarCollapse" aria-label="Collapse sidebar" title="Collapse sidebar">
         <svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="3"/><path d="M9 4v16"/></svg>
@@ -46,7 +46,7 @@
     </div>
 
     <div class="history-area">
-      <div class="section-heading"><span>YOUR CHATS</span><button type="button" class="text-button" id="clearHistory">Clear</button></div>
+      <div class="section-heading"><span>YOUR CHATS</span><span class="history-actions"><button type="button" class="text-button" id="exportHistory">Export</button><button type="button" class="text-button" id="clearHistory">Clear</button></span></div>
       <div class="history-search">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path></svg>
         <input id="historySearch" type="search" placeholder="Search chats" autocomplete="off" aria-label="Search conversations">
@@ -83,7 +83,7 @@
     <header class="topbar">
       <div class="topbar-left">
         <a class="guest-brand" id="guestBrand" href="/" aria-label="TeslafieldAI home">
-          <img src="/teslafieldai-logo.png?v=20261127-01" alt="TeslafieldAI">
+          <img src="/teslafieldai-logo.png?v=20261127-02" alt="TeslafieldAI">
         </a>
         <button type="button" class="icon-button mobile-menu" id="mobileMenu" aria-label="Open sidebar">
           <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -133,13 +133,26 @@
           <textarea id="promptInput" rows="1" maxlength="12000" placeholder="Message TeslafieldAI" aria-label="Message TeslafieldAI"></textarea>
           <div class="composer-toolbar">
             <div class="composer-tools">
-              <div class="tool-menu-wrap">
-                <button class="composer-icon plus-button" id="plusButton" type="button" aria-label="Add files and more" aria-expanded="false" title="Add files">
-                  <svg class="plus-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                  <svg class="cancel-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+              <div class="model-picker-wrap" id="modelPickerWrap">
+                <button class="model-picker-button" id="modelPickerButton" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="modelPickerPopup" aria-label="Choose AI model">
+                  <img id="modelPickerCurrentLogo" src="/teslafieldai-logo.png?v=20261127-02" alt="">
+                  <span id="modelPickerCurrentName">Teslafield B1</span>
+                  <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg>
                 </button>
+                <div class="model-picker-popup" id="modelPickerPopup" role="dialog" aria-label="Choose a model" hidden>
+                  <div class="model-picker-title">Choose a model</div>
+                  <div class="model-picker-list" id="modelPickerList" role="listbox"></div>
+                </div>
+                <label class="visually-hidden" for="modelSelector">Preferred AI model</label>
+                <select id="modelSelector" class="model-selector-native" aria-label="Preferred AI model" tabindex="-1">
+                  <option value="teslafield">Teslafield B1</option>
+                </select>
               </div>
               <span class="composer-divider"></span>
+              <button class="composer-icon plus-button attachment-button" id="attachmentButton" type="button" aria-label="Add files" title="Add files">
+                <svg class="attachment-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m8.5 12.5 6.9-6.9a3.5 3.5 0 0 1 5 5l-9.2 9.2a5 5 0 0 1-7.1-7.1l9.2-9.2"/></svg>
+                <svg class="cancel-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+              </button>
               <span class="composer-hint">Ask anything</span>
             </div>
             <div class="composer-actions">
@@ -186,7 +199,7 @@
 <input id="fileInput" type="file" hidden multiple accept=".png,.jpg,.jpeg,.webp,.pdf,.txt,.csv,.docx,image/png,image/jpeg,image/webp,application/pdf,text/plain,text/csv,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
 <div class="toast-message" id="toastMessage" role="status" aria-live="polite"></div>
 <main class="shared-message-page" id="sharedMessagePage" hidden>
-  <header class="shared-message-header"><a href="/" class="shared-message-brand"><img src="/teslafieldai-logo.png?v=20261127-01" alt=""> TeslafieldAI <span>AI</span></a><a class="shared-open-app" href="/">Try TeslafieldAI</a></header>
+  <header class="shared-message-header"><a href="/" class="shared-message-brand"><img src="/teslafieldai-logo.png?v=20261127-02" alt=""> TeslafieldAI <span>AI</span></a><a class="shared-open-app" href="/">Try TeslafieldAI</a></header>
   <section class="shared-message-card"><div class="shared-eyebrow">SHARED AI RESPONSE</div><h1 id="sharedMessageTitle">A response shared from TeslafieldAI</h1><article class="shared-message-content" id="sharedMessageContent"></article><div class="shared-message-footer"><span>Shared with TeslafieldAI AI</span><button id="copySharedMessage" type="button">Copy response</button></div></section>
   <footer class="shared-message-bottom">TESLAFIELD © 2026 BMR INC. All rights reserved.</footer>
 </main>
@@ -194,7 +207,7 @@
 <div class="signup-prompt-backdrop" id="signupPromptModal" hidden>
   <section class="signup-prompt" role="dialog" aria-modal="true" aria-labelledby="signupPromptTitle">
     <button class="modal-close" id="closeSignupPrompt" type="button" aria-label="Close">×</button>
-    <div class="signup-prompt-mark"><img src="/teslafieldai-logo.png?v=20261127-01" alt=""></div>
+    <div class="signup-prompt-mark"><img src="/teslafieldai-logo.png?v=20261127-02" alt=""></div>
     <p class="signup-eyebrow">YOUR TeslafieldAI EXPERIENCE</p>
     <h2 id="signupPromptTitle">Continue your conversation</h2>
     <p class="signup-prompt-copy">Sign up for free to continue seamlessly with TeslafieldAI. Keep your conversation in your account on this browser and pick up where you left off.</p>
@@ -253,6 +266,7 @@
     <p class="signup-eyebrow">YOUR EXPERIENCE</p>
     <h2 id="personalizeTitle">Personalize TeslafieldAI</h2>
     <p class="personalize-intro">Choose how replies and the chat interface feel on this device.</p>
+    <p class="personalize-intro" id="modelSelectorHint">Model choices load from the connected backend. Paid models require your own OpenRouter account and may incur usage charges.</p>
     <label class="preference-field" for="preferenceResponseStyle">
       <span><strong>Response style</strong><small>Choose the amount of detail in AI replies.</small></span>
       <select id="preferenceResponseStyle"><option value="concise">Concise</option><option value="balanced">Balanced</option><option value="detailed">Detailed</option></select>
@@ -275,6 +289,6 @@
 <script defer src="/__/firebase/8.10.1/firebase-app.js"></script>
 <script defer src="/__/firebase/8.10.1/firebase-auth.js"></script>
 <script defer src="/__/firebase/init.js"></script>
-<script src="/app.js?v=20261127-01" defer></script>
+<script src="/app.js?v=20261127-05" defer></script>
 </body>
 </html>

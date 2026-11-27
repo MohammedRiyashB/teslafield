@@ -16,7 +16,11 @@ Node.js API for the TESLAFIELD web app and ChatGPT MCP connection.
 - `GET /` — service information
 - `GET /health` — Render health check
 - `GET /api/v1/status` — integration status
+- `GET /api/v1/models` — available free and paid text models; paid catalogue requires OpenRouter configuration
 - `GET /api/v1/warmup` — warmup checks for the AI integrations
+- `GET /api/v1/conversations` — Firebase-authenticated list of the signed-in user's cloud conversations
+- `PUT /api/v1/conversations` — Firebase-authenticated create/update of one owned conversation
+- `DELETE /api/v1/conversations?id=<conversation-id>` — delete one owned cloud conversation
 - `POST /api/v1/chat/completions` — Firebase-authenticated TeslafieldAI chat
 - `POST /api/v1/chat/stream` — Firebase-authenticated chat stream
 - `POST /api/v1/speech/transcribe` — Firebase-authenticated speech transcription
@@ -45,6 +49,7 @@ openssl rand -base64 48
 Keep this value only in Render's environment settings. Do not commit it or paste it into GitHub. Rotating it immediately invalidates existing MCP access tokens.
 
 Optional settings:
+- `OPENROUTER_API_KEY` — optional server-side key for OpenRouter free and paid chat models. Store only in Render environment settings. The local TeslafieldAI Qwen model remains the default when this is absent. Paid models are selected explicitly by the user and can incur OpenRouter charges; there is no automatic paid fallback.
 - `PUBLIC_BASE_URL` — defaults to `https://teslafield-api.onrender.com`
 - `TESLAFIELD_OAUTH_PAGE` — defaults to `https://teslafieldai.web.app/oauth`
 - `FIREBASE_PROJECT_ID` — defaults to `teslafieldai`
@@ -54,6 +59,32 @@ Firebase Authentication must have the Google provider enabled and `teslafieldai.
 
 ## Security and scaling notes
 
+Chat completion requests may send an `Idempotency-Key` header. The API scopes this key to the authenticated Firebase user and request payload, coalesces concurrent retries and caches successful responses for five minutes. Reusing the same key with different request content returns HTTP 409. This first implementation is process-local and bounded to 1,000 entries; it protects retries on a single API instance only. It is not a distributed lock. Keep a single Render instance until both OAuth authorization state and idempotency state are moved to a shared store.
+
 OAuth authorization requests and single-use authorization codes are held in process memory with short expirations; access tokens are HMAC-signed and resource-scoped. Keep this Render service at one instance for this initial release. Before scaling to multiple instances or using multiple regions, move the short-lived authorization state and one-time code store to shared Redis/Key Value or a database.
 
 Do not add model provider keys, OAuth signing secrets, Firebase service-account keys or user tokens to frontend files or the public repository.
+
+## Model selection
+
+The browser model selector defaults to the existing TeslafieldAI Qwen3-0.6B Space. If `OPENROUTER_API_KEY` is configured, the API loads the current OpenRouter text-chat catalogue, separates zero-priced models from paid models, and returns price-per-million-token metadata for the UI. The browser sends only the selected model ID; the provider key remains on the server. The API validates model IDs against the live provider catalogue before making a request and includes the selected model in the idempotency fingerprint. Free provider models can still be rate-limited or unavailable. Paid models are never selected automatically; users must explicitly choose one.
+
+
+## Cloud conversation history (Stage 6)
+
+The API stores conversations in the existing Firebase project's default Cloud Firestore database. It uses the caller's Firebase ID token with the Firestore REST API, so Firestore Security Rules enforce ownership; no service-account private key or paid database is added to the backend.
+
+Before cross-device cloud sync can work, the project owner must:
+1. Open the Firebase console for project `teslafieldai` and create/enable the default Cloud Firestore database. Choose a region only after reviewing data-residency needs.
+2. Confirm the Cloud Firestore API is enabled.
+3. From a trusted local checkout with Firebase CLI authenticated as a project administrator, run `firebase deploy --only firestore:rules --project teslafieldai`. The repository's `firestore.rules` permits a signed-in user to access only their own `users/{uid}/conversations/*` and `users/{uid}/deletedConversations/*` documents.
+
+The web client retains localStorage as an offline cache, merges remote and local conversations on sign-in, refreshes when the page regains focus, and uploads local edits through the authenticated API. This is foreground/online synchronization, not a realtime Firestore listener.
+
+Deletion is protected against stale offline devices: the client saves a local deletion marker immediately, the API writes a durable owner-scoped Firestore tombstone before deleting the conversation document, and sync filters tombstoned IDs before merging local and remote history. Tombstones are retained and paginated so an old offline copy cannot silently restore a deleted chat. A deliberate explicit save of the same ID clears its tombstone.
+
+The chat-history Export action downloads the currently synchronized local history as JSON. Account deletion first attempts to remove known cloud conversations and tombstones while the Firebase ID token is valid, then deletes the Firebase Auth account and local data. If cloud cleanup fails, account deletion is stopped. This does not delete records that external AI providers may retain under their own policies.
+
+Each conversation is validated (safe document ID, message role/content limits and a 400 KiB serialized size cap). API user identity always comes from the verified Firebase token, never from a client-supplied UID.
+
+The Firebase Spark plan has historically included a no-cost Firestore Standard quota, but quotas, pricing and eligibility can change. Check the current Firebase pricing and quotas before enabling public usage. On free quotas, reaching a limit may stop Firestore operations until the quota resets. This implementation does not create a database, select its region, deploy rules, or enable billing.

@@ -68,10 +68,13 @@
   let chats = [];
   let activeId = null;
   let generating = false;
+  let sendPending = false;
   let controller = null;
   let mediaRecorder = null;
   let mediaRecorderStream = null;
   let recordingTimer = null;
+  let voiceStartPending = false;
+  let voiceStartAttempt = 0;
   let selectedFiles = [];
   let toastTimer = null;
   let healthRequest = null;
@@ -81,7 +84,15 @@
   let authReady = false;
   let pendingGuestPrompt = "";
   let guestConversationStarted = false;
-  let userPreferences = { responseStyle: "balanced", textSize: "standard", reduceMotion: false };
+  let userPreferences = { responseStyle: "balanced", textSize: "standard", reduceMotion: false, model: "teslafield" };
+  let availableModels = [{ id: "teslafield", name: "Teslafield B1", free: true, provider: "TeslafieldAI" }];
+  let cloudSyncReady = false;
+  let cloudSyncBusy = false;
+  let cloudSyncTimer = null;
+  let cloudSyncFingerprints = new Map();
+  let cloudDeletedIds = new Set();
+  let cloudSyncedDeletedIds = new Set();
+  let cloudHistoryWarningShown = false;
   let resolveAuthReady;
   const authReadyPromise = new Promise((resolve) => { resolveAuthReady = resolve; });
 
@@ -280,7 +291,7 @@
     }
     setGuestLayout(!signedIn);
     $("accountStatus").textContent = signedIn
-      ? "Signed in securely. Your chat history stays on this device."
+      ? "Signed in securely. Your chats are saved locally and sync when cloud history is enabled."
       : "Sign in with Google to use TeslafieldAI securely.";
     $("accountSignUp").hidden = signedIn;
     $("accountLogIn").hidden = signedIn;
@@ -369,9 +380,16 @@
       if (generating) stopGeneration();
       chats = [];
       activeId = null;
+      cloudSyncReady = false;
+      cloudSyncFingerprints = new Map();
+      cloudDeletedIds = new Set();
+      cloudSyncedDeletedIds = new Set();
+      if (cloudSyncTimer) { clearTimeout(cloudSyncTimer); cloudSyncTimer = null; }
       if (currentUser) {
         loadStore();
+        loadDeletedConversationIds();
         activeId = chats.length ? chats[0].id : null;
+        syncCloudHistory();
       }
       messageList.innerHTML = "";
       renderConversation();
@@ -526,17 +544,32 @@
 
   async function deleteAccountAndLocalData() {
     if (!currentUser) return;
-    const uid = currentUser.uid;
-    if (!window.confirm("Permanently delete this TeslafieldAI sign-in account and its locally saved chats on this device? This cannot be undone. This does not erase records that external AI providers may retain under their own policies.")) return;
+    const user = currentUser;
+    const uid = user.uid;
+    if (!window.confirm("Permanently delete your TeslafieldAI account and its cloud conversations? This also removes local chat data on this device. External AI providers may retain data under their own policies. This cannot be undone.")) return;
     try {
-      await currentUser.delete();
+      const token = await user.getIdToken();
+      const remote = await cloudHistoryRequest("GET", token);
+      const ids = new Set([
+        ...chats.map((chat) => chat.id),
+        ...(Array.isArray(remote.conversations) ? remote.conversations.map((chat) => chat.id) : []),
+        ...(Array.isArray(remote.deleted) ? remote.deleted.map((item) => item.id) : [])
+      ]);
+      for (const id of ids) {
+        if (currentUser !== user) throw new Error("ACCOUNT_CHANGED");
+        await cloudHistoryRequest("DELETE", token, null, id);
+      }
+      await user.delete();
       localStorage.removeItem("teslafield.conversations.v4." + uid);
+      localStorage.removeItem("teslafield.conversations.deleted.v1." + uid);
       localStorage.removeItem("teslafield.conversations.v2");
       localStorage.removeItem("teslafield.conversations.v3");
       chats = [];
+      cloudDeletedIds = new Set();
+      cloudSyncedDeletedIds = new Set();
       activeId = null;
       renderConversation();
-      toast("Your account and its local chat data were deleted.");
+      toast("Your TeslafieldAI account and cloud chat data were deleted.");
     } catch (error) {
       if (error && error.code === "auth/requires-recent-login") {
         toast("For security, sign in again with Google and retry account deletion.");
@@ -547,6 +580,46 @@
   }
   function conversationStoreKey() {
     return currentUser ? "teslafield.conversations.v4." + currentUser.uid : null;
+  }
+  function deletedConversationStoreKey() {
+    return currentUser ? "teslafield.conversations.deleted.v1." + currentUser.uid : null;
+  }
+  function loadDeletedConversationIds() {
+    cloudDeletedIds = new Set();
+    const key = deletedConversationStoreKey();
+    if (!key) return;
+    try {
+      const value = JSON.parse(localStorage.getItem(key) || "[]");
+      if (Array.isArray(value)) value.filter((id) => typeof id === "string").forEach((id) => cloudDeletedIds.add(id));
+    } catch (error) {}
+  }
+  function saveDeletedConversationIds() {
+    const key = deletedConversationStoreKey();
+    if (!key) return;
+    try { localStorage.setItem(key, JSON.stringify(Array.from(cloudDeletedIds).slice(-500))); } catch (error) {}
+  }
+  function markConversationDeleted(id) {
+    if (typeof id !== "string" || !id) return;
+    cloudDeletedIds.add(id);
+    saveDeletedConversationIds();
+    queueCloudHistorySync();
+  }
+  function exportConversationHistory() {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      product: "TeslafieldAI",
+      conversations: chats
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "teslafieldai-chat-history-" + new Date().toISOString().slice(0, 10) + ".json";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast("Your visible chat history export is ready.");
   }
   function loadStore() {
     chats = [];
@@ -564,10 +637,131 @@
     if (!key) return;
     try {
       localStorage.setItem(key, JSON.stringify(chats.slice(0, MAX_HISTORY)));
+      if (cloudSyncReady) queueCloudHistorySync();
     } catch (error) {
       toast("This browser could not save the conversation history.");
     }
   }
+  function cloudConversationFingerprint(chat) {
+    return JSON.stringify(chat);
+  }
+
+  async function cloudHistoryRequest(method, token, payload, id) {
+    const url = API + "/api/v1/conversations" + (id ? "?id=" + encodeURIComponent(id) : "");
+    const response = await fetch(url, {
+      method,
+      headers: {
+        Authorization: "Bearer " + token,
+        Accept: "application/json",
+        ...(payload ? { "Content-Type": "application/json" } : {})
+      },
+      ...(payload ? { body: JSON.stringify(payload) } : {}),
+      signal: AbortSignal.timeout(20000)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new Error(data.message || data.error || "Cloud history request failed.");
+      error.code = data.error || "CLOUD_HISTORY_ERROR";
+      error.status = response.status;
+      throw error;
+    }
+    return data;
+  }
+
+  async function syncCloudHistory() {
+    if (!currentUser || cloudSyncBusy) return;
+    const user = currentUser;
+    cloudSyncBusy = true;
+    cloudSyncReady = false;
+    try {
+      const token = await user.getIdToken();
+      const result = await cloudHistoryRequest("GET", token);
+      if (currentUser !== user) return;
+      const remote = Array.isArray(result.conversations) ? result.conversations : [];
+      const remoteDeleted = Array.isArray(result.deleted) ? result.deleted.map((item) => item && item.id).filter(Boolean) : [];
+      remoteDeleted.forEach((id) => cloudDeletedIds.add(id));
+      cloudSyncedDeletedIds = new Set(remoteDeleted);
+      saveDeletedConversationIds();
+      const deletedIds = new Set(cloudDeletedIds);
+      chats = chats.filter((chat) => !deletedIds.has(chat.id));
+      const liveRemote = remote.filter((chat) => !deletedIds.has(chat.id));
+      const local = chats.slice(0, MAX_HISTORY);
+      const merged = new Map(liveRemote.map((chat) => [chat.id, chat]));
+      local.forEach((chat) => {
+        const existing = merged.get(chat.id);
+        if (!existing || Number(chat.updated || 0) >= Number(existing.updated || 0)) merged.set(chat.id, chat);
+      });
+      chats = Array.from(merged.values()).sort((a, b) => Number(b.updated || b.created || 0) - Number(a.updated || a.created || 0)).slice(0, MAX_HISTORY);
+      if (!activeId || !chats.some((chat) => chat.id === activeId)) activeId = chats.length ? chats[0].id : null;
+      try { localStorage.setItem(conversationStoreKey(), JSON.stringify(chats)); } catch (error) {}
+      cloudSyncFingerprints = new Map(liveRemote.map((chat) => [chat.id, cloudConversationFingerprint(chat)]));
+      cloudSyncReady = true;
+      renderConversation();
+      cloudSyncBusy = false;
+      await pushCloudHistoryChanges();
+    } catch (error) {
+      cloudSyncReady = false;
+      if (!cloudHistoryWarningShown) {
+        cloudHistoryWarningShown = true;
+        const message = error.code === "FIRESTORE_NOT_READY"
+          ? "Cloud history is not enabled yet. Your chats remain saved on this device."
+          : "Cloud history could not sync right now. Your chats remain saved on this device.";
+        toast(message);
+      }
+    } finally {
+      cloudSyncBusy = false;
+      if (currentUser && currentUser !== user) syncCloudHistory();
+    }
+  }
+
+  function queueCloudHistorySync() {
+    if (!currentUser || !cloudSyncReady) return;
+    if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
+    cloudSyncTimer = setTimeout(() => {
+      cloudSyncTimer = null;
+      pushCloudHistoryChanges();
+    }, 900);
+  }
+
+  async function pushCloudHistoryChanges() {
+    if (!currentUser || !cloudSyncReady || cloudSyncBusy) return;
+    const user = currentUser;
+    cloudSyncBusy = true;
+    try {
+      const token = await user.getIdToken();
+      const local = chats.slice(0, MAX_HISTORY);
+      const currentIds = new Set(local.map((chat) => chat.id));
+      for (const id of cloudDeletedIds) {
+        if (currentUser !== user) return;
+        if (cloudSyncedDeletedIds.has(id)) continue;
+        await cloudHistoryRequest("DELETE", token, null, id);
+        cloudSyncedDeletedIds.add(id);
+        cloudSyncFingerprints.delete(id);
+      }
+      for (const chat of local) {
+        if (currentUser !== user) return;
+        const fingerprint = cloudConversationFingerprint(chat);
+        if (cloudSyncFingerprints.get(chat.id) === fingerprint) continue;
+        await cloudHistoryRequest("PUT", token, { conversation: chat });
+        cloudSyncFingerprints.set(chat.id, fingerprint);
+      }
+      for (const id of Array.from(cloudSyncFingerprints.keys())) {
+        if (currentUser !== user) return;
+        if (currentIds.has(id)) continue;
+        await cloudHistoryRequest("DELETE", token, null, id);
+        cloudSyncFingerprints.delete(id);
+      }
+    } catch (error) {
+      if (!cloudHistoryWarningShown) {
+        cloudHistoryWarningShown = true;
+        toast("Cloud history sync paused. Your local chat is still saved.");
+      }
+    } finally {
+      cloudSyncBusy = false;
+      if (currentUser && currentUser !== user) syncCloudHistory();
+    }
+  }
+
   function activeChat() { return chats.find((chat) => chat.id === activeId) || null; }
   function scrollBottom() {
     const area = $("conversationScroll");
@@ -813,7 +1007,7 @@
       const element = $(id);
       if (element) element.hidden = true;
     });
-    ["plusButton", "accountButton"].forEach((id) => {
+    ["attachmentButton", "accountButton"].forEach((id) => {
       if (id === except) return;
       const element = $(id);
       if (element) element.setAttribute("aria-expanded", "false");
@@ -865,6 +1059,7 @@
           remove.onclick = () => {
             if (!window.confirm("Delete this conversation from this browser?")) return;
             chats = chats.filter((item) => item.id !== chat.id);
+            markConversationDeleted(chat.id);
             if (activeId === chat.id) { activeId = null; messageList.innerHTML = ""; welcome.hidden = false; }
             saveStore(); renderHistory();
           };
@@ -984,6 +1179,7 @@
   }
 
   async function startVoiceRecording() {
+    if (voiceStartPending || (mediaRecorder && mediaRecorder.state !== "inactive")) return;
     if (!currentUser) {
       toast("Sign in to use voice input.");
       return;
@@ -992,10 +1188,19 @@
       toast("Voice recording is not supported by this browser. Try Chrome on Android.");
       return;
     }
+    const attempt = ++voiceStartAttempt;
+    voiceStartPending = true;
+    let acquiredStream = null;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
       });
+      acquiredStream = stream;
+      // Permission prompts cannot be cancelled by the browser. Ignore stale grants.
+      if (attempt !== voiceStartAttempt || !currentUser) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       const supportedTypes = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
       const mimeType = supportedTypes.find((type) => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(type));
       const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
@@ -1004,7 +1209,11 @@
         if (event.data && event.data.size) chunks.push(event.data);
       };
       recorder.onerror = () => {
+        recorder.failed = true;
+        clearTimeout(recordingTimer);
         stream.getTracks().forEach((track) => track.stop());
+        if (mediaRecorder === recorder) mediaRecorder = null;
+        if (mediaRecorderStream === stream) mediaRecorderStream = null;
         resetMicButton();
         toast("The microphone recording failed. Please try again.");
       };
@@ -1014,7 +1223,7 @@
         mediaRecorder = null;
         mediaRecorderStream = null;
         chunks = chunks || [];
-        if (recorder.cancelled) {
+        if (recorder.cancelled || recorder.failed) {
           chunks = [];
           resetMicButton();
           return;
@@ -1040,13 +1249,14 @@
       button.setAttribute("aria-label", "Finish voice recording");
       button.title = "Finish voice recording";
       $("composer").classList.add("voice-recording");
-      const cancelButton = $("plusButton");
+      const cancelButton = $("attachmentButton");
       cancelButton.classList.add("cancel-recording");
       cancelButton.setAttribute("aria-label", "Cancel voice recording");
       cancelButton.title = "Cancel voice recording";
       recordingTimer = setTimeout(() => stopVoiceRecording(), 45000);
       toast("Listening… tap the waveform to finish, or × to cancel.");
     } catch (error) {
+      if (acquiredStream) acquiredStream.getTracks().forEach((track) => track.stop());
       if (mediaRecorderStream) mediaRecorderStream.getTracks().forEach((track) => track.stop());
       mediaRecorder = null;
       mediaRecorderStream = null;
@@ -1055,16 +1265,18 @@
         ? "Allow microphone access in your browser settings, then try again."
         : "TeslafieldAI could not start the microphone. Please try again.";
       toast(message);
+    } finally {
+      if (attempt === voiceStartAttempt) voiceStartPending = false;
     }
   }
 
   function resetVoiceModeUI() {
     const composer = $("composer");
-    const cancelButton = $("plusButton");
+    const cancelButton = $("attachmentButton");
     if (composer) composer.classList.remove("voice-recording");
     if (cancelButton) {
       cancelButton.classList.remove("cancel-recording");
-      cancelButton.setAttribute("aria-label", "Add files and more");
+      cancelButton.setAttribute("aria-label", "Add files");
       cancelButton.title = "Add files";
     }
   }
@@ -1080,6 +1292,9 @@
   }
 
   function cancelVoiceRecording() {
+    // Invalidate an unresolved permission prompt so a late grant cannot start recording.
+    voiceStartAttempt += 1;
+    voiceStartPending = false;
     clearTimeout(recordingTimer);
     const recorder = mediaRecorder;
     if (recorder && recorder.state !== "inactive") {
@@ -1149,6 +1364,9 @@
   }
 
   async function requestReply(chat) {
+    const idempotencyKey = window.crypto && typeof window.crypto.randomUUID === "function"
+      ? window.crypto.randomUUID()
+      : makeId() + "-" + Date.now().toString(36);
     const requestController = new AbortController();
     const requestSignal = requestController.signal;
     controller = requestController;
@@ -1161,8 +1379,8 @@
       if (requestSignal.aborted) throw new DOMException("Request cancelled", "AbortError");
       const chatRequest = {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-        body: JSON.stringify({ messages: chat.messages.slice(-30), response_style: userPreferences.responseStyle }),
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token, "Idempotency-Key": idempotencyKey },
+        body: JSON.stringify({ messages: chat.messages.slice(-30), response_style: userPreferences.responseStyle, model: userPreferences.model }),
         signal: requestSignal
       };
       let response;
@@ -1219,58 +1437,68 @@
 
   async function sendMessage(value) {
     const text = safeText(value === undefined ? promptInput.value : value).trim();
-    if (!text || generating) return;
-    if (!currentUser) {
-      savePendingGuestPrompt(text);
-      guestConversationStarted = true;
-      welcome.hidden = true;
-      setGuestLayout(true);
-      messageList.innerHTML = "";
-      const row = document.createElement("article");
-      row.className = "message-row user guest-pending-message";
-      const body = document.createElement("div");
-      body.className = "message-content";
-      body.textContent = text;
-      row.appendChild(body);
-      messageList.appendChild(row);
-      showGuestContinueCard();
+    if (!text || generating || sendPending) return;
+    sendPending = true;
+    try {
+      if (!currentUser) {
+        savePendingGuestPrompt(text);
+        guestConversationStarted = true;
+        welcome.hidden = true;
+        setGuestLayout(true);
+        messageList.innerHTML = "";
+        const row = document.createElement("article");
+        row.className = "message-row user guest-pending-message";
+        const body = document.createElement("div");
+        body.className = "message-content";
+        body.textContent = text;
+        row.appendChild(body);
+        messageList.appendChild(row);
+        showGuestContinueCard();
+        promptInput.value = "";
+        promptInput.style.height = "auto";
+        return;
+      }
+      if (!(await requireAuthentication(text))) return;
+      if (selectedFiles.length) {
+        toast("File reading is not connected yet. Remove attachments and send text only.");
+        return;
+      }
+      let chat = activeChat();
+      if (!chat) {
+        chat = { id: makeId(), title: text.replace(/\s+/g, " ").slice(0, 48), messages: [], created: Date.now(), updated: Date.now() };
+        chats.unshift(chat);
+        activeId = chat.id;
+      }
+      chat.messages.push({ role: "user", content: text });
+      chat.updated = Date.now();
       promptInput.value = "";
       promptInput.style.height = "auto";
-      return;
+      welcome.hidden = true;
+      saveStore();
+      renderConversation();
+      closeSidebar();
+      await requestReply(chat);
+    } finally {
+      sendPending = false;
     }
-    if (!(await requireAuthentication(text))) return;
-    if (selectedFiles.length) {
-      toast("File reading is not connected yet. Remove attachments and send text only.");
-      return;
-    }
-    let chat = activeChat();
-    if (!chat) {
-      chat = { id: makeId(), title: text.replace(/\s+/g, " ").slice(0, 48), messages: [], created: Date.now(), updated: Date.now() };
-      chats.unshift(chat);
-      activeId = chat.id;
-    }
-    chat.messages.push({ role: "user", content: text });
-    chat.updated = Date.now();
-    promptInput.value = "";
-    promptInput.style.height = "auto";
-    welcome.hidden = true;
-    saveStore();
-    renderConversation();
-    closeSidebar();
-    await requestReply(chat);
   }
   async function regenerateLast() {
     const chat = activeChat();
-    if (!chat || generating) return;
-    if (!(await requireAuthentication())) return;
-    if (chat.messages.length && chat.messages[chat.messages.length - 1].role === "assistant") chat.messages.pop();
-    if (!chat.messages.length || chat.messages[chat.messages.length - 1].role !== "user") {
-      toast("There is no user message to regenerate.");
-      return;
+    if (!chat || generating || sendPending) return;
+    sendPending = true;
+    try {
+      if (!(await requireAuthentication())) return;
+      if (chat.messages.length && chat.messages[chat.messages.length - 1].role === "assistant") chat.messages.pop();
+      if (!chat.messages.length || chat.messages[chat.messages.length - 1].role !== "user") {
+        toast("There is no user message to regenerate.");
+        return;
+      }
+      saveStore();
+      renderConversation();
+      await requestReply(chat);
+    } finally {
+      sendPending = false;
     }
-    saveStore();
-    renderConversation();
-    await requestReply(chat);
   }
   function renderAttachments() {
     const strip = $("attachmentStrip");
@@ -1398,7 +1626,8 @@
         userPreferences = {
           responseStyle: ["concise", "balanced", "detailed"].includes(saved.responseStyle) ? saved.responseStyle : "balanced",
           textSize: ["small", "standard", "large"].includes(saved.textSize) ? saved.textSize : "standard",
-          reduceMotion: saved.reduceMotion === true
+          reduceMotion: saved.reduceMotion === true,
+          model: typeof saved.model === "string" && /^[A-Za-z0-9._:/-]{1,160}$/.test(saved.model) ? saved.model : "teslafield"
         };
       }
     } catch (error) {}
@@ -1425,15 +1654,216 @@
     userPreferences = {
       responseStyle: $("preferenceResponseStyle").value,
       textSize: $("preferenceTextSize").value,
-      reduceMotion: $("preferenceReduceMotion").checked
+      reduceMotion: $("preferenceReduceMotion").checked,
+      model: userPreferences.model || "teslafield"
     };
     try { localStorage.setItem("teslafield.preferences.v1", JSON.stringify(userPreferences)); }
     catch (error) { toast("Your preferences could not be saved in this browser."); }
     applyPersonalization();
+    try { localStorage.setItem("teslafield.preferences.v1", JSON.stringify(userPreferences)); } catch (error) {}
     closePersonalize();
     toast("Your TeslafieldAI preferences are saved.");
   }
 
+  function renderModelSelector() {
+    const select = $("modelSelector");
+    if (!select) return;
+    const preferred = userPreferences.model || "teslafield";
+    select.replaceChildren();
+    const groups = [
+      { label: "FREE / $0 MODELS", models: availableModels.filter((model) => model.free) },
+      { label: "PAID MODELS · OPENROUTER", models: availableModels.filter((model) => !model.free) }
+    ];
+    groups.forEach((group) => {
+      if (!group.models.length) return;
+      const optgroup = document.createElement("optgroup");
+      optgroup.label = group.label;
+      group.models.forEach((model) => {
+        const option = document.createElement("option");
+        option.value = model.id;
+        const formatPrice = (value) => Number(value || 0).toFixed(6).replace(/\.?0+$/, "");
+        const price = model.free ? (model.provider === "OpenRouter" && model.id !== "openrouter/free" && model.freeTier !== true ? "$0 model price · account conditions may apply" : "Free") :
+          "$" + formatPrice(model.promptPerMillion) + " USD in / $" + formatPrice(model.completionPerMillion) + " USD out per 1M tokens";
+        option.textContent = model.name + " · " + price;
+        optgroup.appendChild(option);
+      });
+      select.appendChild(optgroup);
+    });
+    if (availableModels.some((model) => model.id === preferred)) {
+      select.value = preferred;
+    } else {
+      userPreferences.model = "teslafield";
+      select.value = "teslafield";
+      try { localStorage.setItem("teslafield.preferences.v1", JSON.stringify(userPreferences)); } catch (error) {}
+    }
+    const hint = $("modelSelectorHint");
+    if (hint) {
+      const routerReady = availableModels.some((model) => model.provider === "OpenRouter");
+      hint.textContent = routerReady
+        ? "When selected, messages are sent to OpenRouter. Paid models use your account. Some $0 models may still require account credits; :free variants are free but rate-limited. Prices are shown per 1M tokens."
+        : "TeslafieldAI Free is active. More choices require a server-side OpenRouter key.";
+    }
+  }
+
+  function renderModelPicker() {
+    const list = $("modelPickerList");
+    const button = $("modelPickerButton");
+    const selectedLogo = $("modelPickerCurrentLogo");
+    const selectedName = $("modelPickerCurrentName");
+    if (!list || !button || !selectedLogo || !selectedName) return;
+    const selected = availableModels.find((model) => model.id === (userPreferences.model || "teslafield")) ||
+      availableModels.find((model) => model.id === "teslafield");
+    if (selected) {
+      selectedName.textContent = selected.id === "teslafield" ? "Teslafield B1" : selected.name;
+      selectedLogo.src = selected.provider === "OpenRouter" ? "https://openrouter.ai/favicon.ico" : "/teslafieldai-logo.png?v=20261127-02";
+      selectedLogo.alt = "";
+    }
+    list.replaceChildren();
+    const own = availableModels.filter((model) => model.id === "teslafield");
+    const allRouterFree = availableModels.filter((model) => model.provider === "OpenRouter" && model.free);
+    const routerFree = allRouterFree.slice(0, 13);
+    if (selected && selected.provider === "OpenRouter" && selected.free && !routerFree.some((model) => model.id === selected.id)) routerFree[12] = selected;
+    const routerPaid = availableModels.filter((model) => model.provider === "OpenRouter" && !model.free);
+    const groups = [
+      { title: "TESLAFIELD", models: own },
+      { title: "OPENROUTER · FREE MODELS", models: routerFree },
+      { title: "OPENROUTER · PAID MODELS", models: routerPaid }
+    ];
+    groups.forEach((group) => {
+      if (!group.models.length) return;
+      const heading = document.createElement("div");
+      heading.className = "model-picker-group-title";
+      if (group.title.startsWith("OPENROUTER")) {
+        const logo = document.createElement("img");
+        logo.src = "https://openrouter.ai/favicon.ico";
+        logo.alt = "";
+        logo.className = "model-provider-logo";
+        heading.appendChild(logo);
+      } else {
+        const logo = document.createElement("img");
+        logo.src = "/teslafieldai-logo.png?v=20261127-02";
+        logo.alt = "";
+        logo.className = "model-provider-logo";
+        heading.appendChild(logo);
+      }
+      const label = document.createElement("span");
+      label.textContent = group.title;
+      heading.appendChild(label);
+      list.appendChild(heading);
+      group.models.forEach((model) => {
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = "model-picker-option";
+        option.setAttribute("role", "option");
+        option.setAttribute("aria-selected", String(model.id === (userPreferences.model || "teslafield")));
+        option.dataset.modelId = model.id;
+        const logo = document.createElement("img");
+        logo.src = model.provider === "OpenRouter" ? "https://openrouter.ai/favicon.ico" : "/teslafieldai-logo.png?v=20261127-02";
+        logo.alt = "";
+        logo.className = "model-option-logo";
+        logo.onerror = () => { logo.hidden = true; };
+        const copy = document.createElement("span");
+        copy.className = "model-option-copy";
+        const name = document.createElement("strong");
+        name.textContent = model.id === "teslafield" ? "Teslafield B1" : model.name;
+        const meta = document.createElement("small");
+        meta.textContent = model.free
+          ? (model.provider === "OpenRouter" ? "FREE · OpenRouter" : "FREE · TeslafieldAI")
+          : "PAID · $" + Number(model.promptPerMillion || 0).toFixed(4) + " in / $" + Number(model.completionPerMillion || 0).toFixed(4) + " out per 1M tokens";
+        copy.append(name, meta);
+        const check = document.createElement("span");
+        check.className = "model-option-check";
+        check.textContent = model.id === (userPreferences.model || "teslafield") ? "✓" : "";
+        option.append(logo, copy, check);
+        option.addEventListener("click", () => {
+          const select = $("modelSelector");
+          select.value = model.id;
+          userPreferences.model = model.id;
+          try { localStorage.setItem("teslafield.preferences.v1", JSON.stringify(userPreferences)); } catch (error) {}
+          renderModelSelector();
+          renderModelPicker();
+          closeModelPicker();
+          if (model.provider === "OpenRouter") {
+            toast(model.free ? "OpenRouter free model selected. Provider limits and availability apply." : "Paid OpenRouter model selected. Usage charges may apply.");
+          } else {
+            toast("Teslafield B1 selected.");
+          }
+        });
+        list.appendChild(option);
+      });
+    });
+  }
+
+  function openModelPicker() {
+    const popup = $("modelPickerPopup");
+    if (!popup) return;
+    closeMenus("modelPickerButton");
+    popup.hidden = false;
+    $("modelPickerButton").setAttribute("aria-expanded", "true");
+    $("modelPickerWrap").classList.add("is-open");
+  }
+
+  function closeModelPicker() {
+    const popup = $("modelPickerPopup");
+    if (!popup) return;
+    popup.hidden = true;
+    $("modelPickerButton").setAttribute("aria-expanded", "false");
+    $("modelPickerWrap").classList.remove("is-open");
+  }
+
+  async function loadModelCatalog() {
+    try {
+      const response = await fetch(API + "/api/v1/models", { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(12000) });
+      if (!response.ok) throw new Error("MODEL_CATALOG_UNAVAILABLE");
+      const data = await response.json();
+      if (!data || !Array.isArray(data.models)) throw new Error("MODEL_CATALOG_INVALID");
+      availableModels = data.models.filter((model) =>
+        model && typeof model.id === "string" && typeof model.name === "string" &&
+        typeof model.free === "boolean" && /^[A-Za-z0-9._:/-]{1,160}$/.test(model.id)
+      );
+      if (!availableModels.some((model) => model.id === "teslafield")) {
+        availableModels.unshift({ id: "teslafield", name: "Teslafield B1", free: true, provider: "TeslafieldAI" });
+      }
+    } catch (error) {
+      // Keep the local free model available when the catalogue service is sleeping.
+    }
+    renderModelSelector();
+    renderModelPicker();
+  }
+
+  $("modelSelector").addEventListener("change", () => {
+    const selected = $("modelSelector").value;
+    if (!availableModels.some((model) => model.id === selected)) return;
+    userPreferences.model = selected;
+    try { localStorage.setItem("teslafield.preferences.v1", JSON.stringify(userPreferences)); } catch (error) {}
+    renderModelPicker();
+    const model = availableModels.find((item) => item.id === selected);
+    if (model.provider === "OpenRouter") {
+      toast(model.free ? "OpenRouter $0 model selected. Your messages go to OpenRouter; provider limits and account conditions apply." : "Paid OpenRouter model selected. Your messages go to OpenRouter and usage charges may apply.");
+    } else {
+      toast("Preferred model: " + model.name);
+    }
+  });
+
+  $("modelPickerButton").addEventListener("click", () => {
+    if ($("modelPickerPopup").hidden) openModelPicker();
+    else closeModelPicker();
+  });
+  document.addEventListener("click", (event) => {
+    if (!$("modelPickerWrap").contains(event.target)) closeModelPicker();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !$("modelPickerPopup").hidden) {
+      closeModelPicker();
+      $("modelPickerButton").focus();
+    }
+  });
+  window.addEventListener("focus", () => {
+    if (currentUser) syncCloudHistory();
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && currentUser) syncCloudHistory();
+  });
   $("newChat").onclick = newChat;
   $("connectEntryButton").onclick = openConnectPage;
   $("connectBackButton").onclick = () => closeConnectPage(false);
@@ -1463,10 +1893,12 @@
   document.querySelectorAll("[data-prompt]").forEach((button) => {
     button.onclick = () => sendMessage(button.dataset.prompt);
   });
+  $("exportHistory").onclick = exportConversationHistory;
   $("clearHistory").onclick = () => {
     const hasLegacyHistory = !!(localStorage.getItem("teslafield.conversations.v2") || localStorage.getItem("teslafield.conversations.v3"));
     if (!chats.length && !hasLegacyHistory) { toast("There are no saved conversations."); return; }
     if (window.confirm("Delete all conversations for this signed-in account and remove older unassigned device history?")) {
+      chats.forEach((chat) => markConversationDeleted(chat.id));
       chats = [];
       saveStore();
       try {
@@ -1519,8 +1951,8 @@
   };
   $("accountDelete").onclick = deleteAccountAndLocalData;
   $("accountButton").onclick = () => toggleMenu("accountMenu", "accountButton");
-  $("plusButton").onclick = () => {
-    if ($("plusButton").classList.contains("cancel-recording")) {
+  $("attachmentButton").onclick = () => {
+    if ($("attachmentButton").classList.contains("cancel-recording")) {
       cancelVoiceRecording();
       return;
     }
@@ -1619,6 +2051,7 @@
   } catch (error) { applyTheme("dark"); }
   renderHistory();
   readPersonalization();
+  loadModelCatalog();
   let connectionTimer = null;
   function startConnectionMonitor() {
     if (connectionTimer) clearInterval(connectionTimer);
