@@ -124,7 +124,7 @@ jobs:
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-icon-192.png' && icon.sizes === '192x192'));
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-icon-512.png' && icon.sizes === '512x512'));
           assert.ok(manifest.icons.some(icon => icon.src === '/teslafield-pwa-icon.svg'));
-          assert.ok(fs.readFileSync('sw.js', 'utf8').includes('teslafield-pwa-shell-v11'));
+          assert.ok(fs.readFileSync('sw.js', 'utf8').includes('teslafield-pwa-shell-v12'));
           assert.ok(fs.readFileSync('theme-init.js', 'utf8').includes('teslafield.appearance.v2'));
           const chatEngine = fs.readFileSync('huggingface/chat-space/app.py', 'utf8');
           assert.ok(chatEngine.includes('MODEL_ID = "Qwen/Qwen3-0.6B"'));
