@@ -298,3 +298,20 @@ test("model catalogue exposes the local free model without requiring provider cr
   assert.ok(payload.models.some((model) => model.id === "teslafield" && model.free === true));
   assert.equal(payload.models.some((model) => model.id === "openrouter/free"), false);
 });
+
+
+test("creating a short share link requires Firebase authentication", async () => {
+  const response = await fetch(baseUrl + "/api/v1/shares", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content: "A complete shared response." })
+  });
+  assert.equal(response.status, 401);
+  assert.equal((await response.json()).error, "AUTH_REQUIRED");
+});
+
+test("public share lookup rejects malformed IDs without exposing storage", async () => {
+  const response = await fetch(baseUrl + "/api/v1/shares/not-a-valid-id");
+  assert.equal(response.status, 404);
+  assert.equal((await response.json()).error, "NOT_FOUND");
+});
