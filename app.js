@@ -85,7 +85,8 @@
   let pendingGuestPrompt = "";
   let guestConversationStarted = false;
   let userPreferences = { responseStyle: "balanced", textSize: "standard", reduceMotion: false, model: "teslafield" };
-  let availableModels = [{ id: "teslafield", name: "Teslafield B1", free: true, provider: "TeslafieldAI" }];
+  let availableModels = [{ id: "teslafield", name: "Teslafield B1", free: true, freeTier: true, provider: "TeslafieldAI" }];
+  let modelCatalogStatus = "";
   let cloudSyncReady = false;
   let cloudSyncBusy = false;
   let cloudSyncTimer = null;
@@ -1722,9 +1723,9 @@
     const hint = $("modelSelectorHint");
     if (hint) {
       const routerReady = availableModels.some((model) => model.provider === "OpenRouter");
-      hint.textContent = routerReady
+      hint.textContent = modelCatalogStatus || (routerReady
         ? "Only OpenRouter :free models are listed. Your selected model ID is sent directly; no paid-model fallback. Free-tier rate limits and availability apply."
-        : "TeslafieldAI Free is active. Add OPENROUTER_API_KEY to the backend to load available OpenRouter :free models.";
+        : "Teslafield B1 is available. No OpenRouter :free models have loaded yet.");
     }
   }
 
@@ -1829,11 +1830,20 @@
   }
 
   async function loadModelCatalog() {
+    availableModels = [{ id: "teslafield", name: "Teslafield B1", free: true, freeTier: true, provider: "TeslafieldAI" }];
+    modelCatalogStatus = "";
     try {
       const response = await fetch(API + "/api/v1/models", { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(12000) });
       if (!response.ok) throw new Error("MODEL_CATALOG_UNAVAILABLE");
       const data = await response.json();
       if (!data || !Array.isArray(data.models)) throw new Error("MODEL_CATALOG_INVALID");
+      if (data.openRouterConfigured === false) {
+        modelCatalogStatus = "Render backend does not detect OPENROUTER_API_KEY. Check the exact environment variable name.";
+      } else if (data.catalogAvailable === false) {
+        modelCatalogStatus = "OpenRouter model catalogue failed: " + String(data.catalogError || "unknown error") + ".";
+      } else if (Number(data.openRouterModelCount || 0) === 0) {
+        modelCatalogStatus = "OpenRouter responded, but returned no eligible :free chat models.";
+      }
       availableModels = data.models.filter((model) =>
         model && typeof model.id === "string" && typeof model.name === "string" &&
         typeof model.free === "boolean" && /^[A-Za-z0-9._:/-]{1,160}$/.test(model.id) &&
@@ -1843,7 +1853,10 @@
         availableModels.unshift({ id: "teslafield", name: "Teslafield B1", free: true, provider: "TeslafieldAI" });
       }
     } catch (error) {
-      // Keep the local free model available when the catalogue service is sleeping.
+      modelCatalogStatus = "Could not reach the TeslafieldAI model catalogue. Check the backend connection and refresh.";
+    }
+    if (!availableModels.some((model) => model.id === "teslafield")) {
+      availableModels.unshift({ id: "teslafield", name: "Teslafield B1", free: true, freeTier: true, provider: "TeslafieldAI" });
     }
     renderModelSelector();
     renderModelPicker();
