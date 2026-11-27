@@ -4,6 +4,8 @@ const OPENROUTER_API = "https://openrouter.ai/api/v1";
 const OPENROUTER_FRONTEND_API = "https://openrouter.ai/api/frontend/v1";
 const CHAT_ENDPOINT = "/api/v1/chat/completions";
 const MODEL_CACHE_TTL_MS = 5 * 60 * 1000;
+const MODEL_STALE_TTL_MS = 24 * 60 * 60 * 1000;
+const MODEL_FAILURE_RETRY_MS = 60 * 1000;
 const PROVIDER_CACHE_TTL_MS = 60 * 60 * 1000;
 const PROVIDER_FAILURE_RETRY_MS = 5 * 60 * 1000;
 const MAX_LOGO_BYTES = 256 * 1024;
@@ -160,6 +162,7 @@ function createOpenRouterIntegration({
 } = {}) {
   let cachedCatalogItems = null;
   let catalogExpiresAt = 0;
+  let catalogStaleUntil = 0;
   let catalogPending = null;
   let cachedProviders = null;
   let providersExpiresAt = 0;
@@ -190,6 +193,11 @@ function createOpenRouterIntegration({
       if (!response.ok) {
         const error = new Error("OPENROUTER_MODELS_HTTP_" + response.status);
         error.code = error.message;
+        if (cachedCatalogItems && Date.now() < catalogStaleUntil) {
+          // Serve the last known-good catalogue during a temporary upstream/CDN outage.
+          catalogExpiresAt = Date.now() + MODEL_FAILURE_RETRY_MS;
+          return cachedCatalogItems;
+        }
         throw error;
       }
 
@@ -202,6 +210,7 @@ function createOpenRouterIntegration({
 
       cachedCatalogItems = payload.data;
       catalogExpiresAt = Date.now() + modelTtlMs;
+      catalogStaleUntil = Date.now() + MODEL_STALE_TTL_MS;
       return cachedCatalogItems;
     })();
 
@@ -345,6 +354,8 @@ module.exports = {
   OPENROUTER_API,
   OPENROUTER_FRONTEND_API,
   CHAT_ENDPOINT,
+  MODEL_STALE_TTL_MS,
+  MODEL_FAILURE_RETRY_MS,
   safeProviderLogoUrl,
   normalizeProviderRegistry,
   normalizeFreeChatModel,
