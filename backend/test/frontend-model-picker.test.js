@@ -28,7 +28,7 @@ test("model picker shows Teslafield B1 and provider-branded free models", () => 
   assert.match(app, /baidu\.com/);
   assert.match(app, /recursive\.ai/);
   assert.match(app, /data\.catalogError/);
-  assert.match(app, /OpenRouter responded, but returned no eligible/);
+  assert.match(app, /OpenRouter returned no eligible chat models/);
   assert.match(app, /Free provider models have not loaded yet/);
   assert.doesNotMatch(app, /OPENROUTER · FREE MODELS/);
   assert.doesNotMatch(app, /https:\/\/openrouter\.ai\/favicon\.ico/);
