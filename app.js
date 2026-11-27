@@ -84,7 +84,8 @@
   let authReady = false;
   let pendingGuestPrompt = "";
   let guestConversationStarted = false;
-  let userPreferences = { responseStyle: "balanced", textSize: "standard", reduceMotion: false };
+  let userPreferences = { responseStyle: "balanced", textSize: "standard", reduceMotion: false, model: "teslafield" };
+  let availableModels = [{ id: "teslafield", name: "TeslafieldAI — Qwen3 0.6B", free: true, provider: "TeslafieldAI" }];
   let resolveAuthReady;
   const authReadyPromise = new Promise((resolve) => { resolveAuthReady = resolve; });
 
@@ -1188,7 +1189,7 @@
       const chatRequest = {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token, "Idempotency-Key": idempotencyKey },
-        body: JSON.stringify({ messages: chat.messages.slice(-30), response_style: userPreferences.responseStyle }),
+        body: JSON.stringify({ messages: chat.messages.slice(-30), response_style: userPreferences.responseStyle, model: userPreferences.model }),
         signal: requestSignal
       };
       let response;
@@ -1434,7 +1435,8 @@
         userPreferences = {
           responseStyle: ["concise", "balanced", "detailed"].includes(saved.responseStyle) ? saved.responseStyle : "balanced",
           textSize: ["small", "standard", "large"].includes(saved.textSize) ? saved.textSize : "standard",
-          reduceMotion: saved.reduceMotion === true
+          reduceMotion: saved.reduceMotion === true,
+          model: typeof saved.model === "string" && /^[A-Za-z0-9._:/-]{1,160}$/.test(saved.model) ? saved.model : "teslafield"
         };
       }
     } catch (error) {}
@@ -1461,14 +1463,83 @@
     userPreferences = {
       responseStyle: $("preferenceResponseStyle").value,
       textSize: $("preferenceTextSize").value,
-      reduceMotion: $("preferenceReduceMotion").checked
+      reduceMotion: $("preferenceReduceMotion").checked,
+      model: userPreferences.model || "teslafield"
     };
     try { localStorage.setItem("teslafield.preferences.v1", JSON.stringify(userPreferences)); }
     catch (error) { toast("Your preferences could not be saved in this browser."); }
     applyPersonalization();
+    try { localStorage.setItem("teslafield.preferences.v1", JSON.stringify(userPreferences)); } catch (error) {}
     closePersonalize();
     toast("Your TeslafieldAI preferences are saved.");
   }
+
+  function renderModelSelector() {
+    const select = $("modelSelector");
+    if (!select) return;
+    const preferred = userPreferences.model || "teslafield";
+    select.replaceChildren();
+    const groups = [
+      { label: "FREE MODELS", models: availableModels.filter((model) => model.free) },
+      { label: "PAID MODELS · OPENROUTER", models: availableModels.filter((model) => !model.free) }
+    ];
+    groups.forEach((group) => {
+      if (!group.models.length) return;
+      const optgroup = document.createElement("optgroup");
+      optgroup.label = group.label;
+      group.models.forEach((model) => {
+        const option = document.createElement("option");
+        option.value = model.id;
+        const price = model.free ? "Free" :
+          "$" + Number(model.promptPerMillion || 0).toFixed(2) + " in / $" + Number(model.completionPerMillion || 0).toFixed(2) + " out per 1M";
+        option.textContent = model.name + " · " + price;
+        optgroup.appendChild(option);
+      });
+      select.appendChild(optgroup);
+    });
+    if (availableModels.some((model) => model.id === preferred)) {
+      select.value = preferred;
+    } else {
+      userPreferences.model = "teslafield";
+      select.value = "teslafield";
+      try { localStorage.setItem("teslafield.preferences.v1", JSON.stringify(userPreferences)); } catch (error) {}
+    }
+    const hint = $("modelSelectorHint");
+    if (hint) {
+      const routerReady = availableModels.some((model) => model.provider === "OpenRouter");
+      hint.textContent = routerReady
+        ? "Paid choices use your OpenRouter account. Prices shown per 1M tokens."
+        : "TeslafieldAI Free is active. More choices require a server-side OpenRouter key.";
+    }
+  }
+
+  async function loadModelCatalog() {
+    try {
+      const response = await fetch(API + "/api/v1/models", { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(12000) });
+      if (!response.ok) throw new Error("MODEL_CATALOG_UNAVAILABLE");
+      const data = await response.json();
+      if (!data || !Array.isArray(data.models)) throw new Error("MODEL_CATALOG_INVALID");
+      availableModels = data.models.filter((model) =>
+        model && typeof model.id === "string" && typeof model.name === "string" &&
+        typeof model.free === "boolean" && /^[A-Za-z0-9._:/-]{1,160}$/.test(model.id)
+      );
+      if (!availableModels.some((model) => model.id === "teslafield")) {
+        availableModels.unshift({ id: "teslafield", name: "TeslafieldAI — Qwen3 0.6B", free: true, provider: "TeslafieldAI" });
+      }
+    } catch (error) {
+      // Keep the local free model available when the catalogue service is sleeping.
+    }
+    renderModelSelector();
+  }
+
+  $("modelSelector").addEventListener("change", () => {
+    const selected = $("modelSelector").value;
+    if (!availableModels.some((model) => model.id === selected)) return;
+    userPreferences.model = selected;
+    try { localStorage.setItem("teslafield.preferences.v1", JSON.stringify(userPreferences)); } catch (error) {}
+    const model = availableModels.find((item) => item.id === selected);
+    toast("Preferred model: " + model.name);
+  });
 
   $("newChat").onclick = newChat;
   $("connectEntryButton").onclick = openConnectPage;
@@ -1655,6 +1726,8 @@
   } catch (error) { applyTheme("dark"); }
   renderHistory();
   readPersonalization();
+  renderModelSelector();
+  loadModelCatalog();
   let connectionTimer = null;
   function startConnectionMonitor() {
     if (connectionTimer) clearInterval(connectionTimer);
