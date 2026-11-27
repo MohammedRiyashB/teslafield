@@ -37,7 +37,7 @@ function response(payload, status = 200, contentType = "application/json") {
 
 const registryPayload = {
   data: [
-    { slug: "nvidia", name: "NVIDIA", icon: { url: "/images/icons/NVIDIA.svg" } },
+    { slug: "nvidia", name: "NVIDIA", icon: { url: "https://openrouter.ai/images/icons/brands/nvidia.svg?v=0cc710e7" } },
     { slug: "google", name: "Google", icon: { url: "https://t0.gstatic.com/faviconV2?client=OPENROUTER&type=FAVICON&url=https%3A%2F%2Fgoogle.com" } },
     { slug: "deepseek", name: "DeepSeek", icon: { url: "https://untrusted.example/deepseek.svg" } }
   ]
@@ -56,14 +56,14 @@ test("model discovery refuses to call the authenticated catalogue without a serv
 test("OpenRouter provider registry reads OpenRouter's own slug, name and icon URL", () => {
   const providers = normalizeProviderRegistry(registryPayload);
   assert.equal(providers.get("nvidia").name, "NVIDIA");
-  assert.equal(providers.get("nvidia").logoUrl, "https://openrouter.ai/images/icons/NVIDIA.svg");
+  assert.equal(providers.get("nvidia").logoUrl, "https://openrouter.ai/images/icons/brands/nvidia.svg?v=0cc710e7");
   assert.equal(providers.get("google").logoUrl.startsWith("https://t0.gstatic.com/faviconV2?"), true);
   assert.equal(providers.get("deepseek").logoUrl, null);
   assert.equal(providers.has("nvidi"), false);
 });
 
 test("provider logo URLs accept only HTTPS OpenRouter-provided image hosts", () => {
-  assert.equal(safeProviderLogoUrl("/images/icons/NVIDIA.svg"), "https://openrouter.ai/images/icons/NVIDIA.svg");
+  assert.equal(safeProviderLogoUrl("https://openrouter.ai/images/icons/brands/nvidia.svg?v=0cc710e7"), "https://openrouter.ai/images/icons/brands/nvidia.svg?v=0cc710e7");
   assert.equal(safeProviderLogoUrl("https://t0.gstatic.com/faviconV2?url=https%3A%2F%2Fnvidia.com"), "https://t0.gstatic.com/faviconV2?url=https%3A%2F%2Fnvidia.com");
   assert.equal(safeProviderLogoUrl("https://nvidia.com/favicon.ico"), null);
   assert.equal(safeProviderLogoUrl("http://openrouter.ai/images/icons/NVIDIA.svg"), null);
@@ -79,9 +79,16 @@ test("free chat normalization includes all :free text chat variants and rejects 
   assert.equal(nvidia.providerSlug, "nvidia");
   assert.equal(nvidia.providerName, "NVIDIA");
   assert.equal(nvidia.providerLogoAvailable, true);
+  assert.equal(nvidia.providerLogoUrl, "https://openrouter.ai/images/icons/brands/nvidia.svg?v=0cc710e7");
   assert.equal(nvidia.freeTier, true);
   assert.equal(nvidia.promptPerMillion, 0);
   assert.equal(normalizeFreeChatModel(model("nvidia/nemotron-paid"), providers), null);
+  for (const id of [
+    "google/gemma-4-26b-a4b-it:free",
+    "google/gemma-4-31b-it:free",
+    "inclusionai/ling-3.2-flash:free",
+    "recursive/flint-v1.0:free"
+  ]) assert.equal(normalizeFreeChatModel(model(id), providers), null, id + " must be excluded");
   assert.equal(normalizeFreeChatModel(model("nvidia/nemotron-rerank:free", {
     endpoints: ["/api/v1/rerank"]
   }), providers), null);
@@ -95,6 +102,9 @@ test("model discovery uses the standard OpenRouter catalogue with the server key
     model("nvidia/nemotron-3.5-lightning:free", { name: "NVIDIA: Nemotron 3.5 Lightning (free)" }),
     model("nvidia/nemotron-3-ultra-550b-a55b:free", { name: "NVIDIA: Nemotron 3 Ultra (free)" }),
     model("google/gemma-4-26b-a4b-it:free", { name: "Google: Gemma 4 26B A4B (free)" }),
+    model("google/gemma-4-31b-it:free", { name: "Google: Gemma 4 31B (free)" }),
+    model("inclusionai/ling-3.2-flash:free", { name: "inclusionAI: Ling 3.2 Flash (free)" }),
+    model("recursive/flint-v1.0:free", { name: "Recursive: Flint (free)" }),
     model("nvidia/nemotron-paid", { pricing: { prompt: "0.000001", completion: "0.000002" } }),
     model("nvidia/nemotron-embed:free", { endpoints: ["/api/v1/embeddings"] }),
     model("nvidia/nemotron-vision-output:free", {
@@ -168,7 +178,7 @@ test("logo proxy serves only the logo URL provided by OpenRouter's registry", as
     fetchImpl: async (url) => {
       if (url.startsWith(OPENROUTER_API + "/models?")) return response({ data: [model("nvidia/nemotron-3.5-lightning:free")] });
       if (url === OPENROUTER_FRONTEND_API + "/all-providers") return response(registryPayload);
-      if (url === "https://openrouter.ai/images/icons/NVIDIA.svg") {
+      if (url === "https://openrouter.ai/images/icons/brands/nvidia.svg?v=0cc710e7") {
         logoRequested = url;
         return response("<svg/>", 200, "image/svg+xml");
       }
@@ -178,7 +188,7 @@ test("logo proxy serves only the logo URL provided by OpenRouter's registry", as
 
   await integration.listFreeChatModels();
   assert.equal(await integration.serveProviderLogo(res, "nvidia"), true);
-  assert.equal(logoRequested, "https://openrouter.ai/images/icons/NVIDIA.svg");
+  assert.equal(logoRequested, "https://openrouter.ai/images/icons/brands/nvidia.svg?v=0cc710e7");
   assert.equal(res.status, 200);
   assert.equal(res.headers["Content-Type"], "image/svg+xml");
   assert.equal(res.body.toString("utf8"), "<svg/>");
