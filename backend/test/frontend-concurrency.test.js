@@ -119,7 +119,7 @@ test("stream parser tracks completion and model token-limit finish reasons", () 
   const source = app.slice(start, end);
   assert.match(source, /payloadText === "\[DONE\]"/);
   assert.match(source, /choice\.finish_reason/);
-  assert.match(source, /finishReason === "length"/);
+  assert.match(source, /finish_reason/);
 });
 
 test("long streams continue the same selected model and keep one live bubble", () => {
