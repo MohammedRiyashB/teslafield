@@ -140,6 +140,12 @@
                 </button>
               </div>
               <span class="composer-divider"></span>
+              <label class="model-selector-wrap" for="modelSelector">
+                <span class="visually-hidden">Preferred AI model</span>
+                <select id="modelSelector" class="model-selector" aria-label="Preferred AI model" title="Paid models use your OpenRouter account and may incur charges">
+                  <option value="teslafield">TeslafieldAI Free</option>
+                </select>
+              </label>
               <span class="composer-hint">Ask anything</span>
             </div>
             <div class="composer-actions">
@@ -253,6 +259,7 @@
     <p class="signup-eyebrow">YOUR EXPERIENCE</p>
     <h2 id="personalizeTitle">Personalize TeslafieldAI</h2>
     <p class="personalize-intro">Choose how replies and the chat interface feel on this device.</p>
+    <p class="personalize-intro" id="modelSelectorHint">Model choices load from the connected backend. Paid models require your own OpenRouter account and may incur usage charges.</p>
     <label class="preference-field" for="preferenceResponseStyle">
       <span><strong>Response style</strong><small>Choose the amount of detail in AI replies.</small></span>
       <select id="preferenceResponseStyle"><option value="concise">Concise</option><option value="balanced">Balanced</option><option value="detailed">Detailed</option></select>
@@ -275,6 +282,6 @@
 <script defer src="/__/firebase/8.10.1/firebase-app.js"></script>
 <script defer src="/__/firebase/8.10.1/firebase-auth.js"></script>
 <script defer src="/__/firebase/init.js"></script>
-<script src="/app.js?v=20261127-01" defer></script>
+<script src="/app.js?v=20261127-05" defer></script>
 </body>
 </html>
