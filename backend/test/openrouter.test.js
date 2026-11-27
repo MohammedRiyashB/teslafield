@@ -59,7 +59,7 @@ test("OpenRouter provider registry reads OpenRouter's own slug, name and icon UR
   assert.equal(providers.get("nvidia").logoUrl, "https://openrouter.ai/images/icons/NVIDIA.svg");
   assert.equal(providers.get("google").logoUrl.startsWith("https://t0.gstatic.com/faviconV2?"), true);
   assert.equal(providers.get("deepseek").logoUrl, null);
-  assert.equal(providers.get("nvidi").logoUrl, undefined);
+  assert.equal(providers.has("nvidi"), false);
 });
 
 test("provider logo URLs accept only HTTPS OpenRouter-provided image hosts", () => {
@@ -90,7 +90,7 @@ test("free chat normalization includes all :free text chat variants and rejects 
   }), providers), null);
 });
 
-test("model discovery uses the public OpenRouter catalogue without the server API key and ranks free models first", async () => {
+test("model discovery uses the standard OpenRouter catalogue with the server key and ranks free models first", async () => {
   const catalogItems = [
     model("nvidia/nemotron-3.5-lightning:free", { name: "NVIDIA: Nemotron 3.5 Lightning (free)" }),
     model("nvidia/nemotron-3-ultra-550b-a55b:free", { name: "NVIDIA: Nemotron 3 Ultra (free)" }),
