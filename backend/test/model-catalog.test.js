@@ -23,9 +23,9 @@ test("catalog normalizes text chat models and computes per-million prices", () =
   });
 });
 
-test("catalog marks zero-priced models free and excludes non-chat or invalid pricing", () => {
+test("catalog accepts only :free IDs with zero pricing and excludes non-chat or invalid pricing", () => {
   const free = normalizeOpenRouterModel({
-    id: "provider/free",
+    id: "provider/free:free",
     architecture: { input_modalities: ["text"], output_modalities: ["text"] },
     pricing: { prompt: "0", completion: "0" }
   });
@@ -77,9 +77,9 @@ test("catalog caches model data and resolves free and paid models", async () => 
 });
 
 
-test("catalog keeps every free and paid model visible without truncation", async () => {
+test("catalog keeps every :free model and excludes all paid or non-:free models", async () => {
   const data = Array.from({ length: 125 }, (_, index) => ({
-    id: "provider/free-" + index,
+    id: "provider/free-" + index + ":free",
     name: "Free " + index,
     architecture: { input_modalities: ["text"], output_modalities: ["text"] },
     pricing: { prompt: "0", completion: "0" }
