@@ -1881,3 +1881,202 @@ body:not(.signed-in) .composer .attachment-button {
 body.signed-in .composer-model-row {
   margin-bottom: 19px !important;
 }
+
+
+/* CHATGPT-INSPIRED CHAT SURFACE — transparent controls and a clean conversation lane */
+.topbar{
+  background:transparent!important;
+}
+.topbar .icon-button{
+  display:grid;
+  place-items:center;
+  width:40px;
+  height:40px;
+  padding:0;
+  border:1px solid transparent!important;
+  border-radius:12px!important;
+  background:transparent!important;
+  color:var(--text)!important;
+  box-shadow:none!important;
+  transition:background .16s ease,color .16s ease,transform .16s ease;
+}
+.topbar .icon-button:hover,
+.topbar .icon-button:focus-visible{
+  background:var(--hover)!important;
+  color:var(--text)!important;
+}
+.topbar .icon-button:active{transform:scale(.96)}
+.topbar .icon-button svg{width:20px;height:20px}
+@media(min-width:761px){
+  .topbar .desktop-menu{display:grid!important}
+  .sidebar .sidebar-collapse{display:none!important}
+}
+@media(max-width:760px){
+  .topbar .mobile-menu{display:grid!important}
+  .topbar .desktop-menu{display:none!important}
+}
+
+/* CONNECTO remains an icon-only, fully transparent topbar action. */
+body.signed-in .connect-entry-button{
+  width:40px!important;
+  min-width:40px!important;
+  height:40px!important;
+  margin:0 5px 0 0!important;
+  padding:0!important;
+  border:1px solid transparent!important;
+  border-radius:12px!important;
+  background:transparent!important;
+  color:var(--text)!important;
+}
+body.signed-in .connect-entry-button:hover,
+body.signed-in .connect-entry-button:focus-visible{
+  background:var(--hover)!important;
+  color:var(--text)!important;
+  opacity:1!important;
+}
+body.signed-in .connect-entry-button .infinity-mark{
+  color:var(--text)!important;
+  font-size:33px!important;
+  font-weight:400!important;
+}
+
+/* Model selection is a lightweight ChatGPT-style text control, not a solid capsule. */
+.composer-model-row{
+  margin-bottom:19px!important;
+}
+.composer-model-row .model-picker-button{
+  height:34px!important;
+  max-width:min(58vw,250px)!important;
+  padding:0 9px!important;
+  gap:8px!important;
+  border:1px solid transparent!important;
+  border-radius:11px!important;
+  background:transparent!important;
+  color:var(--text)!important;
+  box-shadow:none!important;
+  font-size:13px!important;
+  font-weight:650!important;
+}
+.composer-model-row .model-picker-button:hover,
+.composer-model-row .model-picker-wrap.is-open .model-picker-button{
+  border-color:transparent!important;
+  background:var(--hover)!important;
+}
+.composer-model-row .model-picker-button img{width:19px!important;height:19px!important}
+.composer-model-row .model-picker-button svg{width:13px!important;height:13px!important;color:var(--muted)}
+
+/* Centered, spacious composer with a soft ChatGPT-like outline. */
+.composer-area{
+  padding:12px 18px max(14px,env(safe-area-inset-bottom))!important;
+  background:linear-gradient(transparent,var(--page) 18%)!important;
+}
+.composer-shell{
+  width:min(768px,100%)!important;
+  max-width:768px!important;
+}
+.composer{
+  min-height:68px;
+  padding:12px 14px 10px!important;
+  border:1px solid var(--border)!important;
+  border-radius:26px!important;
+  background:var(--surface)!important;
+  box-shadow:0 4px 22px rgba(0,0,0,.045)!important;
+  transition:border-color .18s ease,box-shadow .18s ease,background .18s ease;
+}
+.composer:focus-within{
+  border-color:color-mix(in srgb,var(--text) 28%,var(--border))!important;
+  box-shadow:0 5px 25px rgba(0,0,0,.075)!important;
+}
+.composer textarea{
+  min-height:34px!important;
+  max-height:180px!important;
+  padding:3px 4px 9px!important;
+  font-size:15px!important;
+  line-height:1.55!important;
+}
+.composer-toolbar{min-height:34px!important}
+.composer .attachment-button{
+  width:34px!important;height:34px!important;
+  min-width:34px!important;min-height:34px!important;
+  border:0!important;
+  background:transparent!important;
+  color:var(--muted)!important;
+}
+.composer .attachment-button:hover{background:var(--hover)!important;color:var(--text)!important}
+.composer .mic-button{
+  width:35px!important;height:35px!important;
+  color:var(--muted)!important;
+}
+.composer .mic-button:hover{background:var(--hover)!important;color:var(--text)!important}
+.composer .send-button{
+  width:36px!important;height:36px!important;
+  min-width:36px!important;
+  border-radius:50%!important;
+  background:var(--text)!important;
+  color:var(--page)!important;
+  box-shadow:none!important;
+}
+.composer .send-button:hover{filter:brightness(.88)}
+.composer-disclaimer{max-width:768px;margin:7px auto 0!important;text-align:center}
+
+/* Messages read as one centered ChatGPT conversation: assistant text, user bubble on the right. */
+.message-list{
+  width:min(768px,calc(100% - 40px))!important;
+  max-width:768px!important;
+  padding:18px 0 44px!important;
+}
+.message-row{margin:26px 0 30px!important}
+.message-stack.assistant-stack{width:100%!important;max-width:100%!important}
+.message-stack.user-stack{
+  width:fit-content!important;
+  max-width:min(84%,680px)!important;
+  margin-left:auto!important;
+  align-items:flex-end!important;
+}
+.message-row .message-content{
+  font-size:15px!important;
+  line-height:1.72!important;
+}
+.message-row.assistant .message-content{
+  width:100%!important;
+  max-width:100%!important;
+  padding:0 0 2px!important;
+  color:var(--text)!important;
+}
+.message-row.user .message-content{
+  width:fit-content!important;
+  max-width:100%!important;
+  padding:11px 17px!important;
+  border:1px solid var(--border)!important;
+  border-radius:22px 22px 7px 22px!important;
+  background:var(--surface-2)!important;
+  color:var(--text)!important;
+  line-height:1.62!important;
+}
+.message-actions{margin-top:7px!important}
+.message-actions button{
+  border:1px solid transparent!important;
+  border-radius:9px!important;
+  background:transparent!important;
+  color:var(--muted)!important;
+}
+.message-actions button:hover{background:var(--hover)!important;color:var(--text)!important}
+
+@media(max-width:760px){
+  .topbar{padding-inline:10px!important}
+  .topbar-left{gap:5px!important}
+  .topbar-right{gap:4px!important}
+  .composer-area{padding:8px 12px max(10px,env(safe-area-inset-bottom))!important}
+  .composer-shell{width:100%!important;max-width:768px!important}
+  .composer{min-height:62px;padding:9px 11px 8px!important;border-radius:24px!important}
+  .composer textarea{min-height:32px!important;max-height:142px!important;font-size:16px!important}
+  .composer-model-row{margin-bottom:12px!important;padding-left:2px!important}
+  .composer-model-row .model-picker-button{height:33px!important;max-width:58vw!important}
+  .message-list{width:calc(100% - 28px)!important;padding:12px 0 34px!important}
+  .message-stack.user-stack{max-width:92%!important}
+  .message-row .message-content{font-size:14px!important;line-height:1.68!important}
+  .message-row.user .message-content{padding:10px 14px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .topbar .icon-button,.composer,.message-row{transition:none!important;animation:none!important}
+}

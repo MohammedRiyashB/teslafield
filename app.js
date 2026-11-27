@@ -1902,7 +1902,12 @@
   $("mobileMenu").onclick = openSidebar;
   $("sidebarClose").onclick = closeSidebar;
   $("sidebarScrim").onclick = closeSidebar;
-  $("desktopMenu").onclick = () => document.body.classList.remove("sidebar-collapsed");
+  $("desktopMenu").onclick = () => {
+    const collapsed = document.body.classList.toggle("sidebar-collapsed");
+    $("desktopMenu").setAttribute("aria-expanded", String(!collapsed));
+    $("desktopMenu").setAttribute("aria-label", collapsed ? "Expand sidebar" : "Collapse sidebar");
+    $("desktopMenu").title = collapsed ? "Expand sidebar" : "Collapse sidebar";
+  };
   $("sidebarCollapse").onclick = () => document.body.classList.add("sidebar-collapsed");
   $("composer").onsubmit = (event) => { event.preventDefault(); if (generating) stopGeneration(); else sendMessage(); };
   $("micButton").onclick = () => { if (mediaRecorder && mediaRecorder.state !== "inactive") stopVoiceRecording(); else startVoiceRecording(); };
